@@ -1,5 +1,9 @@
 /* Footer component styles */
 
 .footer {
-  /* Add component-specific styles here */
+  border-top: 1px solid hsl(var(--border));
+  padding: 0.75rem 1.5rem;
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
 }

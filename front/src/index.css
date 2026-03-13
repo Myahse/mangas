@@ -4,47 +4,48 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-background text-foreground;
   }
   :root {
 
+    /* White background for the whole app */
     --background: 0 0% 100%;
 
-    --foreground: 0 0% 3.9%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
 
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
 
-    --popover-foreground: 0 0% 3.9%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 0 0% 9%;
+    --primary: 222 47% 11%;
 
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 0 0% 96.1%;
+    --secondary: 220 14% 96%;
 
-    --secondary-foreground: 0 0% 9%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 0 0% 96.1%;
+    --muted: 220 14% 96%;
 
-    --muted-foreground: 0 0% 45.1%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 0 0% 96.1%;
+    --accent: 220 14% 96%;
 
-    --accent-foreground: 0 0% 9%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84.2% 60.2%;
 
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 89.8%;
+    --border: 220 13% 91%;
 
-    --input: 0 0% 89.8%;
+    --input: 220 13% 91%;
 
-    --ring: 0 0% 3.9%;
+    --ring: 222 47% 11%;
 
     --chart-1: 12 76% 61%;
 
@@ -59,43 +60,43 @@
     --radius: 0.5rem}
   .dark {
 
-    --background: 0 0% 3.9%;
+    --background: 222 47% 5%;
 
-    --foreground: 0 0% 98%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 3.9%;
+    --card: 222 47% 7%;
 
-    --card-foreground: 0 0% 98%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 3.9%;
+    --popover: 222 47% 7%;
 
-    --popover-foreground: 0 0% 98%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 0 0% 98%;
+    --primary: 0 0% 100%;
 
-    --primary-foreground: 0 0% 9%;
+    --primary-foreground: 222 47% 5%;
 
-    --secondary: 0 0% 14.9%;
+    --secondary: 222 47% 10%;
 
-    --secondary-foreground: 0 0% 98%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 0 0% 14.9%;
+    --muted: 222 47% 10%;
 
     --muted-foreground: 0 0% 63.9%;
 
-    --accent: 0 0% 14.9%;
+    --accent: 222 47% 10%;
 
-    --accent-foreground: 0 0% 98%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
 
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 14.9%;
+    --border: 222 47% 14%;
 
-    --input: 0 0% 14.9%;
+    --input: 222 47% 14%;
 
-    --ring: 0 0% 83.1%;
+    --ring: 222 47% 40%;
 
     --chart-1: 220 70% 50%;
 
@@ -116,5 +117,17 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Hide scrollbars but keep scrolling */
+  html,
+  body {
+    scrollbar-width: none; /* Firefox */
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
   }
 }

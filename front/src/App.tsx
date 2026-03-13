@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
+import { HomeScrollProvider } from './context/HomeScrollContext'
 import Layout from './components/Layout/Layout'
-import Home from './pages/Home/Home'
+import ComingSoon from './pages/Home/Home'
 import Library from './pages/Library/Library'
 import Community from './pages/Community/Community'
 import Profile from './pages/Profile/Profile'
@@ -9,9 +10,10 @@ import CreateManga from './pages/CreateManga/CreateManga'
 
 function App() {
   return (
+    <HomeScrollProvider>
     <Layout>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<ComingSoon />} />
         <Route path="/library" element={<Library />} />
         <Route path="/community" element={<Community />} />
         <Route path="/profile" element={<Profile />} />
@@ -19,6 +21,7 @@ function App() {
         <Route path="/create" element={<CreateManga />} />
       </Routes>
     </Layout>
+    </HomeScrollProvider>
   )
 }
 
