@@ -1,0 +1,66 @@
+/* ─── Latest Updates ─── */
+.latest {
+  /* contained by parent */
+}
+
+.latest__tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-white);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  box-shadow: var(--card-shadow);
+}
+
+.latest__tab {
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: 5px;
+  transition: var(--transition);
+  font-family: 'Lufga', sans-serif;
+  white-space: nowrap;
+}
+
+.latest__tab:hover {
+  color: var(--text-dark);
+  background: var(--bg-light);
+}
+
+.latest__tab--active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.latest__tab--active:hover {
+  background: var(--primary-dark);
+  color: #fff;
+}
+
+/* ─── Grid ─── */
+.latest__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .latest__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .latest__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .latest__tabs {
+    gap: 2px;
+  }
+  .latest__tab {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}

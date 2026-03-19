@@ -1,0 +1,83 @@
+/* ─── Home Page ─── */
+.home {
+  min-height: 100vh;
+}
+
+/* ─── Genre Chips ─── */
+.home__genres {
+  padding: 20px 0 8px;
+  overflow: hidden;
+}
+
+.home__genres-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+.home__genres-scroll::-webkit-scrollbar { display: none; }
+
+.genre-chip {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-white);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.genre-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(230, 57, 70, 0.04);
+  transform: translateY(-1px);
+}
+
+/* ─── Content Row (main + sidebar) ─── */
+.home__content-row {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  padding-bottom: 60px;
+}
+
+.home__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+/* ─── Main content sections ─── */
+.home__main {
+  padding-top: 0;
+}
+
+/* ─── Popular Grid ─── */
+.home__popular-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .home__popular-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .home__popular-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .home__content-row {
+    flex-direction: column;
+  }
+}
