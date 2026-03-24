@@ -1,21 +1,3 @@
-<<<<<<< HEAD
-# React + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-=======
 # WebGas - Plateforme de Mangas Africains
 
 WebGas est une plateforme communautaire dédiée aux mangas et webtoons africains. Elle permet aux créateurs de publier leurs œuvres et aux lecteurs de découvrir de nouvelles histoires.
@@ -57,6 +39,12 @@ webgas/
 cd front
 npm install
 npm run dev
+```
+
+Static assets for the web app live under **`front/public/`** (Vite convention). If you still have a legacy root-level `public/` folder from the Dev branch prototype, run once from the repo root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\move-root-public-to-front.ps1
 ```
 
 ### Backend (Spring Boot)
@@ -107,4 +95,3 @@ Tous droits réservés © 2025 WebGas
 ## Contribution
 
 Cette plateforme vise à rassembler la communauté de mangakas africains et à promouvoir leurs créations.
->>>>>>> efdd90c48ca037d587bac2b0d671236c91816aa6
