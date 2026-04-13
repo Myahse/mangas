@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, ChevronDown, Sun, Moon, User } from 'lucide-react';
 import { useFetch, fetchAllManga, fetchGenres } from '../../services/api';
@@ -7,6 +7,25 @@ import { useAuth } from '../../context/AuthContext';
 import { CREATOR_PANEL_URL } from '../../config/publicUrls';
 import AuthModal from '../auth/AuthModal';
 import './Navbar.css';
+
+/** Si `db.json` est vide ou lent : la grille Genres reste utilisable. */
+const FALLBACK_GENRES = [
+  'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy',
+  'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Isekai', 'Shonen',
+];
+
+/** Pile de démo (aperçu visuel) quand aucun manga ne correspond encore au genre survolé. */
+function buildMockGenrePreview(genre, count = 6) {
+  const safe = genre.replace(/\s+/g, '-');
+  return Array.from({ length: count }, (_, i) => ({
+    id: `mock-genre-${safe}-${i}`,
+    title: `Série démo — ${genre} ${i + 1}`,
+    rating: (8.0 + (i % 5) * 0.15).toFixed(1),
+    cover: `https://picsum.photos/seed/mg-${safe}-${i}/100/140`,
+    href: `/browse?genre=${encodeURIComponent(genre)}`,
+    isMock: true,
+  }));
+}
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -18,6 +37,9 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [scrolled, setScrolled] = useState(false);
+  const [hoveredGenre, setHoveredGenre] = useState(null);
+  const [mobileGenresOpen, setMobileGenresOpen] = useState(false);
+  const [mobilePreviewGenre, setMobilePreviewGenre] = useState(null);
   const searchRef = useRef(null);
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
@@ -62,6 +84,13 @@ export default function Navbar() {
 
   const closeUserMenu = () => setUserMenuOpen(false);
 
+  useEffect(() => {
+    if (!menuOpen) {
+      setMobileGenresOpen(false);
+      setMobilePreviewGenre(null);
+    }
+  }, [menuOpen]);
+
   const handleLogout = () => {
     logout();
     closeUserMenu();
@@ -95,10 +124,37 @@ export default function Navbar() {
   };
 
   const { data: genres } = useFetch(fetchGenres);
+  const { data: allManga } = useFetch(fetchAllManga);
+
+  const displayGenres = genres?.length ? genres : FALLBACK_GENRES;
+
+  const previewGenre = menuOpen && mobileGenresOpen ? mobilePreviewGenre : hoveredGenre;
+
+  const genrePreviewRows = useMemo(() => {
+    if (!previewGenre) return [];
+    const real =
+      allManga?.length > 0
+        ? [...allManga]
+            .filter((m) => m.genres.includes(previewGenre))
+            .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
+            .slice(0, 8)
+            .map((m) => ({
+              id: m.id,
+              title: m.title,
+              rating: String(m.rating),
+              cover: m.cover,
+              href: `/manga/${m.slug}`,
+              isMock: false,
+            }))
+        : [];
+    if (real.length > 0) return real;
+    return buildMockGenrePreview(previewGenre, 6);
+  }, [previewGenre, allManga]);
 
   const navLinks = [
     { label: 'Parcourir', to: '/browse' },
-    { label: 'Genres', to: '/genres', hasDropdown: true },
+    /* Pas de `to` : /genres n’existe pas en route — évite 404 au clic (mobile / touch). */
+    { label: 'Genres', hasDropdown: true },
     { label: 'Nouveautés', to: '/browse?sort=new' },
     { label: 'Populaire', to: '/browse?sort=popular' },
   ];
@@ -116,29 +172,85 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <nav className="navbar__nav">
-          {navLinks.map(link => (
+          {navLinks.map((link) => (
             <div key={link.label} className="navbar__nav-item">
-              <NavLink
-                to={link.to}
-                className={({ isActive }) =>
-                  `navbar__link${isActive ? ' navbar__link--active' : ''}${link.hasDropdown ? ' navbar__link--dropdown' : ''}`
-                }
-              >
-                {link.label}
-                {link.hasDropdown && <ChevronDown size={14} />}
-              </NavLink>
+              {link.hasDropdown ? (
+                <span
+                  className="navbar__link navbar__link--dropdown"
+                  tabIndex={0}
+                  role="button"
+                  aria-haspopup="true"
+                  aria-label={`${link.label}, ouvrir le menu`}
+                >
+                  {link.label}
+                  <ChevronDown size={14} aria-hidden />
+                </span>
+              ) : (
+                <NavLink
+                  to={link.to}
+                  className={({ isActive }) =>
+                    `navbar__link${isActive ? ' navbar__link--active' : ''}`
+                  }
+                >
+                  {link.label}
+                </NavLink>
+              )}
               {link.hasDropdown && (
-                <div className="navbar__dropdown">
-                  <div className="navbar__dropdown-grid">
-                    {(genres ?? []).slice(0, 16).map(g => (
-                      <Link
-                        key={g}
-                        to={`/browse?genre=${encodeURIComponent(g)}`}
-                        className="navbar__dropdown-item"
-                      >
-                        {g}
-                      </Link>
-                    ))}
+                <div
+                  className="navbar__dropdown navbar__dropdown--genres"
+                  onMouseLeave={() => setHoveredGenre(null)}
+                >
+                  <div className="navbar__dropdown-inner">
+                    <div className="navbar__dropdown-grid">
+                      {displayGenres.slice(0, 16).map((g) => (
+                        <Link
+                          key={g}
+                          to={`/browse?genre=${encodeURIComponent(g)}`}
+                          className={`navbar__dropdown-item${hoveredGenre === g ? ' navbar__dropdown-item--active' : ''}`}
+                          onMouseEnter={() => setHoveredGenre(g)}
+                          onFocus={() => setHoveredGenre(g)}
+                        >
+                          {g}
+                        </Link>
+                      ))}
+                    </div>
+                    <aside className="navbar__dropdown-preview" aria-live="polite">
+                      {hoveredGenre ? (
+                        <>
+                          <p className="navbar__dropdown-preview-title">{hoveredGenre}</p>
+                          {genrePreviewRows.some((r) => r.isMock) && (
+                            <p className="navbar__dropdown-preview-mock-label">Aperçu fictif (maquette)</p>
+                          )}
+                          <ul className="navbar__dropdown-stack">
+                            {genrePreviewRows.map((row, index) => (
+                              <li
+                                key={row.id}
+                                className="navbar__dropdown-stack-item"
+                                style={{ zIndex: genrePreviewRows.length - index }}
+                              >
+                                <Link to={row.href} className="navbar__dropdown-stack-link">
+                                  <img src={row.cover} alt="" className="navbar__dropdown-stack-cover" />
+                                  <span className="navbar__dropdown-stack-meta">
+                                    <span className="navbar__dropdown-stack-name">{row.title}</span>
+                                    <span className="navbar__dropdown-stack-sub">{row.rating} ★</span>
+                                  </span>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                          <Link
+                            to={`/browse?genre=${encodeURIComponent(hoveredGenre)}`}
+                            className="navbar__dropdown-preview-cta"
+                          >
+                            Voir tout →
+                          </Link>
+                        </>
+                      ) : (
+                        <p className="navbar__dropdown-preview-hint">
+                          Survolez un genre pour afficher des mangas.
+                        </p>
+                      )}
+                    </aside>
                   </div>
                 </div>
               )}
@@ -301,16 +413,93 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="navbar__mobile-menu">
-          {navLinks.map(link => (
-            <NavLink
-              key={link.label}
-              to={link.to}
-              className="navbar__mobile-link"
-              onClick={() => setMenuOpen(false)}
-            >
-              {link.label}
-            </NavLink>
-          ))}
+          {navLinks.map((link) =>
+            link.hasDropdown ? (
+              <div key={link.label} className="navbar__mobile-genres">
+                <button
+                  type="button"
+                  className="navbar__mobile-genres-toggle"
+                  aria-expanded={mobileGenresOpen}
+                  onClick={() =>
+                    setMobileGenresOpen((o) => {
+                      const next = !o;
+                      if (next) setMobilePreviewGenre(null);
+                      return next;
+                    })
+                  }
+                >
+                  <span>{link.label}</span>
+                  <ChevronDown
+                    size={18}
+                    className={mobileGenresOpen ? 'navbar__mobile-chevron--open' : ''}
+                    aria-hidden
+                  />
+                </button>
+                {mobileGenresOpen && (
+                  <div className="navbar__mobile-genres-body">
+                    <p className="navbar__mobile-genres-hint">Choisissez un genre pour voir des titres</p>
+                    <div className="navbar__mobile-genres-chips">
+                      {displayGenres.slice(0, 16).map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          className={`navbar__mobile-genre-chip${mobilePreviewGenre === g ? ' is-active' : ''}`}
+                          onClick={() => setMobilePreviewGenre((prev) => (prev === g ? null : g))}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                    {mobilePreviewGenre && (
+                      <div className="navbar__mobile-genres-preview">
+                        <p className="navbar__dropdown-preview-title">{mobilePreviewGenre}</p>
+                        {genrePreviewRows.some((r) => r.isMock) && (
+                          <p className="navbar__dropdown-preview-mock-label">Aperçu fictif (maquette)</p>
+                        )}
+                        <ul className="navbar__dropdown-stack">
+                          {genrePreviewRows.map((row, index) => (
+                            <li
+                              key={row.id}
+                              className="navbar__dropdown-stack-item"
+                              style={{ zIndex: genrePreviewRows.length - index }}
+                            >
+                              <Link
+                                to={row.href}
+                                className="navbar__dropdown-stack-link"
+                                onClick={() => setMenuOpen(false)}
+                              >
+                                <img src={row.cover} alt="" className="navbar__dropdown-stack-cover" />
+                                <span className="navbar__dropdown-stack-meta">
+                                  <span className="navbar__dropdown-stack-name">{row.title}</span>
+                                  <span className="navbar__dropdown-stack-sub">{row.rating} ★</span>
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                        <Link
+                          to={`/browse?genre=${encodeURIComponent(mobilePreviewGenre)}`}
+                          className="navbar__dropdown-preview-cta"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Voir tout →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <NavLink
+                key={link.label}
+                to={link.to}
+                className="navbar__mobile-link"
+                onClick={() => setMenuOpen(false)}
+              >
+                {link.label}
+              </NavLink>
+            ),
+          )}
           <div className="navbar__mobile-divider" />
           {isAuthenticated && user ? (
             <>
