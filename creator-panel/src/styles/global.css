@@ -1,0 +1,101 @@
+/* Aligné sur front/src/styles/global.css (tokens + base utiles au layout compte / favoris) */
+@import url('https://fonts.cdnfonts.com/css/lufga');
+
+:root {
+  /* Creator palette (blue + green) */
+  --primary: #2563eb; /* blue */
+  --primary-dark: #1d4ed8;
+  --primary-light: #60a5fa;
+  --accent: #22c55e; /* green */
+  --accent-dark: #16a34a;
+  --accent-light: #86efac;
+
+  --bg-dark: #0d0d0d;
+  --bg-dark-2: #1a1a1a;
+  --bg-dark-3: #242424;
+
+  --bg-light: #f4f4f6;
+  --bg-white: #ffffff;
+
+  --text-white: #ffffff;
+  --text-dark: #111111;
+  --text-muted: #888888;
+  --text-secondary: #555555;
+
+  --border: #e0e0e0;
+  --border-dark: #2e2e2e;
+
+  --page-bg: var(--bg-light);
+  --surface-bg: var(--bg-white);
+  --text: var(--text-dark);
+  --surface-border: var(--border);
+
+  --nav-bg: rgba(255, 255, 255, 0.9);
+  --nav-border: rgba(0, 0, 0, 0.08);
+  --nav-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+  --nav-text: rgba(17, 17, 17, 0.92);
+  --nav-text-muted: rgba(17, 17, 17, 0.7);
+  --nav-hover-bg: rgba(0, 0, 0, 0.05);
+
+  --navbar-height: 64px;
+  --container-max: 1280px;
+  --radius-sm: 6px;
+  --transition: all 0.2s ease;
+}
+
+html.dark {
+  color-scheme: dark;
+  --page-bg: var(--bg-dark);
+  --surface-bg: var(--bg-dark-2);
+  --text: var(--text-white);
+  --surface-border: var(--border-dark);
+
+  --bg-light: var(--bg-dark);
+  --bg-white: var(--bg-dark-2);
+  --text-dark: var(--text-white);
+  --border: var(--border-dark);
+
+  --nav-bg: rgba(0, 0, 0, 0.85);
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --nav-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  --nav-text: rgba(255, 255, 255, 0.92);
+  --nav-text-muted: rgba(255, 255, 255, 0.75);
+  --nav-hover-bg: rgba(255, 255, 255, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Lufga', 'Inter', 'Segoe UI', sans-serif;
+  background-color: var(--page-bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 20px;
+}
