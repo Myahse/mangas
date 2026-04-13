@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import InfoBar from './components/layout/InfoBar';
 import Footer from './components/layout/Footer';
@@ -7,6 +8,7 @@ import MangaPage from './pages/MangaPage';
 import ReaderPage from './pages/ReaderPage';
 import BrowsePage from './pages/BrowsePage';
 import Register from './pages/Register/Register';
+import AccountSectionPage from './pages/Account/AccountSectionPage';
 
 /* The reader page uses its own full-screen layout */
 function Layout({ children }) {
@@ -28,17 +30,22 @@ function Layout({ children }) {
 
 export default function App() {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/"                              element={<HomePage   />} />
-        <Route path="/browse"                        element={<BrowsePage />} />
-        <Route path="/manga/:slug"                   element={<MangaPage  />} />
-        <Route path="/manga/:slug/chapter/:chapter"  element={<ReaderPage />} />
-        <Route path="/register"                      element={<Register   />} />
-        {/* Catch-all */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Layout>
+    <AuthProvider>
+      <Layout>
+        <Routes>
+          <Route path="/"                              element={<HomePage   />} />
+          <Route path="/browse"                        element={<BrowsePage />} />
+          <Route path="/manga/:slug"                   element={<MangaPage  />} />
+          <Route path="/manga/:slug/chapter/:chapter"  element={<ReaderPage />} />
+          <Route path="/register"                      element={<Register   />} />
+          <Route path="/compte"                         element={<AccountSectionPage />} />
+          <Route path="/compte/abonnements"             element={<AccountSectionPage />} />
+          <Route path="/compte/favoris"                 element={<AccountSectionPage />} />
+          {/* Catch-all */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Layout>
+    </AuthProvider>
   );
 }
 

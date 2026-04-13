@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Eye, EyeOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 import './AuthModal.css';
 
 export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
   const navigate = useNavigate();
+  const { signInAfterLogin } = useAuth();
   const [mode, setMode] = useState(initialMode);
 
   useEffect(() => {
@@ -68,6 +70,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
           return;
         }
         console.log('login', loginData);
+        signInAfterLogin(loginData.email);
         onClose?.();
         return;
       }
@@ -106,7 +109,12 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
 
   return createPortal(
     <div className="auth-modal__overlay" onMouseDown={onClose} role="presentation">
-      <div className={`auth-modal__panel${showRegistrationForm ? ' auth-modal__panel--register' : ''}`} onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className={`auth-modal__panel${showRegistrationForm ? ' auth-modal__panel--register' : ''}${
+          showLoginForm || showRegistrationForm ? ' auth-modal__panel--expanded' : ''
+        }`}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <button className="auth-modal__close" onClick={onClose} aria-label="Fermer">
           <X size={22} />
         </button>
@@ -117,6 +125,21 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
             <span className="auth-modal__brand-accent">Afrik</span>
           </div>
           <p className="auth-modal__tagline">Connectez-vous pour reprendre votre lecture.</p>
+
+          <button
+            className="auth-modal__primary auth-modal__primary--inline"
+            onClick={handlePrimaryClick}
+            disabled={isBusy}
+            type="button"
+          >
+            {showRegistrationForm
+              ? 'Envoyer la demande'
+              : showLoginForm
+                ? isBusy
+                  ? 'Connexion…'
+                  : 'Se connecter'
+                : 'Se connecter avec Email'}
+          </button>
 
           <div className={`auth-modal__spacer${showLoginForm || showRegistrationForm ? ' auth-modal__spacer--open' : ''}`}>
             {showLoginForm && (
@@ -225,28 +248,41 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
                 </div>
               </form>
             )}
+
+            <button
+              className="auth-modal__primary auth-modal__primary--form"
+              onClick={handlePrimaryClick}
+              disabled={isBusy}
+              type="button"
+            >
+              {showRegistrationForm
+                ? 'Envoyer la demande'
+                : showLoginForm
+                  ? isBusy
+                    ? 'Connexion…'
+                    : 'Se connecter'
+                  : 'Se connecter avec Email'}
+            </button>
           </div>
         </div>
 
-        <div className="auth-modal__actions">
-          <button className="auth-modal__primary" onClick={handlePrimaryClick} disabled={isBusy} type="button">
-            {showRegistrationForm
-              ? 'Envoyer la demande'
-              : showLoginForm
-                ? isBusy
-                  ? 'Connexion…'
-                  : 'Se connecter'
-                : 'Se connecter avec Email'}
+        <button className="auth-modal__primary" onClick={handlePrimaryClick} disabled={isBusy} type="button">
+          {showRegistrationForm
+            ? 'Envoyer la demande'
+            : showLoginForm
+              ? isBusy
+                ? 'Connexion…'
+                : 'Se connecter'
+              : 'Se connecter avec Email'}
+        </button>
+
+        <div className="auth-modal__divider" />
+
+        <div className="auth-modal__register-line">
+          <span>Pas encore de compte ?</span>
+          <button type="button" onClick={handleRequestAccess}>
+            Créer un compte
           </button>
-
-          <div className="auth-modal__divider" />
-
-          <div className="auth-modal__register-line">
-            <span>Pas encore de compte ?</span>
-            <button type="button" onClick={handleRequestAccess}>
-              Créer un compte
-            </button>
-          </div>
         </div>
 
         <div className={`auth-modal__footer${showRegistrationForm ? ' auth-modal__footer--up' : ''}`}>
