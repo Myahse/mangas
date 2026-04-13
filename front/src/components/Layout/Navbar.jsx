@@ -2,11 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, BookOpen, ChevronDown } from 'lucide-react';
 import { useFetch, fetchAllManga, fetchGenres } from '../../services/api';
+import AuthModal from '../auth/AuthModal';
 import './Navbar.css';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [scrolled, setScrolled] = useState(false);
@@ -69,7 +72,8 @@ export default function Navbar() {
   ];
 
   return (
-    <header className={`navbar${scrolled ? ' navbar--scrolled' : ''}`}>
+    <>
+      <header className={`navbar${scrolled ? ' navbar--scrolled' : ''}`}>
       <div className="navbar__inner container">
 
         {/* Logo */}
@@ -157,7 +161,16 @@ export default function Navbar() {
           </div>
 
           {/* Login */}
-          <Link to="/login" className="navbar__login-btn">Connexion</Link>
+          <button
+            type="button"
+            className="navbar__login-btn"
+            onClick={() => {
+              setAuthMode('login');
+              setAuthOpen(true);
+            }}
+          >
+            Connexion
+          </button>
 
           {/* Mobile burger */}
           <button
@@ -184,11 +197,26 @@ export default function Navbar() {
             </NavLink>
           ))}
           <div className="navbar__mobile-divider" />
-          <Link to="/login" className="navbar__mobile-login" onClick={() => setMenuOpen(false)}>
+          <button
+            type="button"
+            className="navbar__mobile-login"
+            onClick={() => {
+              setMenuOpen(false);
+              setAuthMode('login');
+              setAuthOpen(true);
+            }}
+          >
             Connexion
-          </Link>
+          </button>
         </div>
       )}
     </header>
+
+    <AuthModal
+      isOpen={authOpen}
+      initialMode={authMode}
+      onClose={() => setAuthOpen(false)}
+    />
+    </>
   );
 }

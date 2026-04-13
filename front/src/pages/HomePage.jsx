@@ -3,32 +3,23 @@ import HeroBanner from '../components/home/HeroBanner';
 import LatestUpdates from '../components/home/LatestUpdates';
 import PopularSidebar from '../components/home/PopularSidebar';
 import MangaCard from '../components/common/MangaCard';
-import { useFetch, fetchPopularManga, fetchGenres } from '../services/api';
+import { useFetch, fetchPopularManga } from '../services/api';
 import './HomePage.css';
 
 export default function HomePage() {
   const { data: popular } = useFetch(fetchPopularManga, 8);
-  const { data: genres }  = useFetch(fetchGenres);
 
   return (
     <div className="home">
       <HeroBanner />
 
       <main className="home__main container">
-        {/* Genre chips */}
-        <section className="home__genres">
-          <div className="home__genres-scroll">
-            {(genres ?? []).map(g => (
-              <Link
-                key={g}
-                to={`/browse?genre=${encodeURIComponent(g)}`}
-                className="genre-chip"
-              >
-                {g}
-              </Link>
-            ))}
-          </div>
-        </section>
+        {/* Genre control under hero (disabled for now) */}
+        {/*
+          <section className="home__genres">
+            ...
+          </section>
+        */}
 
         {/* Content + Sidebar */}
         <div className="home__content-row">

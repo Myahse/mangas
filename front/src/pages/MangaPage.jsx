@@ -58,6 +58,10 @@ export default function MangaPage() {
   );
 
   const relatedFiltered = (related ?? []).filter(m => m.slug !== slug).slice(0, 6);
+  const firstChapterNumber =
+    chapters && chapters.length ? chapters[chapters.length - 1].number : null;
+  const lastChapterNumber =
+    chapters && chapters.length ? chapters[0].number : null;
 
   return (
     <div className="page-wrapper manga-page">
@@ -93,12 +97,17 @@ export default function MangaPage() {
 
               <div className="manga-page__info-row">
                 <div className="manga-page__info-item"><User size={14} /><span>{manga.author}</span></div>
-                <div className="manga-page__info-item"><Clock size={14} /><span>Ch. {manga.latestChapter.number} · {manga.latestChapter.date}</span></div>
+                <div className="manga-page__info-item">
+                  <Clock size={14} />
+                  <span>
+                    {manga.latestChapter ? `Ch. ${manga.latestChapter.number} · ${manga.latestChapter.date}` : 'Aucun chapitre'}
+                  </span>
+                </div>
                 <div className="manga-page__info-item"><TrendingUp size={14} /><span>{manga.views} vues</span></div>
               </div>
 
               <div className="manga-page__genres">
-                {manga.genres.map(g => (
+                {(manga.genres ?? []).map(g => (
                   <Link key={g} to={`/browse?genre=${encodeURIComponent(g)}`} className="manga-page__genre-tag">
                     <Tag size={11} />{g}
                   </Link>
@@ -117,7 +126,9 @@ export default function MangaPage() {
                 </div>
                 <div className="manga-page__stat-divider" />
                 <div className="manga-page__stat">
-                  <span className={`badge badge-${manga.status.toLowerCase()}`}>{manga.status}</span>
+                  <span className={`badge badge-${(manga.status ?? 'unknown').toString().toLowerCase()}`}>
+                    {manga.status ?? '—'}
+                  </span>
                   <span className="manga-page__stat-label">Statut</span>
                 </div>
                 <div className="manga-page__stat-divider" />
@@ -130,10 +141,20 @@ export default function MangaPage() {
               <p className="manga-page__synopsis">{manga.synopsis}</p>
 
               <div className="manga-page__actions">
-                <Link to={`/manga/${manga.slug}/chapter/1`} className="manga-page__btn manga-page__btn--primary">
+                <Link
+                  to={firstChapterNumber ? `/manga/${manga.slug}/chapter/${firstChapterNumber}` : '#'}
+                  className="manga-page__btn manga-page__btn--primary"
+                  aria-disabled={!firstChapterNumber}
+                  onClick={e => { if (!firstChapterNumber) e.preventDefault(); }}
+                >
                   <BookOpen size={16} />Lire le Ch.1
                 </Link>
-                <Link to={`/manga/${manga.slug}/chapter/${manga.totalChapters}`} className="manga-page__btn manga-page__btn--outline">
+                <Link
+                  to={lastChapterNumber ? `/manga/${manga.slug}/chapter/${lastChapterNumber}` : '#'}
+                  className="manga-page__btn manga-page__btn--outline"
+                  aria-disabled={!lastChapterNumber}
+                  onClick={e => { if (!lastChapterNumber) e.preventDefault(); }}
+                >
                   Dernier chapitre
                 </Link>
                 <button
@@ -167,7 +188,7 @@ export default function MangaPage() {
               />
               <div className="manga-page__view-toggle">
                 <button className={`manga-page__view-btn${chapterView === 'list' ? ' active' : ''}`} onClick={() => setChapterView('list')}><List size={16} /></button>
-            
+                <button className={`manga-page__view-btn${chapterView === 'grid' ? ' active' : ''}`} onClick={() => setChapterView('grid')}><Grid size={16} /></button>
               </div>
             </div>
           </div>
@@ -177,6 +198,12 @@ export default function MangaPage() {
               ? Array.from({ length: 8 }, (_, i) => (
                   <div key={i} className="skeleton" style={{ height: 44, borderRadius: 6 }} />
                 ))
+              : filteredChapters.length === 0
+                ? (
+                  <div style={{ padding: '14px 4px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    Aucun chapitre trouvé.
+                  </div>
+                )
               : filteredChapters.map(ch => (
                   <Link key={ch.number} to={`/manga/${slug}/chapter/${ch.number}`} className="chapter-item">
                     <span className="chapter-item__num">Ch. {ch.number}</span>

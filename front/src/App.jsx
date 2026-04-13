@@ -6,13 +6,15 @@ import HomePage from './pages/HomePage';
 import MangaPage from './pages/MangaPage';
 import ReaderPage from './pages/ReaderPage';
 import BrowsePage from './pages/BrowsePage';
+import Register from './pages/Register/Register';
 
 /* The reader page uses its own full-screen layout */
 function Layout({ children }) {
   const { pathname } = useLocation();
   const isReader = pathname.includes('/chapter/');
+  const isRegister = pathname.startsWith('/register');
 
-  if (isReader) return <>{children}</>;
+  if (isReader || isRegister) return <>{children}</>;
 
   return (
     <>
@@ -32,6 +34,7 @@ export default function App() {
         <Route path="/browse"                        element={<BrowsePage />} />
         <Route path="/manga/:slug"                   element={<MangaPage  />} />
         <Route path="/manga/:slug/chapter/:chapter"  element={<ReaderPage />} />
+        <Route path="/register"                      element={<Register   />} />
         {/* Catch-all */}
         <Route path="*" element={<NotFound />} />
       </Routes>

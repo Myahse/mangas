@@ -5,6 +5,10 @@ import './MangaCard.css';
 export default function MangaCard({ manga, variant = 'default' }) {
   if (!manga) return null;
 
+  const statusLabel = manga.status ?? '—';
+  const statusKey = (manga.status ?? 'unknown').toString().toLowerCase();
+  const latest = manga.latestChapter ?? null;
+
   if (variant === 'list') {
     return (
       <Link to={`/manga/${manga.slug}`} className="manga-card manga-card--list">
@@ -12,7 +16,7 @@ export default function MangaCard({ manga, variant = 'default' }) {
         <div className="manga-card__list-info">
           <p className="manga-card__list-title">{manga.title}</p>
           <p className="manga-card__list-meta">
-            Ch. {manga.latestChapter.number} · {manga.latestChapter.date}
+            {latest ? `Ch. ${latest.number} · ${latest.date}` : 'Aucun chapitre'}
           </p>
         </div>
         <div className="manga-card__list-rating rating">
@@ -39,8 +43,8 @@ export default function MangaCard({ manga, variant = 'default' }) {
           {manga.rating}
         </div>
         {/* Status badge */}
-        <span className={`manga-card__status badge badge-${manga.status.toLowerCase()}`}>
-          {manga.status}
+        <span className={`manga-card__status badge badge-${statusKey}`}>
+          {statusLabel}
         </span>
         {/* Hover overlay */}
         <div className="manga-card__overlay">
@@ -54,14 +58,14 @@ export default function MangaCard({ manga, variant = 'default' }) {
       {/* Info */}
       <div className="manga-card__info">
         <h3 className="manga-card__title">{manga.title}</h3>
-        <div className="manga-card__chapters">
-          {manga.genres.slice(0, 2).map(g => (
+        <div className="manga-card__genres">
+          {(manga.genres ?? []).slice(0, 2).map(g => (
             <span key={g} className="manga-card__genre">{g}</span>
           ))}
         </div>
         <div className="manga-card__latest">
           <Clock size={11} />
-          <span>Ch. {manga.latestChapter.number} · {manga.latestChapter.date}</span>
+          <span>{latest ? `Ch. ${latest.number} · ${latest.date}` : 'Aucun chapitre'}</span>
         </div>
       </div>
     </Link>

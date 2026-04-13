@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { TrendingUp, Star, Flame, Sparkles } from 'lucide-react';
+import { TrendingUp, Star, Sparkles } from 'lucide-react';
 import { useFetch, fetchPopularManga, fetchAllManga } from '../../services/api';
 import './PopularSidebar.css';
 
@@ -35,8 +35,11 @@ function RankedItem({ manga, rank }) {
   );
 }
 
-export default function PopularSidebar() {
-  const { data: popular, loading: loadingPop } = useFetch(fetchPopularManga, 10);
+export default function PopularSidebar({ popular: popularProp, loadingPop: loadingPopProp }) {
+  // Allow parent to provide popular list to avoid duplicate fetch/delay.
+  const { data: popularFetched, loading: loadingPopFetched } = useFetch(fetchPopularManga, 10);
+  const popular = popularProp ?? popularFetched;
+  const loadingPop = loadingPopProp ?? loadingPopFetched;
   const { data: allManga, loading: loadingAll } = useFetch(fetchAllManga);
 
   const newManga = allManga

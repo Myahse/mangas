@@ -4,9 +4,13 @@
 /* ─── CSS Variables ─── */
 :root {
   /* Colors */
-  --primary:        #e63946;
-  --primary-dark:   #c1121f;
-  --primary-light:  #ff6b6b;
+  /* Brand palette (orange + red) */
+  --primary:        #ff6a00; /* orange */
+  --primary-dark:   #e63946; /* red */
+  --primary-light:  #ffb26b; /* light orange */
+  --accent:         #e63946; /* red */
+  --accent-dark:    #c1121f;
+  --accent-light:   #ff6b6b;
 
   --bg-dark:        #0d0d0d;
   --bg-dark-2:      #1a1a1a;
@@ -157,8 +161,8 @@ img {
   letter-spacing: 0.04em;
 }
 
-.badge-ongoing  { background: #e8f5e9; color: #2e7d32; }
-.badge-completed { background: #e3f2fd; color: #1565c0; }
+.badge-ongoing  { background: #fff3e0; color: #e65100; }
+.badge-completed { background: #ffebee; color: var(--accent-dark); }
 .badge-hiatus   { background: #fff3e0; color: #e65100; }
 
 /* ─── Rating star ─── */
@@ -168,7 +172,7 @@ img {
   gap: 4px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #f5a623;
+  color: var(--primary);
 }
 
 /* ─── Page padding ─── */

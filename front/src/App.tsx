@@ -7,6 +7,7 @@ import Community from './pages/Community/Community'
 import Profile from './pages/Profile/Profile'
 import MangaDetail from './pages/MangaDetail/MangaDetail'
 import CreateManga from './pages/CreateManga/CreateManga'
+import Register from './pages/Register/Register'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/manga/:id" element={<MangaDetail />} />
         <Route path="/create" element={<CreateManga />} />
+        <Route path="/register" element={<Register />} />
       </Routes>
     </Layout>
     </HomeScrollProvider>
