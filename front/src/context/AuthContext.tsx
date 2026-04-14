@@ -16,17 +16,34 @@ const AUTH_CONTEXT_GLOBAL_KEY = '__mangafrik_auth_context__';
 
 export type AuthUserRole = 'reader' | 'creator';
 
+export type ReaderProfile = {
+  favoriteGenres: string;
+  readingFrequency: 'daily' | 'weekly' | 'sometimes';
+};
+
+export type CreatorProfile = {
+  penName: string;
+  genres: string;
+  publishingGoal: 'web' | 'print' | 'both';
+};
+
 export type AuthUser = {
   role: AuthUserRole;
   displayName: string;
   email: string;
+  profile?: ReaderProfile | CreatorProfile;
 };
 
 type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   logout: () => void;
-  signInAfterRegister: (payload: { role: AuthUserRole; displayName: string; email: string }) => void;
+  signInAfterRegister: (payload: {
+    role: AuthUserRole;
+    displayName: string;
+    email: string;
+    profile?: ReaderProfile | CreatorProfile;
+  }) => void;
   signInAfterLogin: (email: string) => void;
 };
 
@@ -63,11 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => persist(null), [persist]);
 
   const signInAfterRegister = useCallback(
-    (payload: { role: AuthUserRole; displayName: string; email: string }) => {
+    (payload: { role: AuthUserRole; displayName: string; email: string; profile?: ReaderProfile | CreatorProfile }) => {
       persist({
         role: payload.role,
         displayName: payload.displayName.trim(),
         email: payload.email.trim(),
+        profile: payload.profile,
       });
     },
     [persist],

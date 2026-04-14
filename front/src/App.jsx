@@ -9,6 +9,7 @@ import ReaderPage from './pages/ReaderPage';
 import BrowsePage from './pages/BrowsePage';
 import Register from './pages/Register/Register';
 import AccountSectionPage from './pages/Account/AccountSectionPage';
+import ProfilePage from './pages/Account/ProfilePage';
 
 /* The reader page uses its own full-screen layout */
 function Layout({ children }) {
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/compte"                         element={<AccountSectionPage />} />
           <Route path="/compte/abonnements"             element={<AccountSectionPage />} />
           <Route path="/compte/favoris"                 element={<AccountSectionPage />} />
+          <Route path="/compte/profil"                  element={<ProfilePage />} />
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -5,6 +5,7 @@ const TITLES = {
   '/compte': 'Mon espace',
   '/compte/abonnements': 'Mes abonnements',
   '/compte/favoris': 'Mes favoris',
+  '/compte/profil': 'Mon profil',
 };
 
 export default function AccountSectionPage() {

@@ -250,6 +250,27 @@ export default function Navbar() {
                       Panneau créateur
                     </span>
                   )}
+                  {user.role === 'reader' ? (
+                    <Link
+                      to="/compte/profil"
+                      className="navbar__user-menu-item"
+                      role="menuitem"
+                      onClick={closeUserMenu}
+                    >
+                      Mon profil
+                    </Link>
+                  ) : CREATOR_PANEL_URL ? (
+                    <a
+                      href={`${CREATOR_PANEL_URL.replace(/\/+$/, '')}/profil`}
+                      className="navbar__user-menu-item navbar__user-menu-item--external"
+                      role="menuitem"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={closeUserMenu}
+                    >
+                      Mon profil
+                    </a>
+                  ) : null}
                   <Link
                     to="/compte/abonnements"
                     className="navbar__user-menu-item"
@@ -331,6 +352,21 @@ export default function Navbar() {
               ) : (
                 <span className="navbar__mobile-link navbar__mobile-link--disabled">Panneau créateur</span>
               )}
+              {user.role === 'reader' ? (
+                <Link to="/compte/profil" className="navbar__mobile-link" onClick={() => setMenuOpen(false)}>
+                  Mon profil
+                </Link>
+              ) : CREATOR_PANEL_URL ? (
+                <a
+                  href={`${CREATOR_PANEL_URL.replace(/\/+$/, '')}/profil`}
+                  className="navbar__mobile-link navbar__mobile-link--external"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Mon profil
+                </a>
+              ) : null}
               <Link to="/compte/abonnements" className="navbar__mobile-link" onClick={() => setMenuOpen(false)}>
                 Mes abonnements
               </Link>

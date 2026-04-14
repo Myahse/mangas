@@ -84,6 +84,7 @@ export default function Register() {
         role,
         displayName: account.name.trim(),
         email: account.email.trim(),
+        profile: payload.profile,
       })
     }
     navigate('/')

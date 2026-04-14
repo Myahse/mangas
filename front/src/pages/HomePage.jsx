@@ -14,12 +14,7 @@ export default function HomePage() {
       <HeroBanner />
 
       <main className="home__main container">
-        {/* Genre control under hero (disabled for now) */}
-        {/*
-          <section className="home__genres">
-            ...
-          </section>
-        */}
+     
 
         {/* Content + Sidebar */}
         <div className="home__content-row">

@@ -18,8 +18,7 @@ export default function CreatorSectionPage() {
       </nav>
       <h1 className="account-section__title">{title}</h1>
       <p className="account-section__lead">
-        Base du panneau créateur — même structure que « Mes favoris » sur le site lecteur. Reliez cette zone au
-        backend quand il sera prêt.
+        Base du panneau créateur
       </p>
     </div>
   );

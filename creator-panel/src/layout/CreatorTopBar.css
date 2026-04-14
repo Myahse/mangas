@@ -19,11 +19,121 @@
   gap: 16px;
 }
 
+.creator-topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
+}
+
+.creator-topbar__nav-link {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  color: var(--nav-text-muted);
+  transition: var(--transition);
+}
+
+.creator-topbar__nav-link:hover {
+  color: var(--nav-text);
+  background: var(--nav-hover-bg);
+}
+
+.creator-topbar__nav-link.is-active {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--nav-hover-bg) 100%, var(--primary) 10%);
+  border: 1px solid color-mix(in srgb, var(--surface-border) 70%, var(--primary) 30%);
+}
+
 .creator-topbar__actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.creator-topbar__user {
+  position: relative;
+}
+
+.creator-topbar__user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 240px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--nav-text);
+  background: var(--nav-hover-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.creator-topbar__user-trigger:hover {
+  border-color: color-mix(in srgb, var(--surface-border) 60%, var(--primary) 40%);
+}
+
+.creator-topbar__user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creator-topbar__user-chevron {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.creator-topbar__user-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 200px;
+  padding: 8px;
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  box-shadow: var(--nav-shadow);
+  z-index: 1200;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: var(--transition);
+}
+
+.creator-topbar__user:hover .creator-topbar__user-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.creator-topbar__user-item {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--nav-text);
+  font-weight: 800;
+}
+
+.creator-topbar__user-item:hover {
+  background: var(--nav-hover-bg);
+  color: var(--primary);
+}
+
+@media (max-width: 860px) {
+  .creator-topbar__nav {
+    display: none;
+  }
 }
 
 .creator-topbar__icon-btn {
