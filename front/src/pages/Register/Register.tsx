@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { recordUserRegistration } from '@/services/adminBridge'
 import './Register.css'
 
 type Role = 'reader' | 'creator'
@@ -85,6 +86,12 @@ export default function Register() {
         displayName: account.name.trim(),
         email: account.email.trim(),
         profile: payload.profile,
+      })
+      recordUserRegistration({
+        role,
+        displayName: account.name.trim(),
+        email: account.email.trim(),
+        creatorProfile: role === 'creator' ? creator : undefined,
       })
     }
     navigate('/')
