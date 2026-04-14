@@ -4,6 +4,7 @@ import CreatorSectionPage from './pages/CreatorSectionPage';
 import SeriesPage from './pages/SeriesPage';
 import EpisodesPage from './pages/EpisodesPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
+import PublicationsPage from './features/publications/PublicationsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/series" replace />} />
         <Route path="/series" element={<SeriesPage />} />
         <Route path="/episodes" element={<EpisodesPage />} />
+        <Route path="/publications" element={<PublicationsPage />} />
         <Route path="/profil" element={<CreatorProfilePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

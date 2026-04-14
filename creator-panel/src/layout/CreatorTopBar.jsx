@@ -39,6 +39,12 @@ export default function CreatorTopBar() {
           >
             ÉPISODES
           </NavLink>
+          <NavLink
+            to="/publications"
+            className={({ isActive }) => `creator-topbar__nav-link${isActive ? ' is-active' : ''}`}
+          >
+            PUBLICATIONS
+          </NavLink>
         </nav>
         <div className="creator-topbar__actions">
           {isCreator && (

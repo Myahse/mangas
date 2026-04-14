@@ -209,6 +209,8 @@ export default function EpisodesPage() {
       commentsEnabled,
       thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
       images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
+      stats: { views: 0, likes: 0, comments: 0 },
+      comments: [],
     });
 
     alert('Épisode publié.');
