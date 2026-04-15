@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useState } from 'react';
 import { Eye, EyeOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import Modal from './Modal';
 
 import './AuthModal.css';
 
@@ -16,18 +16,6 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
     setMode(initialMode);
   }, [isOpen, initialMode]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') onClose?.();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, onClose]);
-
-  const title = useMemo(() => (mode === 'login' ? 'Connexion' : 'Inscription'), [mode]);
-
-  // Mimic the immo modal flow: first screen -> reveal login form -> optional registration form.
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
 
@@ -105,16 +93,17 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
     setError('');
   };
 
-  if (!isOpen) return null;
+  const panelClassName = `auth-modal__panel${showRegistrationForm ? ' auth-modal__panel--register' : ''}${
+    showLoginForm || showRegistrationForm ? ' auth-modal__panel--expanded' : ''
+  }`;
 
-  return createPortal(
-    <div className="auth-modal__overlay" onMouseDown={onClose} role="presentation">
-      <div
-        className={`auth-modal__panel${showRegistrationForm ? ' auth-modal__panel--register' : ''}${
-          showLoginForm || showRegistrationForm ? ' auth-modal__panel--expanded' : ''
-        }`}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      overlayClassName="auth-modal__overlay"
+      panelClassName={panelClassName}
+    >
         <button className="auth-modal__close" onClick={onClose} aria-label="Fermer">
           <X size={22} />
         </button>
@@ -291,9 +280,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
             <button type="button">Politique de confidentialité</button>.
           </p>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }
 
