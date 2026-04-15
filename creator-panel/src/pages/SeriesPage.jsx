@@ -7,6 +7,31 @@ const CATEGORY_2 = ['Shonen', 'Shojo', 'Seinen', 'Josei', 'Tranche de vie', 'Mys
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 
+/** Reject wrong MIME labels; empty/octet-stream allowed — real format verified via magic bytes. */
+function isAllowedImageMimeType(type) {
+  const t = (type || '').toLowerCase().trim();
+  if (!t) return true;
+  if (t === 'application/octet-stream') return true;
+  return ACCEPTED_TYPES.includes(t);
+}
+
+/** True only for raw JPEG or PNG file signatures (not WebP, GIF, BMP, SVG, etc.). */
+async function isJpegOrPngSignature(file) {
+  const buf = await file.slice(0, 8).arrayBuffer();
+  const b = new Uint8Array(buf);
+  const jpeg = b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  const png =
+    b[0] === 0x89 &&
+    b[1] === 0x50 &&
+    b[2] === 0x4e &&
+    b[3] === 0x47 &&
+    b[4] === 0x0d &&
+    b[5] === 0x0a &&
+    b[6] === 0x1a &&
+    b[7] === 0x0a;
+  return jpeg || png;
+}
+
 async function loadImageFromFile(file) {
   const url = URL.createObjectURL(file);
   try {
@@ -142,12 +167,22 @@ export default function SeriesPage() {
       return;
     }
 
-    if (!ACCEPTED_TYPES.includes(file.type)) {
+    if (!isAllowedImageMimeType(file.type)) {
       setState({ file: null, url: '', dims: null, error: 'Format non autorisé (JPG, JPEG, PNG).' });
       return;
     }
 
     try {
+      const signatureOk = await isJpegOrPngSignature(file);
+      if (!signatureOk) {
+        setState({
+          file: null,
+          url: '',
+          dims: null,
+          error: 'Fichier non valide : importez une image JPG ou PNG (autres formats non acceptés).',
+        });
+        return;
+      }
       // We still read original dims for diagnostics, but we don't block: we auto-resize.
       const originalDims = await getImageDimensions(file);
       const resized = await resizeForUpload({
