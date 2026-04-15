@@ -149,6 +149,40 @@
   color: var(--nav-text);
 }
 
+.navbar__lang-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  min-width: 88px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  color: var(--nav-text);
+  background: color-mix(in srgb, var(--nav-hover-bg) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--panel-border) 85%, transparent);
+  font-weight: 900;
+  font-size: 0.85rem;
+  transition: var(--transition);
+}
+
+.navbar__lang-btn:hover {
+  background: color-mix(in srgb, var(--nav-hover-bg) 100%, var(--primary) 8%);
+  border-color: color-mix(in srgb, var(--panel-border) 70%, var(--primary) 30%);
+}
+
+@media (max-width: 520px) {
+  /* Keep theme toggle visible by shrinking language/currency control */
+  .navbar__lang-btn {
+    min-width: 56px;
+    padding: 0 10px;
+  }
+
+  .navbar__lang-btn__sep,
+  .navbar__lang-btn__currency {
+    display: none;
+  }
+}
+
 .navbar__login-btn {
   padding: 8px 20px;
   font-size: 0.875rem;

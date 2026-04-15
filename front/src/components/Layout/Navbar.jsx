@@ -3,9 +3,13 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, ChevronDown, Sun, Moon, User } from 'lucide-react';
 import { useFetch, fetchAllManga, fetchGenres } from '../../services/api';
 import { useTheme } from '../../hooks/useTheme';
+import { useLocale } from '../../hooks/useLocale';
+import { useCurrency } from '../../hooks/useCurrency';
+import { useI18n } from '../../i18n/i18n';
 import { useAuth } from '../../context/AuthContext';
 import { CREATOR_PANEL_URL } from '../../config/publicUrls';
 import AuthModal from '../auth/AuthModal';
+import PreferencesModal from '../modals/PreferencesModal';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -15,6 +19,7 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [scrolled, setScrolled] = useState(false);
@@ -22,6 +27,9 @@ export default function Navbar() {
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
   const { resolved, setMode } = useTheme();
+  const { label: localeLabel } = useLocale();
+  const { label: currencyLabel } = useCurrency();
+  const { t } = useI18n();
 
   /* Scroll shadow */
   useEffect(() => {
@@ -97,10 +105,10 @@ export default function Navbar() {
   const { data: genres } = useFetch(fetchGenres);
 
   const navLinks = [
-    { label: 'Parcourir', to: '/browse' },
-    { label: 'Genres', to: '/genres', hasDropdown: true },
-    { label: 'Nouveautés', to: '/browse?sort=new' },
-    { label: 'Populaire', to: '/browse?sort=popular' },
+    { label: t('nav.browse', 'Browse'), to: '/browse' },
+    { label: t('nav.genres', 'Genres'), to: '/genres', hasDropdown: true },
+    { label: t('nav.new', 'New'), to: '/browse?sort=new' },
+    { label: t('nav.popular', 'Popular'), to: '/browse?sort=popular' },
   ];
 
   return (
@@ -203,6 +211,18 @@ export default function Navbar() {
             title={resolved === 'dark' ? 'Mode clair' : 'Mode sombre'}
           >
             {resolved === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          {/* Language toggle */}
+          <button
+            type="button"
+            className="navbar__lang-btn"
+            onClick={() => setPrefsOpen(true)}
+            aria-label="Changer la langue"
+            title="Langue"
+          >
+            {localeLabel} <span className="navbar__lang-btn__sep">·</span>{' '}
+            <span className="navbar__lang-btn__currency">{currencyLabel}</span>
           </button>
 
           {/* Compte : menu utilisateur ou connexion */}
@@ -399,6 +419,7 @@ export default function Navbar() {
       initialMode={authMode}
       onClose={() => setAuthOpen(false)}
     />
+    <PreferencesModal isOpen={prefsOpen} onClose={() => setPrefsOpen(false)} />
     </>
   );
 }

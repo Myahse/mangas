@@ -99,3 +99,12 @@ a {
   margin: 0 auto;
   padding: 0 20px;
 }
+
+.creator-page-wrapper {
+  padding-top: var(--navbar-height);
+  min-height: 100vh;
+}
+
+.creator-main {
+  padding: 26px 0 40px;
+}

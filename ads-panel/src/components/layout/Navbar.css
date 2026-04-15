@@ -23,6 +23,7 @@
   display: flex;
   align-items: center;
   gap: 32px;
+  padding: 0 20px;
 }
 
 /* ─── Logo ─── */
@@ -136,10 +137,42 @@
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   color: var(--nav-text);
-  background: var(--nav-hover-bg);
-  border: 1px solid var(--panel-border);
-  font-weight: 800;
+  background: color-mix(in srgb, var(--nav-hover-bg) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--panel-border) 85%, transparent);
+  font-weight: 900;
   font-size: 0.85rem;
+  transition: var(--transition);
+}
+
+.navbar__pill--lang {
+  min-width: 96px;
+  justify-content: center;
+}
+
+.navbar__pill--lang:hover {
+  background: color-mix(in srgb, var(--nav-hover-bg) 100%, var(--primary) 8%);
+  border-color: color-mix(in srgb, var(--panel-border) 70%, var(--primary) 30%);
+}
+
+@media (max-width: 520px) {
+  .navbar__actions {
+    gap: 6px;
+  }
+
+  /* Free up space so the theme toggle stays visible */
+  .navbar__pill:not(.navbar__pill--lang) {
+    display: none;
+  }
+
+  .navbar__pill--lang {
+    min-width: 56px;
+    padding: 8px 10px;
+  }
+
+  .navbar__pill-lang__sep,
+  .navbar__pill-lang__currency {
+    display: none;
+  }
 }
 
 /* ─── Mobile Burger ─── */
