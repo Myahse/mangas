@@ -2,21 +2,29 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme.js';
+import { useLocale } from '../../hooks/useLocale.js';
+import { useCurrency } from '../../hooks/useCurrency.js';
+import PreferencesModal from '../modals/PreferencesModal.jsx';
+import { useI18n } from '../../i18n/i18n.js';
 import './Navbar.css';
-
-const navLinks = [
-  { label: 'Overview', to: '/overview' },
-  { label: 'Requests', to: '/requests' },
-  { label: 'Creators', to: '/creators' },
-  { label: 'Submissions', to: '/submissions' },
-  { label: 'Users', to: '/users' },
-  { label: 'Content', to: '/content' },
-];
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const { resolved, setMode } = useTheme();
+  const { label: localeLabel } = useLocale();
+  const { label: currencyLabel } = useCurrency();
+  const { t } = useI18n();
+
+  const navLinks = [
+    { label: t('nav.overview', 'Overview'), to: '/overview' },
+    { label: t('nav.requests', 'Requests'), to: '/requests' },
+    { label: t('nav.creators', 'Creators'), to: '/creators' },
+    { label: t('nav.submissions', 'Submissions'), to: '/submissions' },
+    { label: t('nav.users', 'Users'), to: '/users' },
+    { label: t('nav.content', 'Content'), to: '/content' },
+  ];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -54,7 +62,17 @@ export default function Navbar() {
         </nav>
 
         <div className="navbar__actions">
-          <span className="navbar__pill">Local mode</span>
+          <span className="navbar__pill">{t('common.localMode', 'Local mode')}</span>
+          <button
+            type="button"
+            className="navbar__pill navbar__pill--lang"
+            onClick={() => setPrefsOpen(true)}
+            aria-label={t('common.preferences', 'Preferences')}
+            title={t('common.preferences', 'Preferences')}
+          >
+            {localeLabel} <span className="navbar__pill-lang__sep">·</span>{' '}
+            <span className="navbar__pill-lang__currency">{currencyLabel}</span>
+          </button>
           <button
             type="button"
             className="navbar__icon-btn"
@@ -90,6 +108,7 @@ export default function Navbar() {
           ))}
         </div>
       ) : null}
+      <PreferencesModal isOpen={prefsOpen} onClose={() => setPrefsOpen(false)} />
     </header>
   );
 }

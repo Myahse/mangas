@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import './SeriesPage.css';
+import { recordMangaSubmission } from '../services/adminBridge';
 
 const CATEGORY_1 = ['Action', 'Aventure', 'Comédie', 'Drame', 'Fantaisie', 'Horreur', 'Romance', 'Sci‑Fi', 'Thriller'];
 const CATEGORY_2 = ['Shonen', 'Shojo', 'Seinen', 'Josei', 'Tranche de vie', 'Mystère', 'Surnaturel'];
@@ -224,7 +225,8 @@ export default function SeriesPage() {
       explicit,
     };
     console.log('creator_create_series_submit', payload);
-    alert('Série créée (demo). À connecter au backend ensuite.');
+    recordMangaSubmission(payload);
+    alert('Série envoyée à la modération (demo).');
   };
 
   return (
