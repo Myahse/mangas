@@ -14,7 +14,13 @@ public class SecurityConfig {
 		return http
 				.csrf(csrf -> csrf.disable())
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers(AppConstants.API_V1 + "/health").permitAll()
+						.requestMatchers(
+								"/swagger-ui.html",
+								"/swagger-ui/**",
+								"/v3/api-docs",
+								"/v3/api-docs/**"
+						).permitAll()
+						.requestMatchers(AppConstants.API_V1 + "/**").permitAll()
 						.anyRequest().authenticated()
 				)
 				.httpBasic(Customizer.withDefaults())
