@@ -172,6 +172,16 @@
   font: inherit;
 }
 
+/* Make native select + dropdown options readable across OS themes */
+.creator__field select {
+  background: var(--surface-bg);
+}
+
+.creator__field select option {
+  background: var(--surface-bg);
+  color: var(--nav-text);
+}
+
 .creator__field textarea {
   resize: vertical;
 }

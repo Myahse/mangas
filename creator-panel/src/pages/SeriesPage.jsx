@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import './SeriesPage.css';
 import { recordMangaSubmission } from '../services/adminBridge';
+import ThumbnailGuideModal from '../components/modals/ThumbnailGuideModal';
 
 const CATEGORY_1 = ['Action', 'Aventure', 'Comédie', 'Drame', 'Fantaisie', 'Horreur', 'Romance', 'Sci‑Fi', 'Thriller'];
 const CATEGORY_2 = ['Shonen', 'Shojo', 'Seinen', 'Josei', 'Tranche de vie', 'Mystère', 'Surnaturel'];
@@ -48,63 +49,13 @@ async function loadImageFromFile(file) {
   }
 }
 
-/**
- * Create an upload-ready image that matches exact dimensions + size constraints.
- * Strategy: center-crop to aspect ratio, resize to target dims, then compress to maxBytes.
- */
-async function resizeForUpload({ file, targetWidth, targetHeight, maxBytes }) {
-  const img = await loadImageFromFile(file);
-  const sw = img.naturalWidth;
-  const sh = img.naturalHeight;
-
-  const targetAspect = targetWidth / targetHeight;
-  const srcAspect = sw / sh;
-
-  // center crop
-  let sx = 0;
-  let sy = 0;
-  let sWidth = sw;
-  let sHeight = sh;
-  if (srcAspect > targetAspect) {
-    // too wide: crop left/right
-    sWidth = Math.round(sh * targetAspect);
-    sx = Math.round((sw - sWidth) / 2);
-  } else if (srcAspect < targetAspect) {
-    // too tall: crop top/bottom
-    sHeight = Math.round(sw / targetAspect);
-    sy = Math.round((sh - sHeight) / 2);
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-  const ctx = canvas.getContext('2d', { alpha: false });
-  if (!ctx) throw new Error('no_canvas');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
-
-  // Prefer jpeg for predictable compression. (Still accept png/jpg inputs.)
-  let quality = 0.9;
-  let blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
-  if (!blob) throw new Error('toBlob_failed');
-
-  // reduce quality until under limit (or floor)
-  while (blob.size > maxBytes && quality > 0.45) {
-    quality = Math.max(0.45, quality - 0.07);
-    // eslint-disable-next-line no-await-in-loop
-    blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
-    if (!blob) throw new Error('toBlob_failed');
-  }
-
-  // If still too large, we keep the best effort and surface an error upstream.
-  const outFile = new File([blob], file.name.replace(/\.(png|jpe?g)$/i, '.jpg'), { type: 'image/jpeg' });
-  return {
-    file: outFile,
-    blob,
-    dims: { width: targetWidth, height: targetHeight },
-    quality,
-  };
+function isAspectRatio({ width, height }, ratioW, ratioH, tolerance = 0.01) {
+  if (!width || !height) return false;
+  // Compare via cross-multiplication to avoid float precision issues.
+  const left = width * ratioH;
+  const right = height * ratioW;
+  const diff = Math.abs(left - right);
+  return diff <= tolerance * right;
 }
 
 function getImageDimensions(file) {
@@ -134,6 +85,8 @@ function formatBytes(n) {
 export default function SeriesPage() {
   const [thumbSquare, setThumbSquare] = useState({ file: null, url: '', dims: null, error: '' });
   const [thumbVertical, setThumbVertical] = useState({ file: null, url: '', dims: null, error: '' });
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideKind, setGuideKind] = useState('square'); // 'square' | 'vertical'
   const [category1, setCategory1] = useState('');
   const [category2, setCategory2] = useState('');
   const [title, setTitle] = useState('');
@@ -155,8 +108,8 @@ export default function SeriesPage() {
   const setThumbWithValidation = async ({ kind, file }) => {
     const expected =
       kind === 'square'
-        ? { width: 1080, height: 1080, maxBytes: 500 * 1024 }
-        : { width: 1080, height: 1920, maxBytes: 700 * 1024 };
+        ? { ratioW: 1, ratioH: 1, label: '1:1', maxBytes: 500 * 1024 }
+        : { ratioW: 9, ratioH: 16, label: '9:16', maxBytes: 700 * 1024 };
     const setState = kind === 'square' ? setThumbSquare : setThumbVertical;
     const current = kind === 'square' ? thumbSquare : thumbVertical;
 
@@ -183,30 +136,33 @@ export default function SeriesPage() {
         });
         return;
       }
-      // We still read original dims for diagnostics, but we don't block: we auto-resize.
-      const originalDims = await getImageDimensions(file);
-      const resized = await resizeForUpload({
-        file,
-        targetWidth: expected.width,
-        targetHeight: expected.height,
-        maxBytes: expected.maxBytes,
-      });
-
-      if (resized.file.size > expected.maxBytes) {
+      const dims = await getImageDimensions(file);
+      const ratioOk = isAspectRatio(dims, expected.ratioW, expected.ratioH);
+      if (!ratioOk) {
         setState({
           file: null,
           url: '',
-          dims: originalDims,
-          error: `Impossible de compresser sous ${Math.round(expected.maxBytes / 1024)} kb (résultat: ${formatBytes(resized.file.size)}).`,
+          dims,
+          error: `Proportions invalides: ${dims.width}×${dims.height}px. Requis: ${expected.label}.`,
         });
         return;
       }
 
-      const url = URL.createObjectURL(resized.file);
+      if (file.size > expected.maxBytes) {
+        setState({
+          file: null,
+          url: '',
+          dims,
+          error: `Fichier trop lourd: ${formatBytes(file.size)}. Maximum: ${Math.round(expected.maxBytes / 1024)} kb.`,
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
       setState({
-        file: resized.file,
+        file,
         url,
-        dims: resized.dims,
+        dims,
         error: '',
       });
     } catch {
@@ -284,7 +240,14 @@ export default function SeriesPage() {
               <div className="creator__thumb-block">
                 <div className="creator__section-head">
                   <h2 className="creator__section-title">Thumbnail carré</h2>
-                  <button type="button" className="creator__guide-btn">
+                  <button
+                    type="button"
+                    className="creator__guide-btn"
+                    onClick={() => {
+                      setGuideKind('square');
+                      setGuideOpen(true);
+                    }}
+                  >
                     Guide
                   </button>
                 </div>
@@ -341,8 +304,8 @@ export default function SeriesPage() {
                   )}
                 </div>
                 <p className="creator__help creator__help--mt">
-                  L'image doit avoir un format de 1080 x 1080 px, et ne doit pas dépasser 500 kb. Seuls les formats JPG,
-                  JPEG ou PNG sont autorisés.
+                  L'image doit être au format carré (1:1) et ne doit pas dépasser 500 kb. Seuls les formats JPG, JPEG ou
+                  PNG sont autorisés.
                 </p>
                 {squareError && <div className="creator__error">{squareError}</div>}
               </div>
@@ -350,7 +313,14 @@ export default function SeriesPage() {
               <div className="creator__thumb-block">
                 <div className="creator__section-head">
                   <h2 className="creator__section-title">Thumbnail vertical</h2>
-                  <button type="button" className="creator__guide-btn">
+                  <button
+                    type="button"
+                    className="creator__guide-btn"
+                    onClick={() => {
+                      setGuideKind('vertical');
+                      setGuideOpen(true);
+                    }}
+                  >
                     Guide
                   </button>
                 </div>
@@ -407,8 +377,8 @@ export default function SeriesPage() {
                   )}
                 </div>
                 <p className="creator__help creator__help--mt">
-                  L'image doit avoir un format de 1080 x 1920 px, et ne doit pas dépasser 700 kb. Seuls les formats JPG,
-                  JPEG ou PNG sont autorisés.
+                  L'image doit être au format vertical (9:16) et ne doit pas dépasser 700 kb. Seuls les formats JPG, JPEG
+                  ou PNG sont autorisés.
                 </p>
                 {verticalError && <div className="creator__error">{verticalError}</div>}
               </div>
@@ -509,13 +479,26 @@ export default function SeriesPage() {
               <button type="button" className="creator__aside-link">
                 Importer les instructions
               </button>
-              <button type="button" className="creator__aside-link">
+              <button
+                type="button"
+                className="creator__aside-link"
+                onClick={() => {
+                  setGuideKind('square');
+                  setGuideOpen(true);
+                }}
+              >
                 Thumbnail carré — Guide
               </button>
             </div>
           </div>
         </aside>
       </div>
+
+      <ThumbnailGuideModal
+        isOpen={guideOpen}
+        kind={guideKind}
+        onClose={() => setGuideOpen(false)}
+      />
     </div>
   );
 }
