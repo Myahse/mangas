@@ -15,6 +15,7 @@ export function writeJson(key, value) {
 }
 
 export function randomId(prefix = '') {
-  return `${prefix}${crypto.randomUUID()}`;
+  void prefix;
+  return crypto.randomUUID();
 }
 
