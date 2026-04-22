@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SeriesPage.css';
-import { recordMangaSubmission } from '../services/adminBridge';
+import { creatorApi } from '../services/api';
 import AfterSeriesCreateModal from '../components/modals/AfterSeriesCreateModal';
 
 const CATEGORY_1 = ['Action', 'Aventure', 'Comédie', 'Drame', 'Fantaisie', 'Horreur', 'Romance', 'Sci‑Fi', 'Thriller'];
@@ -60,6 +60,7 @@ function formatBytes(n) {
 
 export default function SeriesPage() {
   const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
   const [thumbSquare, setThumbSquare] = useState({ file: null, url: '', dims: null, error: '' });
   const [thumbVertical, setThumbVertical] = useState({ file: null, url: '', dims: null, error: '' });
   const [category1, setCategory1] = useState('');
@@ -85,8 +86,8 @@ export default function SeriesPage() {
   const setThumbWithValidation = async ({ kind, file }) => {
     const expected =
       kind === 'square'
-        ? { width: 1080, height: 1080, maxBytes: 500 * 1024 }
-        : { width: 1080, height: 1920, maxBytes: 700 * 1024 };
+        ? { width: 1080, height: 1080, maxBytes: 800 * 1024 }
+        : { width: 1080, height: 1920, maxBytes: 800 * 1024 };
     const setState = kind === 'square' ? setThumbSquare : setThumbVertical;
     const current = kind === 'square' ? thumbSquare : thumbVertical;
 
@@ -172,7 +173,7 @@ export default function SeriesPage() {
     summary.length <= 500 &&
     acceptPolicies;
 
-  const onCreate = (e) => {
+  const onCreate = async (e) => {
     e.preventDefault();
     if (!canCreate) return;
     const payload = {
@@ -188,9 +189,16 @@ export default function SeriesPage() {
       explicit,
     };
     console.log('creator_create_series_submit', payload);
-    recordMangaSubmission(payload);
-    setCreatedSeriesTitle(payload.title);
-    setAfterCreateOpen(true);
+    try {
+      setSubmitting(true);
+      await creatorApi.createSubmission(payload);
+      setCreatedSeriesTitle(payload.title);
+      setAfterCreateOpen(true);
+    } catch (err) {
+      alert(`Impossible d'envoyer la série. ${(err && err.message) || ''}`.trim());
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -270,7 +278,7 @@ export default function SeriesPage() {
                   )}
                 </div>
                 <p className="creator__help creator__help--mt">
-                  L'image doit avoir un format de 1080 x 1080 px, et ne doit pas dépasser 500 kb. Seuls les formats JPG,
+                  L'image doit avoir un format de 1080 x 1080 px, et ne doit pas dépasser 800 kb. Seuls les formats JPG,
                   JPEG ou PNG sont autorisés.
                 </p>
                 {squareError && <div className="creator__error">{squareError}</div>}
@@ -336,7 +344,7 @@ export default function SeriesPage() {
                   )}
                 </div>
                 <p className="creator__help creator__help--mt">
-                  L'image doit avoir un format de 1080 x 1920 px, et ne doit pas dépasser 700 kb. Seuls les formats JPG,
+                  L'image doit avoir un format de 1080 x 1920 px, et ne doit pas dépasser 800 kb. Seuls les formats JPG,
                   JPEG ou PNG sont autorisés.
                 </p>
                 {verticalError && <div className="creator__error">{verticalError}</div>}
@@ -417,7 +425,7 @@ export default function SeriesPage() {
               </section>
 
               <div className="creator__actions">
-                <button className="creator__submit" type="submit" disabled={!canCreate}>
+                <button className="creator__submit" type="submit" disabled={!canCreate || submitting}>
                   Créer une série
                 </button>
               </div>

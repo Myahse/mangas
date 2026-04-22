@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../../pages/EpisodesPage.css';
-import { saveEpisodeDraft, savePublishedEpisode } from './storage';
+import { creatorApi } from '../../services/api';
 import { formatBytes, isValidAlphaNumFilename, resizeForUpload } from './utils';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-const THUMB_MAX_BYTES = 500 * 1024;
+const THUMB_MAX_BYTES = 800 * 1024;
 const EP_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 const EP_TOTAL_MAX_BYTES = 20 * 1024 * 1024;
 const EP_TOTAL_MAX_FILES = 100;
@@ -52,6 +52,7 @@ export default function EpisodesPage() {
   const [seriesTitle, setSeriesTitle] = useState('');
   const [episodeTitle, setEpisodeTitle] = useState('');
   const [creatorNote, setCreatorNote] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const [thumb, setThumb] = useState({ file: null, url: '', error: '' });
   const thumbInputRef = useRef(null);
@@ -202,43 +203,47 @@ export default function EpisodesPage() {
     if (filesInputRef.current) filesInputRef.current.value = '';
   };
 
-  const onSaveDraft = () => {
+  const onSaveDraft = async () => {
     if (!canSaveDraft) return;
-
-    saveEpisodeDraft({
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      seriesTitle,
-      episodeTitle: episodeTitle.trim(),
-      creatorNote: creatorNote.trim() || null,
-      commentsEnabled,
-      publishMode,
-      publishAt: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : 'now',
-      thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
-      images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
-    });
-
-    alert('Brouillon enregistré.');
+    try {
+      setSaving(true);
+      await creatorApi.createDraft({
+        seriesTitle,
+        episodeTitle: episodeTitle.trim(),
+        creatorNote: creatorNote.trim() || null,
+        commentsEnabled,
+        publishMode,
+        publishAt: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : 'now',
+        thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
+        images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
+      });
+      alert('Brouillon enregistré.');
+    } catch (err) {
+      alert(`Impossible d'enregistrer le brouillon. ${(err && err.message) || ''}`.trim());
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const onPublish = () => {
+  const onPublish = async () => {
     if (!canPublish) return;
-
-    savePublishedEpisode({
-      id: crypto.randomUUID(),
-      publishedAt: new Date().toISOString(),
-      scheduledFor: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : null,
-      seriesTitle,
-      episodeTitle: episodeTitle.trim(),
-      creatorNote: creatorNote.trim() || null,
-      commentsEnabled,
-      thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
-      images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
-      stats: { views: 0, likes: 0, comments: 0 },
-      comments: [],
-    });
-
-    alert('Épisode publié.');
+    try {
+      setSaving(true);
+      await creatorApi.createPublished({
+        scheduledFor: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : null,
+        seriesTitle,
+        episodeTitle: episodeTitle.trim(),
+        creatorNote: creatorNote.trim() || null,
+        commentsEnabled,
+        thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
+        images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
+      });
+      alert('Épisode publié.');
+    } catch (err) {
+      alert(`Impossible de publier l'épisode. ${(err && err.message) || ''}`.trim());
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -414,7 +419,7 @@ export default function EpisodesPage() {
               </div>
             </div>
 
-            <button type="button" className="ep__btn ep__btn--primary" disabled={!canSaveDraft} onClick={onSaveDraft}>
+            <button type="button" className="ep__btn ep__btn--primary" disabled={!canSaveDraft || saving} onClick={onSaveDraft}>
               Enregistrer un brouillon
             </button>
           </div>
@@ -478,7 +483,7 @@ export default function EpisodesPage() {
               </div>
             )}
 
-            <button type="button" className="ep__btn ep__btn--publish" disabled={!canPublish} onClick={onPublish}>
+            <button type="button" className="ep__btn ep__btn--publish" disabled={!canPublish || saving} onClick={onPublish}>
               Publier un épisode
             </button>
           </div>

@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { addPublishedEpisodeComment, loadPublishedEpisodes, togglePublishedEpisodeLike, updatePublishedEpisode } from '../episodes/storage';
-import { listMyMangaSubmissions } from '../../services/adminBridge';
+import { creatorApi } from '../../services/api';
 import '../publications/PublicationsPage.css';
 
 function formatWhen(iso) {
@@ -16,6 +15,9 @@ function formatWhen(iso) {
 export default function PublicationsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [commentTextById, setCommentTextById] = useState({});
+  const [episodes, setEpisodes] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -24,12 +26,28 @@ export default function PublicationsPage() {
     return (params.get('tab') || 'episodes').toLowerCase() === 'series' ? 'series' : 'episodes';
   }, [location.search]);
 
-  const episodes = useMemo(() => {
-    void refreshKey;
-    return loadPublishedEpisodes();
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        void refreshKey;
+        const [eps, subs] = await Promise.all([creatorApi.listPublished(), creatorApi.listMySubmissions()]);
+        if (cancelled) return;
+        setEpisodes(Array.isArray(eps) ? eps : []);
+        setSubmissions(Array.isArray(subs) ? subs : []);
+      } catch (err) {
+        if (!cancelled) {
+          alert(`Impossible de charger les publications. ${(err && err.message) || ''}`.trim());
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [refreshKey]);
-
-  const submissions = useMemo(() => listMyMangaSubmissions(), []);
   const counts = useMemo(() => {
     const pending = submissions.filter((s) => s.status === 'pending').length;
     const approved = submissions.filter((s) => s.status === 'approved').length;
@@ -59,7 +77,9 @@ export default function PublicationsPage() {
         </button>
       </div>
 
-      {tab === 'episodes' ? (
+      {loading ? (
+        <div className="pub__empty">Chargement…</div>
+      ) : tab === 'episodes' ? (
         episodes.length === 0 ? (
           <div className="pub__empty">Aucune publication pour le moment. Publiez un épisode dans l’onglet ÉPISODES.</div>
         ) : (
@@ -97,9 +117,13 @@ export default function PublicationsPage() {
                   <button
                     type="button"
                     className="pub__btn"
-                    onClick={() => {
-                      togglePublishedEpisodeLike(ep.id);
-                      setRefreshKey((k) => k + 1);
+                    onClick={async () => {
+                      try {
+                        await creatorApi.addLike(ep.id);
+                        setRefreshKey((k) => k + 1);
+                      } catch (err) {
+                        alert(`Impossible d'ajouter un like. ${(err && err.message) || ''}`.trim());
+                      }
                     }}
                   >
                     +1 Like
@@ -107,9 +131,13 @@ export default function PublicationsPage() {
                   <button
                     type="button"
                     className="pub__btn"
-                    onClick={() => {
-                      updatePublishedEpisode(ep.id, (e) => ({ ...e, stats: { ...(e.stats ?? {}), views: (e.stats?.views ?? 0) + 1 } }));
-                      setRefreshKey((k) => k + 1);
+                    onClick={async () => {
+                      try {
+                        await creatorApi.addView(ep.id);
+                        setRefreshKey((k) => k + 1);
+                      } catch (err) {
+                        alert(`Impossible d'ajouter une vue. ${(err && err.message) || ''}`.trim());
+                      }
                     }}
                   >
                     +1 Vue (demo)
@@ -127,12 +155,16 @@ export default function PublicationsPage() {
                     <button
                       type="button"
                       className="pub__btn pub__btn--primary"
-                      onClick={() => {
+                      onClick={async () => {
                         const text = (commentTextById[ep.id] ?? '').trim();
                         if (!text) return;
-                        addPublishedEpisodeComment(ep.id, { author: 'Lecteur', text });
-                        setCommentTextById((p) => ({ ...p, [ep.id]: '' }));
-                        setRefreshKey((k) => k + 1);
+                        try {
+                          await creatorApi.addComment(ep.id, { author: 'Lecteur', text });
+                          setCommentTextById((p) => ({ ...p, [ep.id]: '' }));
+                          setRefreshKey((k) => k + 1);
+                        } catch (err) {
+                          alert(`Impossible d'ajouter un commentaire. ${(err && err.message) || ''}`.trim());
+                        }
                       }}
                     >
                       Ajouter
