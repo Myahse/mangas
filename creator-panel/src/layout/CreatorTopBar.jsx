@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Sun, Moon, User, ChevronDown } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useLocale } from '../hooks/useLocale';
@@ -11,6 +11,7 @@ import './CreatorTopBar.css';
 const STORAGE_KEY = 'mangafrik_session';
 
 export default function CreatorTopBar() {
+  const location = useLocation();
   const { resolved, setMode } = useTheme();
   const { label: localeLabel } = useLocale();
   const { label: currencyLabel } = useCurrency();
@@ -25,6 +26,11 @@ export default function CreatorTopBar() {
   }
 
   const isCreator = session?.role === 'creator';
+  const isSeriesStatusActive = (() => {
+    if (location.pathname !== '/publications') return false;
+    const tab = new URLSearchParams(location.search).get('tab');
+    return (tab || '').toLowerCase() === 'series';
+  })();
 
   return (
     <>
@@ -58,6 +64,12 @@ export default function CreatorTopBar() {
             >
               {t('nav.publications', 'Publications').toUpperCase()}
             </NavLink>
+            <Link
+              to="/publications?tab=series"
+              className={`creator-topbar__nav-link${isSeriesStatusActive ? ' is-active' : ''}`}
+            >
+              {t('nav.status', 'Status').toUpperCase()}
+            </Link>
           </nav>
           <div className="creator-topbar__actions">
             {isCreator && (

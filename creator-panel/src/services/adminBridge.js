@@ -26,7 +26,7 @@ export function recordMangaSubmission(input) {
     session = null;
   }
 
-  submissions.unshift({
+  const row = {
     id: randomId('ms_'),
     status: 'pending', // pending | approved | rejected | resubmit
     createdAt,
@@ -40,8 +40,28 @@ export function recordMangaSubmission(input) {
       reason: '',
       reviewedAt: null,
     },
-  });
+  };
+
+  submissions.unshift(row);
 
   localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(submissions.slice(0, 500)));
+  return row;
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function listMyMangaSubmissions() {
+  const session = loadSession();
+  const email = (session?.email || '').toLowerCase().trim();
+  const submissions = safeParse(localStorage.getItem(SUBMISSIONS_KEY), []);
+  const mine = email ? submissions.filter((s) => (s?.creator?.email || '').toLowerCase().trim() === email) : submissions;
+  return mine.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 

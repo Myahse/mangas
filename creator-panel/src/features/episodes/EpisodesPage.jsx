@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import '../../pages/EpisodesPage.css';
 import { saveEpisodeDraft, savePublishedEpisode } from './storage';
 import { formatBytes, isValidAlphaNumFilename, resizeForUpload } from './utils';
@@ -8,6 +9,23 @@ const THUMB_MAX_BYTES = 500 * 1024;
 const EP_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 const EP_TOTAL_MAX_BYTES = 20 * 1024 * 1024;
 const EP_TOTAL_MAX_FILES = 100;
+
+function getImageDimensions(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const dims = { width: img.naturalWidth, height: img.naturalHeight };
+      URL.revokeObjectURL(url);
+      resolve(dims);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('invalid_image'));
+    };
+    img.src = url;
+  });
+}
 
 function getPublishBlockingReasons({
   episodeTitle,
@@ -30,7 +48,8 @@ function getPublishBlockingReasons({
 }
 
 export default function EpisodesPage() {
-  const [seriesTitle] = useState('momo dinio');
+  const location = useLocation();
+  const [seriesTitle, setSeriesTitle] = useState('');
   const [episodeTitle, setEpisodeTitle] = useState('');
   const [creatorNote, setCreatorNote] = useState('');
 
@@ -46,6 +65,13 @@ export default function EpisodesPage() {
   const [publishMode, setPublishMode] = useState('now'); // 'now' | 'schedule'
   const [publishDate, setPublishDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [publishTime, setPublishTime] = useState('09:40');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = (params.get('seriesTitle') || '').trim();
+    if (fromUrl) setSeriesTitle(fromUrl);
+    // only when URL changes
+  }, [location.search]);
 
   useEffect(() => {
     return () => {
@@ -89,18 +115,17 @@ export default function EpisodesPage() {
       return;
     }
     try {
-      const resized = await resizeForUpload({
-        file,
-        targetWidth: 202,
-        targetHeight: 142,
-        maxBytes: THUMB_MAX_BYTES,
-      });
-      if (resized.file.size > THUMB_MAX_BYTES) {
-        setThumb({ file: null, url: '', error: `Impossible de compresser sous 500kb (résultat: ${formatBytes(resized.file.size)}).` });
+      const dims = await getImageDimensions(file);
+      if (dims.width !== 202 || dims.height !== 142) {
+        setThumb({ file: null, url: '', error: `Dimensions invalides: ${dims.width}×${dims.height}px. Requis: 202×142px.` });
         return;
       }
-      const url = URL.createObjectURL(resized.file);
-      setThumb({ file: resized.file, url, error: '' });
+      if (file.size > THUMB_MAX_BYTES) {
+        setThumb({ file: null, url: '', error: `Fichier trop lourd: ${formatBytes(file.size)}. Maximum: 500kb.` });
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      setThumb({ file, url, error: '' });
     } catch {
       setThumb({ file: null, url: '', error: "Impossible de lire l'image. Essayez un autre fichier." });
     }
@@ -270,8 +295,12 @@ export default function EpisodesPage() {
           {/* Titles */}
           <div className="ep__section">
             <div className="ep__row">
-              <div className="ep__label">Titre de séries : {seriesTitle}</div>
+              <div className="ep__label">Titre de séries</div>
             </div>
+            <label className="ep__field">
+              <span>Série</span>
+              <input value={seriesTitle} onChange={(e) => setSeriesTitle(e.target.value.slice(0, 80))} placeholder="Nom de la série" />
+            </label>
             <label className="ep__field">
               <span>Titre d'épisode</span>
               <input value={episodeTitle} onChange={(e) => setEpisodeTitle(e.target.value.slice(0, 60))} placeholder="Moins de 60 caractères" />

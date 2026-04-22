@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './SeriesPage.css';
 import { recordMangaSubmission } from '../services/adminBridge';
+import AfterSeriesCreateModal from '../components/modals/AfterSeriesCreateModal';
 
 const CATEGORY_1 = ['Action', 'Aventure', 'Comédie', 'Drame', 'Fantaisie', 'Horreur', 'Romance', 'Sci‑Fi', 'Thriller'];
 const CATEGORY_2 = ['Shonen', 'Shojo', 'Seinen', 'Josei', 'Tranche de vie', 'Mystère', 'Surnaturel'];
@@ -32,81 +34,6 @@ async function isJpegOrPngSignature(file) {
   return jpeg || png;
 }
 
-async function loadImageFromFile(file) {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = new Image();
-    img.decoding = 'async';
-    img.src = url;
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
-    return img;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-/**
- * Create an upload-ready image that matches exact dimensions + size constraints.
- * Strategy: center-crop to aspect ratio, resize to target dims, then compress to maxBytes.
- */
-async function resizeForUpload({ file, targetWidth, targetHeight, maxBytes }) {
-  const img = await loadImageFromFile(file);
-  const sw = img.naturalWidth;
-  const sh = img.naturalHeight;
-
-  const targetAspect = targetWidth / targetHeight;
-  const srcAspect = sw / sh;
-
-  // center crop
-  let sx = 0;
-  let sy = 0;
-  let sWidth = sw;
-  let sHeight = sh;
-  if (srcAspect > targetAspect) {
-    // too wide: crop left/right
-    sWidth = Math.round(sh * targetAspect);
-    sx = Math.round((sw - sWidth) / 2);
-  } else if (srcAspect < targetAspect) {
-    // too tall: crop top/bottom
-    sHeight = Math.round(sw / targetAspect);
-    sy = Math.round((sh - sHeight) / 2);
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-  const ctx = canvas.getContext('2d', { alpha: false });
-  if (!ctx) throw new Error('no_canvas');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
-
-  // Prefer jpeg for predictable compression. (Still accept png/jpg inputs.)
-  let quality = 0.9;
-  let blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
-  if (!blob) throw new Error('toBlob_failed');
-
-  // reduce quality until under limit (or floor)
-  while (blob.size > maxBytes && quality > 0.45) {
-    quality = Math.max(0.45, quality - 0.07);
-    // eslint-disable-next-line no-await-in-loop
-    blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
-    if (!blob) throw new Error('toBlob_failed');
-  }
-
-  // If still too large, we keep the best effort and surface an error upstream.
-  const outFile = new File([blob], file.name.replace(/\.(png|jpe?g)$/i, '.jpg'), { type: 'image/jpeg' });
-  return {
-    file: outFile,
-    blob,
-    dims: { width: targetWidth, height: targetHeight },
-    quality,
-  };
-}
-
 function getImageDimensions(file) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -132,6 +59,7 @@ function formatBytes(n) {
 }
 
 export default function SeriesPage() {
+  const navigate = useNavigate();
   const [thumbSquare, setThumbSquare] = useState({ file: null, url: '', dims: null, error: '' });
   const [thumbVertical, setThumbVertical] = useState({ file: null, url: '', dims: null, error: '' });
   const [category1, setCategory1] = useState('');
@@ -140,6 +68,8 @@ export default function SeriesPage() {
   const [summary, setSummary] = useState('');
   const [acceptPolicies, setAcceptPolicies] = useState(false);
   const [explicit, setExplicit] = useState(false);
+  const [afterCreateOpen, setAfterCreateOpen] = useState(false);
+  const [createdSeriesTitle, setCreatedSeriesTitle] = useState('');
 
   const squareInputRef = useRef(null);
   const verticalInputRef = useRef(null);
@@ -183,32 +113,30 @@ export default function SeriesPage() {
         });
         return;
       }
-      // We still read original dims for diagnostics, but we don't block: we auto-resize.
-      const originalDims = await getImageDimensions(file);
-      const resized = await resizeForUpload({
-        file,
-        targetWidth: expected.width,
-        targetHeight: expected.height,
-        maxBytes: expected.maxBytes,
-      });
-
-      if (resized.file.size > expected.maxBytes) {
+      const dims = await getImageDimensions(file);
+      const dimsOk = dims?.width === expected.width && dims?.height === expected.height;
+      if (!dimsOk) {
         setState({
           file: null,
           url: '',
-          dims: originalDims,
-          error: `Impossible de compresser sous ${Math.round(expected.maxBytes / 1024)} kb (résultat: ${formatBytes(resized.file.size)}).`,
+          dims,
+          error: `Dimensions invalides: ${dims?.width}×${dims?.height}px. Requis: ${expected.width}×${expected.height}px.`,
         });
         return;
       }
 
-      const url = URL.createObjectURL(resized.file);
-      setState({
-        file: resized.file,
-        url,
-        dims: resized.dims,
-        error: '',
-      });
+      if (file.size > expected.maxBytes) {
+        setState({
+          file: null,
+          url: '',
+          dims,
+          error: `Fichier trop lourd: ${formatBytes(file.size)}. Maximum: ${Math.round(expected.maxBytes / 1024)} kb.`,
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      setState({ file, url, dims, error: '' });
     } catch {
       setState({ file: null, url: '', dims: null, error: "Impossible de lire l'image. Essayez un autre fichier." });
     }
@@ -261,7 +189,8 @@ export default function SeriesPage() {
     };
     console.log('creator_create_series_submit', payload);
     recordMangaSubmission(payload);
-    alert('Série envoyée à la modération (demo).');
+    setCreatedSeriesTitle(payload.title);
+    setAfterCreateOpen(true);
   };
 
   return (
@@ -516,6 +445,19 @@ export default function SeriesPage() {
           </div>
         </aside>
       </div>
+      <AfterSeriesCreateModal
+        isOpen={afterCreateOpen}
+        title={createdSeriesTitle}
+        onClose={() => setAfterCreateOpen(false)}
+        onUploadNow={() => {
+          setAfterCreateOpen(false);
+          navigate(`/episodes?seriesTitle=${encodeURIComponent(createdSeriesTitle || '')}`);
+        }}
+        onDoLater={() => {
+          setAfterCreateOpen(false);
+          navigate('/publications?tab=series');
+        }}
+      />
     </div>
   );
 }
