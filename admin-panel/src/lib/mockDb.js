@@ -1,9 +1,11 @@
 import { randomId, readJson, writeJson } from './storage.js';
 
-const DB_KEY = 'db_v1';
-const USERS_KEY = 'mangaafrik_users_v1';
-const CREATOR_REQUESTS_KEY = 'mangaafrik_creator_requests_v1';
-const SUBMISSIONS_KEY = 'mangaafrik_manga_submissions_v1';
+const DB_KEY = import.meta?.env?.VITE_ADMIN_DB_KEY || 'db_v1';
+const USERS_KEY = import.meta?.env?.VITE_USERS_KEY || 'mangaafrik_users_v1';
+const CREATOR_REQUESTS_KEY =
+  import.meta?.env?.VITE_CREATOR_REQUESTS_KEY || 'mangaafrik_creator_requests_v1';
+const SUBMISSIONS_KEY =
+  import.meta?.env?.VITE_CREATOR_SUBMISSIONS_KEY || 'mangaafrik_manga_submissions_v1';
 
 function safeParse(raw, fallback) {
   try {

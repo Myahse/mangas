@@ -22,8 +22,10 @@ export type CreatorRequestRow = {
   reviewedAt?: string;
 };
 
-const USERS_KEY = 'mangaafrik_users_v1';
-const CREATOR_REQUESTS_KEY = 'mangaafrik_creator_requests_v1';
+const USERS_KEY =
+  import.meta?.env?.VITE_USERS_KEY || 'mangaafrik_users_v1';
+const CREATOR_REQUESTS_KEY =
+  import.meta?.env?.VITE_CREATOR_REQUESTS_KEY || 'mangaafrik_creator_requests_v1';
 
 function safeParse<T>(raw: string | null, fallback: T): T {
   try {

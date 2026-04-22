@@ -1,5 +1,7 @@
-const SUBMISSIONS_KEY = 'mangaafrik_manga_submissions_v1';
-const SESSION_KEY = 'mangafrik_session';
+const SUBMISSIONS_KEY =
+  import.meta?.env?.VITE_CREATOR_SUBMISSIONS_KEY || 'mangaafrik_manga_submissions_v1';
+const SESSION_KEY =
+  import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
 
 function safeParse(raw, fallback) {
   try {

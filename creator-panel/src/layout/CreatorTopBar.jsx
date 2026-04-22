@@ -8,7 +8,8 @@ import PreferencesModal from '../components/modals/PreferencesModal';
 import { useI18n } from '../i18n/i18n';
 import './CreatorTopBar.css';
 
-const STORAGE_KEY = 'mangafrik_session';
+const STORAGE_KEY =
+  import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
 
 export default function CreatorTopBar() {
   const location = useLocation();

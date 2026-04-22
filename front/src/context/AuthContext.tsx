@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from 'react';
 
-const STORAGE_KEY = 'mangafrik_session';
+const STORAGE_KEY =
+  import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
 const AUTH_CONTEXT_GLOBAL_KEY = '__mangafrik_auth_context__';

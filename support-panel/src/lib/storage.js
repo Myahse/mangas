@@ -1,4 +1,5 @@
-const PREFIX = 'mangaafrik_support:';
+const PREFIX =
+  import.meta?.env?.VITE_SUPPORT_STORAGE_PREFIX || 'mangaafrik_support:';
 
 export function readJson(key, fallback) {
   try {
