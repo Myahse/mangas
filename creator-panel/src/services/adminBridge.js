@@ -11,7 +11,7 @@ function safeParse(raw, fallback) {
 }
 
 function randomId(prefix) {
-  return `${prefix}${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`;
+  return `${prefix}${crypto.randomUUID()}`;
 }
 
 export function recordMangaSubmission(input) {

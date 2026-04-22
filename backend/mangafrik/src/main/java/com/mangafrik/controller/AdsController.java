@@ -7,13 +7,16 @@ import com.mangafrik.dto.ads.AdsDtos.CreateHeroAd;
 import com.mangafrik.dto.ads.AdsDtos.CreateNotification;
 import com.mangafrik.dto.ads.AdsDtos.CreateSystemNotice;
 import com.mangafrik.dto.ads.AdsDtos.HeroAdDto;
+import com.mangafrik.dto.creator.MangaSubmissionDto;
 import com.mangafrik.dto.ads.AdsDtos.NotificationDto;
 import com.mangafrik.dto.ads.AdsDtos.SystemNoticeDto;
 import com.mangafrik.dto.ads.AdsDtos.UpdateHeroAd;
 import com.mangafrik.dto.ads.AdsDtos.UpdateNotification;
 import com.mangafrik.dto.ads.AdsDtos.UpdateSystemNotice;
 import com.mangafrik.services.ads.AdsStore;
+import com.mangafrik.services.creator.CreatorStore;
 import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -27,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(AppConstants.API_V1 + "/ads")
 public class AdsController {
 	private final AdsStore adsStore;
+	private final CreatorStore creatorStore;
 
-	public AdsController(AdsStore adsStore) {
+	public AdsController(AdsStore adsStore, CreatorStore creatorStore) {
 		this.adsStore = adsStore;
+		this.creatorStore = creatorStore;
 	}
 
 	@GetMapping("/summary")
@@ -100,6 +105,38 @@ public class AdsController {
 	@DeleteMapping("/system-notices/{id}")
 	public boolean deleteSystemNotice(@PathVariable String id) {
 		return adsStore.deleteSystemNotice(id);
+	}
+
+	/**
+	 * Returns vertical manga thumbnails coming from creator submissions.
+	 * This enables the ads-panel to reuse the vertical cover as an ad image (demo).
+	 */
+	@GetMapping("/manga-thumbnails/vertical")
+	public List<Map<String, Object>> verticalMangaThumbnails() {
+		return creatorStore.listSubmissions(null).stream()
+				.map((MangaSubmissionDto s) -> {
+					Object payloadObj = s.payload();
+					if (!(payloadObj instanceof Map<?, ?> payload)) return null;
+					Object thumbsObj = payload.get("thumbnails");
+					if (!(thumbsObj instanceof Map<?, ?> thumbs)) return null;
+					Object verticalObj = thumbs.get("vertical");
+					if (!(verticalObj instanceof Map<?, ?> vertical)) return null;
+					Object dataUrl = vertical.get("dataUrl");
+					if (!(dataUrl instanceof String) || ((String) dataUrl).isBlank()) return null;
+
+					String title = "";
+					Object t = payload.get("title");
+					if (t instanceof String) title = (String) t;
+					return Map.of(
+							"submissionId", s.id(),
+							"status", s.status(),
+							"title", title,
+							"createdAt", s.createdAt().toString(),
+							"dataUrl", dataUrl
+					);
+				})
+				.filter(java.util.Objects::nonNull)
+				.toList();
 	}
 }
 

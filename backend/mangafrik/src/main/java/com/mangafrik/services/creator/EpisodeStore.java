@@ -27,7 +27,7 @@ public class EpisodeStore {
 
 	public EpisodeDraftDto createDraft(CreateDraftRequest req) {
 		EpisodeDraftDto dto = new EpisodeDraftDto(
-				"ed_" + UUID.randomUUID(),
+				UUID.randomUUID().toString(),
 				Instant.now(),
 				nz(req.seriesTitle()),
 				nz(req.episodeTitle()),
@@ -53,7 +53,7 @@ public class EpisodeStore {
 		stats.put("likes", 0);
 		stats.put("comments", 0);
 		PublishedEpisodeDto dto = new PublishedEpisodeDto(
-				"ep_" + UUID.randomUUID(),
+				UUID.randomUUID().toString(),
 				Instant.now(),
 				blankToNull(req.scheduledFor()),
 				nz(req.seriesTitle()),

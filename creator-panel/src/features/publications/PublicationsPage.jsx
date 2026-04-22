@@ -12,6 +12,19 @@ function formatWhen(iso) {
   }
 }
 
+function pickThumbSquareUrl(payload) {
+  const p = payload || {};
+  // Accept multiple possible shapes depending on backend evolution.
+  return (
+    p?.thumbnails?.square?.url ||
+    p?.thumbnails?.squareUrl ||
+    p?.thumbnailSquareUrl ||
+    p?.thumbSquareUrl ||
+    p?.thumbnail?.square?.url ||
+    ''
+  );
+}
+
 export default function PublicationsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [commentTextById, setCommentTextById] = useState({});
@@ -201,7 +214,14 @@ export default function PublicationsPage() {
             return (
               <div key={s.id} className="pub__card">
                 <div className="pub__head">
-                  <div>
+                  <div className="pub__left">
+                    <div className="pub__thumb pub__thumb--square" aria-hidden="true">
+                      {pickThumbSquareUrl(s.payload) ? (
+                        <img src={pickThumbSquareUrl(s.payload)} alt="" />
+                      ) : (
+                        <div className="pub__thumb-ph" />
+                      )}
+                    </div>
                     <div className="pub__series">Série</div>
                     <div className="pub__episode">{s.payload?.title || 'Sans titre'}</div>
                     <div className="pub__meta">

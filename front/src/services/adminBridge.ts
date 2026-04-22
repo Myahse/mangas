@@ -34,8 +34,8 @@ function safeParse<T>(raw: string | null, fallback: T): T {
   }
 }
 
-function randomId(prefix: string) {
-  return `${prefix}${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`;
+function uuid() {
+  return crypto.randomUUID();
 }
 
 export function recordUserRegistration(input: {
@@ -48,7 +48,7 @@ export function recordUserRegistration(input: {
 
   const users = safeParse<RegisteredUserRow[]>(localStorage.getItem(USERS_KEY), []);
   const userRow: RegisteredUserRow = {
-    id: randomId('u_'),
+    id: uuid(),
     role: input.role,
     displayName: input.displayName.trim(),
     email: input.email.trim().toLowerCase(),
@@ -66,7 +66,7 @@ export function recordUserRegistration(input: {
     );
 
     reqs.unshift({
-      id: randomId('cr_'),
+      id: uuid(),
       email: userRow.email,
       displayName: userRow.displayName,
       penName: input.creatorProfile?.penName,

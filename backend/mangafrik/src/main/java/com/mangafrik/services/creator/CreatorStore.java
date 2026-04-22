@@ -21,7 +21,7 @@ public class CreatorStore {
 	public MangaSubmissionDto createSubmission(CreateMangaSubmissionRequest req) {
 		Instant now = Instant.now();
 		MangaSubmissionDto dto = new MangaSubmissionDto(
-				"ms_" + UUID.randomUUID(),
+				UUID.randomUUID().toString(),
 				"pending",
 				now,
 				new CreatorDto(

@@ -124,7 +124,7 @@ public class AdminStore {
 	public MangaRequestDto createMangaRequest(CreateMangaRequest req) {
 		Instant now = Instant.now();
 		MangaRequestDto row = new MangaRequestDto(
-				randomId("r_"),
+				uuid(),
 				(req.requestedTitle() == null || req.requestedTitle().isBlank()) ? "Untitled" : req.requestedTitle().trim(),
 				(req.requestedBy() == null || req.requestedBy().isBlank()) ? "unknown" : req.requestedBy().trim(),
 				req.notes() == null ? "" : req.notes().trim(),
@@ -172,7 +172,7 @@ public class AdminStore {
 		Instant now = Instant.now();
 		String title = (req.title() == null || req.title().isBlank()) ? "Untitled" : req.title().trim();
 		String slug = (req.slug() == null || req.slug().isBlank()) ? slugify(title) : req.slug().trim();
-		AdminMangaDto row = new AdminMangaDto(randomId("m_"), title, slug, req.status() == null ? "draft" : req.status(), now);
+		AdminMangaDto row = new AdminMangaDto(uuid(), title, slug, req.status() == null ? "draft" : req.status(), now);
 		mangas.add(0, row);
 		audit("manga.create", java.util.Map.of("id", row.id()));
 		return row;
@@ -209,7 +209,7 @@ public class AdminStore {
 			String title = (next.payload() == null ? null : String.valueOf(next.payload().get("title")));
 			if (title == null || title.isBlank() || "null".equals(title)) title = "Untitled";
 			String slug = slugify(title);
-			mangas.add(0, new AdminMangaDto(randomId("m_"), title, slug, "published", Instant.now()));
+			mangas.add(0, new AdminMangaDto(uuid(), title, slug, "published", Instant.now()));
 			audit("submission.approve", java.util.Map.of("id", id, "title", title));
 		} else {
 			audit("submission." + req.decision(), java.util.Map.of("id", id));
@@ -218,14 +218,14 @@ public class AdminStore {
 	}
 
 	private void audit(String action, Object payload) {
-		audits.add(0, new AuditDto(randomId("a_"), Instant.now(), action, payload));
+		audits.add(0, new AuditDto(uuid(), Instant.now(), action, payload));
 		while (audits.size() > 250) {
 			audits.remove(audits.size() - 1);
 		}
 	}
 
-	private String randomId(String prefix) {
-		return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+	private String uuid() {
+		return UUID.randomUUID().toString();
 	}
 
 	private String slugify(String input) {
@@ -236,16 +236,16 @@ public class AdminStore {
 
 	private void seed() {
 		Instant now = Instant.now();
-		users.add(new AdminUserDto("u_admin", "admin@mangaafrik.local", "Admin", "admin", "active", now, "seed"));
-		users.add(new AdminUserDto("u_01", "reader1@example.com", "Reader One", "reader", "active", now, "seed"));
-		users.add(new AdminUserDto("u_02", "creator1@example.com", "Creator One", "creator", "active", now, "seed"));
+		users.add(new AdminUserDto(uuid(), "admin@mangaafrik.local", "Admin", "admin", "active", now, "seed"));
+		users.add(new AdminUserDto(uuid(), "reader1@example.com", "Reader One", "reader", "active", now, "seed"));
+		users.add(new AdminUserDto(uuid(), "creator1@example.com", "Creator One", "creator", "active", now, "seed"));
 
-		mangas.add(new AdminMangaDto("m_01", "Akwa Origins", "akwa-origins", "published", now));
-		mangas.add(new AdminMangaDto("m_02", "Lagoon Runner", "lagoon-runner", "draft", now));
+		mangas.add(new AdminMangaDto(uuid(), "Akwa Origins", "akwa-origins", "published", now));
+		mangas.add(new AdminMangaDto(uuid(), "Lagoon Runner", "lagoon-runner", "draft", now));
 
-		mangaRequests.add(new MangaRequestDto("r_01", "Nouchi Legends", "reader1@example.com", "Could you add this manga? I heard it is great.", "new", now));
+		mangaRequests.add(new MangaRequestDto(uuid(), "Nouchi Legends", "reader1@example.com", "Could you add this manga? I heard it is great.", "new", now));
 
-		creatorRequests.add(new CreatorRequestDto("cr_01", "creator1@example.com", "Creator One", "pending", "", now, null));
+		creatorRequests.add(new CreatorRequestDto(uuid(), "creator1@example.com", "Creator One", "pending", "", now, null));
 	}
 }
 

@@ -92,7 +92,7 @@ public class SupportStore {
 		String from = Objects.equals(req.from(), "support") ? "support" : "user";
 		String text = req.text() == null ? "" : req.text().trim();
 		if (text.isEmpty()) throw new IllegalArgumentException("Message text required");
-		MessageDto msg = new MessageDto(id("m_"), Instant.now(), from, text);
+		MessageDto msg = new MessageDto(uuid(), Instant.now(), from, text);
 		conversations.computeIfAbsent(ticketId, k -> new CopyOnWriteArrayList<>()).add(msg);
 		audit("chat.send", java.util.Map.of("ticketId", ticketId, "from", from));
 		return msg;
@@ -126,47 +126,47 @@ public class SupportStore {
 	}
 
 	private void audit(String action, Object payload) {
-		audits.add(0, new SupportAuditDto(id("a_"), Instant.now(), action, payload));
+		audits.add(0, new SupportAuditDto(uuid(), Instant.now(), action, payload));
 		while (audits.size() > 250) audits.remove(audits.size() - 1);
 	}
 
-	private String id(String prefix) {
-		return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+	private String uuid() {
+		return UUID.randomUUID().toString();
 	}
 
 	private void seed() {
 		Instant now = Instant.now();
 		TicketDto t1 = new TicketDto(
-				"t_01",
+				uuid(),
 				"issue",
 				"new",
 				"Login error on mobile",
 				"I keep getting “Something went wrong” when I try to sign in.",
-				new TicketUserDto("u_01", "Reader One", "reader1@example.com"),
+				new TicketUserDto(uuid(), "Reader One", "reader1@example.com"),
 				now,
 				now,
 				"",
 				""
 		);
 		TicketDto t2 = new TicketDto(
-				"t_02",
+				uuid(),
 				"request",
 				"new",
 				"Add payment method: MTN Mobile Money",
 				"Can you add MoMo as a payment option for subscriptions?",
-				new TicketUserDto("u_02", "Creator One", "creator1@example.com"),
+				new TicketUserDto(uuid(), "Creator One", "creator1@example.com"),
 				now,
 				now,
 				"",
 				""
 		);
 		TicketDto t3 = new TicketDto(
-				"t_03",
+				uuid(),
 				"issue",
 				"in_review",
 				"Chapter images not loading",
 				"The reader shows blank pages for chapter 4.",
-				new TicketUserDto("u_03", "Reader Two", "reader2@example.com"),
+				new TicketUserDto(uuid(), "Reader Two", "reader2@example.com"),
 				now,
 				now,
 				"",
@@ -174,12 +174,12 @@ public class SupportStore {
 		);
 		tickets.addAll(List.of(t1, t2, t3));
 
-		conversations.put("t_01", new CopyOnWriteArrayList<>(List.of(
-				new MessageDto(id("m_"), now, "user", "Hi, I can’t log in from the mobile app.")
+		conversations.put(t1.id(), new CopyOnWriteArrayList<>(List.of(
+				new MessageDto(uuid(), now, "user", "Hi, I can’t log in from the mobile app.")
 		)));
-		conversations.put("t_03", new CopyOnWriteArrayList<>(List.of(
-				new MessageDto(id("m_"), now, "user", "It loads the UI but pages are empty for chapter 4."),
-				new MessageDto(id("m_"), now, "support", "Thanks. Which device + OS version are you on?")
+		conversations.put(t3.id(), new CopyOnWriteArrayList<>(List.of(
+				new MessageDto(uuid(), now, "user", "It loads the UI but pages are empty for chapter 4."),
+				new MessageDto(uuid(), now, "support", "Thanks. Which device + OS version are you on?")
 		)));
 	}
 }

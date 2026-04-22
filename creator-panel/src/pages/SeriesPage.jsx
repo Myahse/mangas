@@ -34,6 +34,16 @@ async function isJpegOrPngSignature(file) {
   return jpeg || png;
 }
 
+function readAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve('');
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(new Error('read_failed'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function getImageDimensions(file) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -176,10 +186,18 @@ export default function SeriesPage() {
   const onCreate = async (e) => {
     e.preventDefault();
     if (!canCreate) return;
+    const verticalDataUrl = await readAsDataUrl(thumbVertical.file);
     const payload = {
       thumbnails: {
         square: { name: thumbSquare.file?.name, size: thumbSquare.file?.size, type: thumbSquare.file?.type, dims: thumbSquare.dims },
-        vertical: { name: thumbVertical.file?.name, size: thumbVertical.file?.size, type: thumbVertical.file?.type, dims: thumbVertical.dims },
+        // Vertical thumbnail is exported as a Data URL so other panels (ads) can reuse it.
+        vertical: {
+          name: thumbVertical.file?.name,
+          size: thumbVertical.file?.size,
+          type: thumbVertical.file?.type,
+          dims: thumbVertical.dims,
+          dataUrl: verticalDataUrl,
+        },
       },
       category1,
       category2: category2 || null,

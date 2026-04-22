@@ -45,7 +45,7 @@ public class AdsStore {
 	public HeroAdDto createHeroAd(CreateHeroAd req) {
 		Instant now = Instant.now();
 		HeroAdDto row = new HeroAdDto(
-				id("ad_"),
+				uuid(),
 				nz(req.title(), "Untitled ad"),
 				nz(req.subtitle(), ""),
 				nz(req.imageUrl(), ""),
@@ -101,7 +101,7 @@ public class AdsStore {
 		Instant now = Instant.now();
 		String channel = Objects.equals(req.channel(), "in_app") ? "in_app" : "push";
 		NotificationDto row = new NotificationDto(
-				id("n_"),
+				uuid(),
 				channel,
 				nz(req.title(), "Untitled notification"),
 				nz(req.body(), ""),
@@ -159,7 +159,7 @@ public class AdsStore {
 	public SystemNoticeDto createSystemNotice(CreateSystemNotice req) {
 		Instant now = Instant.now();
 		SystemNoticeDto row = new SystemNoticeDto(
-				id("sn_"),
+				uuid(),
 				nz(req.severity(), "info"),
 				nz(req.title(), "Untitled notice"),
 				nz(req.message(), ""),
@@ -208,12 +208,12 @@ public class AdsStore {
 	}
 
 	private void audit(String action, Object payload) {
-		audits.add(0, new AdsAuditDto(id("a_"), Instant.now(), action, payload));
+		audits.add(0, new AdsAuditDto(uuid(), Instant.now(), action, payload));
 		while (audits.size() > 250) audits.remove(audits.size() - 1);
 	}
 
-	private String id(String prefix) {
-		return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+	private String uuid() {
+		return UUID.randomUUID().toString();
 	}
 
 	private String nz(String s, String fallback) {
@@ -224,9 +224,9 @@ public class AdsStore {
 
 	private void seed() {
 		Instant now = Instant.now();
-		heroAds.add(new HeroAdDto("ad_01", "Welcome promo", "New chapters every week", "", "Explore", "/explore", "active", now.toString(), "", now, now));
-		notifications.add(new NotificationDto("n_01", "push", "New release", "A new manga chapter is out now.", "all", "", "", "/home", "draft", "", now, now));
-		systemNotices.add(new SystemNoticeDto("sn_01", "info", "Maintenance window", "Scheduled maintenance tonight at 02:00 UTC.", "scheduled", now.toString(), "", now, now));
+		heroAds.add(new HeroAdDto(uuid(), "Welcome promo", "New chapters every week", "", "Explore", "/explore", "active", now.toString(), "", now, now));
+		notifications.add(new NotificationDto(uuid(), "push", "New release", "A new manga chapter is out now.", "all", "", "", "/home", "draft", "", now, now));
+		systemNotices.add(new SystemNoticeDto(uuid(), "info", "Maintenance window", "Scheduled maintenance tonight at 02:00 UTC.", "scheduled", now.toString(), "", now, now));
 	}
 }
 

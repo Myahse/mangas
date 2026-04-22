@@ -1,6 +1,6 @@
 import { ImagePlus, Pause, Play, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { mockDb } from '../../../lib/mockDb.js';
+import { useEffect, useMemo, useState } from 'react';
+import { adsApi } from '../../../services/api.js';
 
 const emptyForm = {
   title: '',
@@ -16,22 +16,47 @@ const emptyForm = {
 export function HeroAdsPage() {
   const [form, setForm] = useState(emptyForm);
   const [refreshKey, setRefreshKey] = useState(0);
-  const ads = useMemo(() => mockDb.listHeroAds(), [refreshKey]);
+  const [ads, setAds] = useState([]);
+  const [thumbs, setThumbs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  function onCreate(e) {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        void refreshKey;
+        const [rows, verticalThumbs] = await Promise.all([adsApi.listHeroAds(), adsApi.verticalMangaThumbnails()]);
+        if (cancelled) return;
+        setAds(Array.isArray(rows) ? rows : []);
+        setThumbs(Array.isArray(verticalThumbs) ? verticalThumbs : []);
+      } catch (err) {
+        if (!cancelled) {
+          alert(`Failed to load ads. ${(err && err.message) || ''}`.trim());
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  async function onCreate(e) {
     e.preventDefault();
-    mockDb.createHeroAd(form);
+    await adsApi.createHeroAd(form);
     setForm(emptyForm);
     setRefreshKey((k) => k + 1);
   }
 
-  function toggleActive(row) {
-    mockDb.updateHeroAd(row.id, { status: row.status === 'active' ? 'paused' : 'active' });
+  async function toggleActive(row) {
+    await adsApi.updateHeroAd(row.id, { status: row.status === 'active' ? 'paused' : 'active' });
     setRefreshKey((k) => k + 1);
   }
 
-  function onDelete(id) {
-    mockDb.deleteHeroAd(id);
+  async function onDelete(id) {
+    await adsApi.deleteHeroAd(id);
     setRefreshKey((k) => k + 1);
   }
 
@@ -84,6 +109,43 @@ export function HeroAdsPage() {
                   placeholder="https://..."
                 />
               </label>
+
+              <label>
+                <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800 }}>
+                  Or pick a manga vertical thumbnail (creator submissions)
+                </div>
+                <select
+                  className="admin-select"
+                  value=""
+                  onChange={(e) => {
+                    const pickedId = e.target.value;
+                    if (!pickedId) return;
+                    const picked = thumbs.find((t) => String(t.submissionId) === String(pickedId));
+                    if (picked?.dataUrl) setForm((s) => ({ ...s, imageUrl: picked.dataUrl }));
+                    e.target.value = '';
+                  }}
+                >
+                  <option value="">Select…</option>
+                  {thumbs.map((t) => (
+                    <option key={t.submissionId} value={t.submissionId}>
+                      {t.title || 'Untitled'} · {t.status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {form.imageUrl ? (
+                <div className="admin-surface" style={{ padding: 10, borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
+                    Preview
+                  </div>
+                  <img
+                    src={form.imageUrl}
+                    alt="Ad preview"
+                    style={{ width: 140, aspectRatio: '9 / 16', borderRadius: 12, objectFit: 'cover', border: '1px solid var(--border)' }}
+                  />
+                </div>
+              ) : null}
 
               <div className="admin-grid-2">
                 <label>
@@ -138,6 +200,7 @@ export function HeroAdsPage() {
         <section className="admin-surface">
           <div className="admin-surface__inner">
             <h2 style={{ fontSize: '1rem', fontWeight: 900, marginBottom: 10 }}>Existing</h2>
+            {loading ? <div className="admin-muted">Loading…</div> : null}
             <table className="admin-table">
               <thead>
                 <tr>
