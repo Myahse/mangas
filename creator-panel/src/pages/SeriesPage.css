@@ -163,7 +163,7 @@
 .creator__field select,
 .creator__field textarea {
   width: 100%;
-  background: transparent;
+  background: var(--surface-bg);
   border: 1px solid var(--surface-border);
   border-radius: 12px;
   padding: 12px 12px;
@@ -172,9 +172,8 @@
   font: inherit;
 }
 
-/* Make native select + dropdown options readable across OS themes */
 .creator__field select {
-  background: var(--surface-bg);
+  color-scheme: light dark;
 }
 
 .creator__field select option {
@@ -458,6 +457,17 @@
   .creator__left,
   .creator__right {
     min-width: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .creator__field input,
+  .creator__field select,
+  .creator__field textarea {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
   }
 }
 

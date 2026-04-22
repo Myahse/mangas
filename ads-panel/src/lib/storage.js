@@ -1,4 +1,5 @@
-const PREFIX = 'mangaafrik_ads_admin:';
+const PREFIX =
+  import.meta?.env?.VITE_ADS_STORAGE_PREFIX || 'mangaafrik_ads_admin:';
 
 export function readJson(key, fallback) {
   try {
@@ -15,7 +16,7 @@ export function writeJson(key, value) {
 }
 
 export function randomId(prefix = '') {
-  const rand = Math.random().toString(16).slice(2);
-  return `${prefix}${Date.now().toString(16)}_${rand}`;
+  void prefix;
+  return crypto.randomUUID();
 }
 

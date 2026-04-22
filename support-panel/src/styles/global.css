@@ -169,18 +169,18 @@ img {
   border-radius: 2px;
 }
 
-:::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-:::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: var(--bg-light);
 }
-:::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 3px;
 }
-:::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
   background: #aaa;
 }
 

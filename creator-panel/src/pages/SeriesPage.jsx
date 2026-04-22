@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './SeriesPage.css';
-import { recordMangaSubmission } from '../services/adminBridge';
+import { creatorApi } from '../services/api';
+import AfterSeriesCreateModal from '../components/modals/AfterSeriesCreateModal';
 import ThumbnailGuideModal from '../components/modals/ThumbnailGuideModal';
 
 const CATEGORY_1 = ['Action', 'Aventure', 'Comédie', 'Drame', 'Fantaisie', 'Horreur', 'Romance', 'Sci‑Fi', 'Thriller'];
@@ -33,29 +35,14 @@ async function isJpegOrPngSignature(file) {
   return jpeg || png;
 }
 
-async function loadImageFromFile(file) {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = new Image();
-    img.decoding = 'async';
-    img.src = url;
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
-    return img;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-function isAspectRatio({ width, height }, ratioW, ratioH, tolerance = 0.01) {
-  if (!width || !height) return false;
-  // Compare via cross-multiplication to avoid float precision issues.
-  const left = width * ratioH;
-  const right = height * ratioW;
-  const diff = Math.abs(left - right);
-  return diff <= tolerance * right;
+function readAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve('');
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(new Error('read_failed'));
+    reader.readAsDataURL(file);
+  });
 }
 
 function getImageDimensions(file) {
@@ -83,6 +70,8 @@ function formatBytes(n) {
 }
 
 export default function SeriesPage() {
+  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
   const [thumbSquare, setThumbSquare] = useState({ file: null, url: '', dims: null, error: '' });
   const [thumbVertical, setThumbVertical] = useState({ file: null, url: '', dims: null, error: '' });
   const [guideOpen, setGuideOpen] = useState(false);
@@ -93,6 +82,8 @@ export default function SeriesPage() {
   const [summary, setSummary] = useState('');
   const [acceptPolicies, setAcceptPolicies] = useState(false);
   const [explicit, setExplicit] = useState(false);
+  const [afterCreateOpen, setAfterCreateOpen] = useState(false);
+  const [createdSeriesTitle, setCreatedSeriesTitle] = useState('');
 
   const squareInputRef = useRef(null);
   const verticalInputRef = useRef(null);
@@ -108,8 +99,8 @@ export default function SeriesPage() {
   const setThumbWithValidation = async ({ kind, file }) => {
     const expected =
       kind === 'square'
-        ? { ratioW: 1, ratioH: 1, label: '1:1', maxBytes: 500 * 1024 }
-        : { ratioW: 9, ratioH: 16, label: '9:16', maxBytes: 700 * 1024 };
+        ? { width: 1080, height: 1080, maxBytes: 800 * 1024 }
+        : { width: 1080, height: 1920, maxBytes: 800 * 1024 };
     const setState = kind === 'square' ? setThumbSquare : setThumbVertical;
     const current = kind === 'square' ? thumbSquare : thumbVertical;
 
@@ -137,13 +128,13 @@ export default function SeriesPage() {
         return;
       }
       const dims = await getImageDimensions(file);
-      const ratioOk = isAspectRatio(dims, expected.ratioW, expected.ratioH);
-      if (!ratioOk) {
+      const dimsOk = dims?.width === expected.width && dims?.height === expected.height;
+      if (!dimsOk) {
         setState({
           file: null,
           url: '',
           dims,
-          error: `Proportions invalides: ${dims.width}×${dims.height}px. Requis: ${expected.label}.`,
+          error: `Dimensions invalides: ${dims?.width}×${dims?.height}px. Requis: ${expected.width}×${expected.height}px.`,
         });
         return;
       }
@@ -159,12 +150,7 @@ export default function SeriesPage() {
       }
 
       const url = URL.createObjectURL(file);
-      setState({
-        file,
-        url,
-        dims,
-        error: '',
-      });
+      setState({ file, url, dims, error: '' });
     } catch {
       setState({ file: null, url: '', dims: null, error: "Impossible de lire l'image. Essayez un autre fichier." });
     }
@@ -200,13 +186,21 @@ export default function SeriesPage() {
     summary.length <= 500 &&
     acceptPolicies;
 
-  const onCreate = (e) => {
+  const onCreate = async (e) => {
     e.preventDefault();
     if (!canCreate) return;
+    const verticalDataUrl = await readAsDataUrl(thumbVertical.file);
     const payload = {
       thumbnails: {
         square: { name: thumbSquare.file?.name, size: thumbSquare.file?.size, type: thumbSquare.file?.type, dims: thumbSquare.dims },
-        vertical: { name: thumbVertical.file?.name, size: thumbVertical.file?.size, type: thumbVertical.file?.type, dims: thumbVertical.dims },
+        // Vertical thumbnail is exported as a Data URL so other panels (ads) can reuse it.
+        vertical: {
+          name: thumbVertical.file?.name,
+          size: thumbVertical.file?.size,
+          type: thumbVertical.file?.type,
+          dims: thumbVertical.dims,
+          dataUrl: verticalDataUrl,
+        },
       },
       category1,
       category2: category2 || null,
@@ -216,8 +210,16 @@ export default function SeriesPage() {
       explicit,
     };
     console.log('creator_create_series_submit', payload);
-    recordMangaSubmission(payload);
-    alert('Série envoyée à la modération (demo).');
+    try {
+      setSubmitting(true);
+      await creatorApi.createSubmission(payload);
+      setCreatedSeriesTitle(payload.title);
+      setAfterCreateOpen(true);
+    } catch (err) {
+      alert(`Impossible d'envoyer la série. ${(err && err.message) || ''}`.trim());
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -304,8 +306,8 @@ export default function SeriesPage() {
                   )}
                 </div>
                 <p className="creator__help creator__help--mt">
-                  L'image doit être au format carré (1:1) et ne doit pas dépasser 500 kb. Seuls les formats JPG, JPEG ou
-                  PNG sont autorisés.
+                  L'image doit avoir un format de 1080 x 1080 px, et ne doit pas dépasser 800 kb. Seuls les formats JPG,
+                  JPEG ou PNG sont autorisés.
                 </p>
                 {squareError && <div className="creator__error">{squareError}</div>}
               </div>
@@ -377,8 +379,8 @@ export default function SeriesPage() {
                   )}
                 </div>
                 <p className="creator__help creator__help--mt">
-                  L'image doit être au format vertical (9:16) et ne doit pas dépasser 700 kb. Seuls les formats JPG, JPEG
-                  ou PNG sont autorisés.
+                  L'image doit avoir un format de 1080 x 1920 px, et ne doit pas dépasser 800 kb. Seuls les formats JPG,
+                  JPEG ou PNG sont autorisés.
                 </p>
                 {verticalError && <div className="creator__error">{verticalError}</div>}
               </div>
@@ -458,7 +460,7 @@ export default function SeriesPage() {
               </section>
 
               <div className="creator__actions">
-                <button className="creator__submit" type="submit" disabled={!canCreate}>
+                <button className="creator__submit" type="submit" disabled={!canCreate || submitting}>
                   Créer une série
                 </button>
               </div>
@@ -493,7 +495,19 @@ export default function SeriesPage() {
           </div>
         </aside>
       </div>
-
+      <AfterSeriesCreateModal
+        isOpen={afterCreateOpen}
+        title={createdSeriesTitle}
+        onClose={() => setAfterCreateOpen(false)}
+        onUploadNow={() => {
+          setAfterCreateOpen(false);
+          navigate(`/episodes?seriesTitle=${encodeURIComponent(createdSeriesTitle || '')}`);
+        }}
+        onDoLater={() => {
+          setAfterCreateOpen(false);
+          navigate('/publications?tab=series');
+        }}
+      />
       <ThumbnailGuideModal
         isOpen={guideOpen}
         kind={guideKind}

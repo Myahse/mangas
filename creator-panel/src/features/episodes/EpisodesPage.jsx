@@ -1,13 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import '../../pages/EpisodesPage.css';
-import { saveEpisodeDraft, savePublishedEpisode } from './storage';
+import { creatorApi } from '../../services/api';
 import { formatBytes, isValidAlphaNumFilename, resizeForUpload } from './utils';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-const THUMB_MAX_BYTES = 500 * 1024;
+const THUMB_MAX_BYTES = 800 * 1024;
 const EP_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 const EP_TOTAL_MAX_BYTES = 20 * 1024 * 1024;
 const EP_TOTAL_MAX_FILES = 100;
+
+function getImageDimensions(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const dims = { width: img.naturalWidth, height: img.naturalHeight };
+      URL.revokeObjectURL(url);
+      resolve(dims);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('invalid_image'));
+    };
+    img.src = url;
+  });
+}
 
 function getPublishBlockingReasons({
   episodeTitle,
@@ -30,9 +48,11 @@ function getPublishBlockingReasons({
 }
 
 export default function EpisodesPage() {
-  const [seriesTitle] = useState('momo dinio');
+  const location = useLocation();
+  const [seriesTitle, setSeriesTitle] = useState('');
   const [episodeTitle, setEpisodeTitle] = useState('');
   const [creatorNote, setCreatorNote] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const [thumb, setThumb] = useState({ file: null, url: '', error: '' });
   const thumbInputRef = useRef(null);
@@ -46,6 +66,13 @@ export default function EpisodesPage() {
   const [publishMode, setPublishMode] = useState('now'); // 'now' | 'schedule'
   const [publishDate, setPublishDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [publishTime, setPublishTime] = useState('09:40');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = (params.get('seriesTitle') || '').trim();
+    if (fromUrl) setSeriesTitle(fromUrl);
+    // only when URL changes
+  }, [location.search]);
 
   useEffect(() => {
     return () => {
@@ -89,18 +116,17 @@ export default function EpisodesPage() {
       return;
     }
     try {
-      const resized = await resizeForUpload({
-        file,
-        targetWidth: 202,
-        targetHeight: 142,
-        maxBytes: THUMB_MAX_BYTES,
-      });
-      if (resized.file.size > THUMB_MAX_BYTES) {
-        setThumb({ file: null, url: '', error: `Impossible de compresser sous 500kb (résultat: ${formatBytes(resized.file.size)}).` });
+      const dims = await getImageDimensions(file);
+      if (dims.width !== 202 || dims.height !== 142) {
+        setThumb({ file: null, url: '', error: `Dimensions invalides: ${dims.width}×${dims.height}px. Requis: 202×142px.` });
         return;
       }
-      const url = URL.createObjectURL(resized.file);
-      setThumb({ file: resized.file, url, error: '' });
+      if (file.size > THUMB_MAX_BYTES) {
+        setThumb({ file: null, url: '', error: `Fichier trop lourd: ${formatBytes(file.size)}. Maximum: 500kb.` });
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      setThumb({ file, url, error: '' });
     } catch {
       setThumb({ file: null, url: '', error: "Impossible de lire l'image. Essayez un autre fichier." });
     }
@@ -177,43 +203,47 @@ export default function EpisodesPage() {
     if (filesInputRef.current) filesInputRef.current.value = '';
   };
 
-  const onSaveDraft = () => {
+  const onSaveDraft = async () => {
     if (!canSaveDraft) return;
-
-    saveEpisodeDraft({
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      seriesTitle,
-      episodeTitle: episodeTitle.trim(),
-      creatorNote: creatorNote.trim() || null,
-      commentsEnabled,
-      publishMode,
-      publishAt: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : 'now',
-      thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
-      images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
-    });
-
-    alert('Brouillon enregistré.');
+    try {
+      setSaving(true);
+      await creatorApi.createDraft({
+        seriesTitle,
+        episodeTitle: episodeTitle.trim(),
+        creatorNote: creatorNote.trim() || null,
+        commentsEnabled,
+        publishMode,
+        publishAt: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : 'now',
+        thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
+        images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
+      });
+      alert('Brouillon enregistré.');
+    } catch (err) {
+      alert(`Impossible d'enregistrer le brouillon. ${(err && err.message) || ''}`.trim());
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const onPublish = () => {
+  const onPublish = async () => {
     if (!canPublish) return;
-
-    savePublishedEpisode({
-      id: crypto.randomUUID(),
-      publishedAt: new Date().toISOString(),
-      scheduledFor: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : null,
-      seriesTitle,
-      episodeTitle: episodeTitle.trim(),
-      creatorNote: creatorNote.trim() || null,
-      commentsEnabled,
-      thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
-      images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
-      stats: { views: 0, likes: 0, comments: 0 },
-      comments: [],
-    });
-
-    alert('Épisode publié.');
+    try {
+      setSaving(true);
+      await creatorApi.createPublished({
+        scheduledFor: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : null,
+        seriesTitle,
+        episodeTitle: episodeTitle.trim(),
+        creatorNote: creatorNote.trim() || null,
+        commentsEnabled,
+        thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
+        images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
+      });
+      alert('Épisode publié.');
+    } catch (err) {
+      alert(`Impossible de publier l'épisode. ${(err && err.message) || ''}`.trim());
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -270,8 +300,12 @@ export default function EpisodesPage() {
           {/* Titles */}
           <div className="ep__section">
             <div className="ep__row">
-              <div className="ep__label">Titre de séries : {seriesTitle}</div>
+              <div className="ep__label">Titre de séries</div>
             </div>
+            <label className="ep__field">
+              <span>Série</span>
+              <input value={seriesTitle} onChange={(e) => setSeriesTitle(e.target.value.slice(0, 80))} placeholder="Nom de la série" />
+            </label>
             <label className="ep__field">
               <span>Titre d'épisode</span>
               <input value={episodeTitle} onChange={(e) => setEpisodeTitle(e.target.value.slice(0, 60))} placeholder="Moins de 60 caractères" />
@@ -385,7 +419,7 @@ export default function EpisodesPage() {
               </div>
             </div>
 
-            <button type="button" className="ep__btn ep__btn--primary" disabled={!canSaveDraft} onClick={onSaveDraft}>
+            <button type="button" className="ep__btn ep__btn--primary" disabled={!canSaveDraft || saving} onClick={onSaveDraft}>
               Enregistrer un brouillon
             </button>
           </div>
@@ -449,7 +483,7 @@ export default function EpisodesPage() {
               </div>
             )}
 
-            <button type="button" className="ep__btn ep__btn--publish" disabled={!canPublish} onClick={onPublish}>
+            <button type="button" className="ep__btn ep__btn--publish" disabled={!canPublish || saving} onClick={onPublish}>
               Publier un épisode
             </button>
           </div>
