@@ -11,7 +11,8 @@ function safeParse(raw, fallback) {
 }
 
 function randomId(prefix) {
-  return `${prefix}${crypto.randomUUID()}`;
+  void prefix;
+  return crypto.randomUUID();
 }
 
 export function recordMangaSubmission(input) {
