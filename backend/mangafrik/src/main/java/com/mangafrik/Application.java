@@ -2,16 +2,18 @@ package com.mangafrik;
 
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
-
+@Slf4j
 
 public class Application {
 
 	public static void main(String[] args) {
 		SpringApplication app = new SpringApplication(Application.class);
 		Map<String, Object> defaults = new HashMap<>();
+
 
 		String normalized = normalizeToJdbc(firstNonBlank(
 			System.getenv("SPRING_DATASOURCE_URL"),
