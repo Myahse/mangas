@@ -20,22 +20,35 @@ public class DatabaseUrlEnvPostProcessor implements EnvironmentPostProcessor, Or
 
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-		String raw = environment.getProperty("DATABASE_URL");
-		logger.info("DATABASE_URL: {}", raw);
-		if (raw == null || raw.isBlank()) return;
-
 		String dsUrl = environment.getProperty("spring.datasource.url");
-		logger.info("spring.datasource.url: {}", dsUrl);
-		if (dsUrl != null && !dsUrl.isBlank() && dsUrl.startsWith("jdbc:")) return;
+		String jdbcDatabaseUrl = environment.getProperty("JDBC_DATABASE_URL");
+		String databaseUrl = environment.getProperty("DATABASE_URL");
 
-		String normalized = normalizeToJdbc(raw.trim());
-		logger.info("normalized: {}", normalized);
-		if (normalized == null) return;
+		logger.info("spring.datasource.url: {}", dsUrl);
+		logger.info("JDBC_DATABASE_URL: {}", jdbcDatabaseUrl);
+		logger.info("DATABASE_URL: {}", databaseUrl);
+
+		String candidate = firstNonBlank(dsUrl, jdbcDatabaseUrl, databaseUrl);
+		if (candidate == null) return;
+		if (candidate.startsWith("jdbc:") && dsUrl != null && dsUrl.startsWith("jdbc:")) return;
+
+		String normalized = normalizeToJdbc(candidate.trim());
+		logger.info("normalized datasource url: {}", normalized);
+		if (normalized == null || normalized.isBlank()) return;
 
 		Map<String, Object> map = new HashMap<>();
 		map.put("spring.datasource.url", normalized);
+		map.putIfAbsent("spring.datasource.driver-class-name", "org.postgresql.Driver");
 		environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, map));
 		logger.info("Added spring.datasource.url to environment");
+	}
+
+	private String firstNonBlank(String... candidates) {
+		if (candidates == null) return null;
+		for (String c : candidates) {
+			if (c != null && !c.isBlank()) return c;
+		}
+		return null;
 	}
 
 	private String normalizeToJdbc(String url) {
