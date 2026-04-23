@@ -7,18 +7,14 @@ WORKDIR /app
 
 # Cache dependencies first
 COPY backend/mangafrik/pom.xml backend/mangafrik/pom.xml
-COPY backend/mangafrik/mvnw backend/mangafrik/mvnw
-COPY backend/mangafrik/mvnw.cmd backend/mangafrik/mvnw.cmd
-COPY backend/mangafrik/.mvn backend/mangafrik/.mvn
 WORKDIR /app/backend/mangafrik
-RUN chmod +x mvnw || true
-RUN ./mvnw -q -DskipTests dependency:go-offline
+RUN mvn -q -DskipTests dependency:go-offline
 
 # Build
 WORKDIR /app
 COPY backend/mangafrik backend/mangafrik
 WORKDIR /app/backend/mangafrik
-RUN ./mvnw -q -DskipTests package
+RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
