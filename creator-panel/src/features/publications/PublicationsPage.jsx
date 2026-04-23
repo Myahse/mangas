@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { creatorApi } from '../../services/api';
+import { notify } from '../../services/notify';
 import '../publications/PublicationsPage.css';
 
 function formatWhen(iso) {
@@ -51,7 +52,7 @@ export default function PublicationsPage() {
         setSubmissions(Array.isArray(subs) ? subs : []);
       } catch (err) {
         if (!cancelled) {
-          alert(`Impossible de charger les publications. ${(err && err.message) || ''}`.trim());
+          notify.error(`Impossible de charger les publications. ${(err && err.message) || ''}`.trim());
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -135,7 +136,7 @@ export default function PublicationsPage() {
                         await creatorApi.addLike(ep.id);
                         setRefreshKey((k) => k + 1);
                       } catch (err) {
-                        alert(`Impossible d'ajouter un like. ${(err && err.message) || ''}`.trim());
+                        notify.error(`Impossible d'ajouter un like. ${(err && err.message) || ''}`.trim());
                       }
                     }}
                   >
@@ -149,7 +150,7 @@ export default function PublicationsPage() {
                         await creatorApi.addView(ep.id);
                         setRefreshKey((k) => k + 1);
                       } catch (err) {
-                        alert(`Impossible d'ajouter une vue. ${(err && err.message) || ''}`.trim());
+                        notify.error(`Impossible d'ajouter une vue. ${(err && err.message) || ''}`.trim());
                       }
                     }}
                   >
@@ -176,7 +177,7 @@ export default function PublicationsPage() {
                           setCommentTextById((p) => ({ ...p, [ep.id]: '' }));
                           setRefreshKey((k) => k + 1);
                         } catch (err) {
-                          alert(`Impossible d'ajouter un commentaire. ${(err && err.message) || ''}`.trim());
+                          notify.error(`Impossible d'ajouter un commentaire. ${(err && err.message) || ''}`.trim());
                         }
                       }}
                     >

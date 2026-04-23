@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../../pages/EpisodesPage.css';
 import { creatorApi } from '../../services/api';
+import { notify } from '../../services/notify';
 import { formatBytes, isValidAlphaNumFilename, resizeForUpload } from './utils';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
@@ -217,9 +218,9 @@ export default function EpisodesPage() {
         thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
         images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
       });
-      alert('Brouillon enregistré.');
+      notify.success('Brouillon enregistré.');
     } catch (err) {
-      alert(`Impossible d'enregistrer le brouillon. ${(err && err.message) || ''}`.trim());
+      notify.error(`Impossible d'enregistrer le brouillon. ${(err && err.message) || ''}`.trim());
     } finally {
       setSaving(false);
     }
@@ -238,9 +239,9 @@ export default function EpisodesPage() {
         thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
         images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
       });
-      alert('Épisode publié.');
+      notify.success('Épisode publié.');
     } catch (err) {
-      alert(`Impossible de publier l'épisode. ${(err && err.message) || ''}`.trim());
+      notify.error(`Impossible de publier l'épisode. ${(err && err.message) || ''}`.trim());
     } finally {
       setSaving(false);
     }

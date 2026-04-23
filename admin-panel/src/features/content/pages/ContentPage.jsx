@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
 import { mockDb } from '../../../lib/mockDb.js';
+import { notify } from '../../../services/notify.js';
 
 const STATUS_OPTIONS = ['draft', 'published', 'archived'];
 
@@ -32,7 +33,7 @@ export function ContentPage() {
             const created = mockDb.createManga(create);
             setCreate({ title: '', slug: '', status: 'draft' });
             setRefreshKey((k) => k + 1);
-            alert(`Manga created: ${created.title}`);
+            notify.success(`Manga created: ${created.title}`);
           }}
           disabled={!create.title.trim()}
         >

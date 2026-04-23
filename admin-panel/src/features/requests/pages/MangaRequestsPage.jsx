@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
 import { mockDb } from '../../../lib/mockDb.js';
+import { notify } from '../../../services/notify.js';
 
 const STATUS_OPTIONS = ['new', 'in_review', 'done', 'rejected'];
 
@@ -43,7 +44,7 @@ export function MangaRequestsPage() {
             const created = mockDb.createMangaRequest(create);
             setCreate({ requestedTitle: '', requestedBy: '', notes: '' });
             setRefreshKey((k) => k + 1);
-            alert(`Request created: ${created.id}`);
+            notify.success(`Request created: ${created.id}`);
           }}
           disabled={!create.requestedTitle.trim()}
         >

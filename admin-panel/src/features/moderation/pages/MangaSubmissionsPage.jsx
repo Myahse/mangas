@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, RefreshCcw, XCircle } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
 import { mockDb } from '../../../lib/mockDb.js';
+import { notify } from '../../../services/notify.js';
 
 export function MangaSubmissionsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -137,7 +138,7 @@ export function MangaSubmissionsPage() {
                             onClick={() => {
                               const reason = (reasonById[s.id] || '').trim();
                               if (!reason) {
-                                alert('Please provide a reason to request resubmission.');
+                                notify.info('Please provide a reason to request resubmission.');
                                 return;
                               }
                               mockDb.reviewMangaSubmission(s.id, 'resubmit', reason);
@@ -153,7 +154,7 @@ export function MangaSubmissionsPage() {
                             onClick={() => {
                               const reason = (reasonById[s.id] || '').trim();
                               if (!reason) {
-                                alert('Please provide a reason to reject.');
+                                notify.info('Please provide a reason to reject.');
                                 return;
                               }
                               mockDb.reviewMangaSubmission(s.id, 'rejected', reason);

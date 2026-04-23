@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Ban, CheckCircle2, Shield, UserCog } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
 import { mockDb } from '../../../lib/mockDb.js';
+import { notify } from '../../../services/notify.js';
 
 const ROLE_OPTIONS = ['reader', 'creator', 'admin'];
 const STATUS_OPTIONS = ['active', 'disabled'];
@@ -190,7 +191,7 @@ export function UsersPage() {
                         <button
                           className="admin-btn"
                           type="button"
-                          onClick={() => alert(`User id: ${u.id}`)}
+                          onClick={() => notify.info(`User id: ${u.id}`)}
                         >
                           <UserCog size={16} />
                           Details

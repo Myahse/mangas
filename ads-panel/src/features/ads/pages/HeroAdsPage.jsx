@@ -1,6 +1,7 @@
 import { ImagePlus, Pause, Play, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { adsApi } from '../../../services/api.js';
+import { notify } from '../../../services/notify.js';
 
 const emptyForm = {
   title: '',
@@ -32,7 +33,7 @@ export function HeroAdsPage() {
         setThumbs(Array.isArray(verticalThumbs) ? verticalThumbs : []);
       } catch (err) {
         if (!cancelled) {
-          alert(`Failed to load ads. ${(err && err.message) || ''}`.trim());
+          notify.error(`Failed to load ads. ${(err && err.message) || ''}`.trim());
         }
       } finally {
         if (!cancelled) setLoading(false);

@@ -4,6 +4,7 @@ import './SeriesPage.css';
 import { creatorApi } from '../services/api';
 import AfterSeriesCreateModal from '../components/modals/AfterSeriesCreateModal';
 import ThumbnailGuideModal from '../components/modals/ThumbnailGuideModal';
+import { notify } from '../services/notify';
 
 const CATEGORY_1 = ['Action', 'Aventure', 'Comédie', 'Drame', 'Fantaisie', 'Horreur', 'Romance', 'Sci‑Fi', 'Thriller'];
 const CATEGORY_2 = ['Shonen', 'Shojo', 'Seinen', 'Josei', 'Tranche de vie', 'Mystère', 'Surnaturel'];
@@ -216,7 +217,7 @@ export default function SeriesPage() {
       setCreatedSeriesTitle(payload.title);
       setAfterCreateOpen(true);
     } catch (err) {
-      alert(`Impossible d'envoyer la série. ${(err && err.message) || ''}`.trim());
+      notify.error(`Impossible d'envoyer la série. ${(err && err.message) || ''}`.trim());
     } finally {
       setSubmitting(false);
     }
