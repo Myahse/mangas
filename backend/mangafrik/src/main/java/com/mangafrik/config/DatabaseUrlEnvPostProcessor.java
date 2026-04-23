@@ -21,14 +21,16 @@ public class DatabaseUrlEnvPostProcessor implements EnvironmentPostProcessor, Or
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
 		String dsUrl = environment.getProperty("spring.datasource.url");
+		String springDatasourceUrl = environment.getProperty("SPRING_DATASOURCE_URL");
 		String jdbcDatabaseUrl = environment.getProperty("JDBC_DATABASE_URL");
 		String databaseUrl = environment.getProperty("DATABASE_URL");
 
 		logger.info("spring.datasource.url: {}", dsUrl);
+		logger.info("SPRING_DATASOURCE_URL: {}", springDatasourceUrl);
 		logger.info("JDBC_DATABASE_URL: {}", jdbcDatabaseUrl);
 		logger.info("DATABASE_URL: {}", databaseUrl);
 
-		String candidate = firstNonBlank(dsUrl, jdbcDatabaseUrl, databaseUrl);
+		String candidate = firstNonBlank(dsUrl, springDatasourceUrl, jdbcDatabaseUrl, databaseUrl);
 		if (candidate == null) return;
 		if (candidate.startsWith("jdbc:") && dsUrl != null && dsUrl.startsWith("jdbc:")) return;
 
@@ -38,6 +40,7 @@ public class DatabaseUrlEnvPostProcessor implements EnvironmentPostProcessor, Or
 
 		Map<String, Object> map = new HashMap<>();
 		map.put("spring.datasource.url", normalized);
+		map.put("spring.datasource.hikari.jdbc-url", normalized);
 		map.putIfAbsent("spring.datasource.driver-class-name", "org.postgresql.Driver");
 		environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, map));
 		logger.info("Added spring.datasource.url to environment");
