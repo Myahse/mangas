@@ -11,8 +11,10 @@ export default function Footer() {
         <div className="footer__grid">
           {/* Brand */}
           <div className="footer__brand">
-            <Link to="/" className="navbar__logo">   
-              <span>Mang<span className="navbar__logo-accent">Afrik</span></span>
+            <Link to="/" className="footer__logo">
+              <span>
+                Mang<span className="footer__logo-accent">Afrik</span>
+              </span>
             </Link>
             <p className="footer__tagline">
               Votre destination pour lire les meilleurs mangas en ligne, gratuitement et en haute qualité.
