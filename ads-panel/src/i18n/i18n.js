@@ -4,7 +4,7 @@ import { useLocale } from '../hooks/useLocale.js';
 const DICT = {
   fr: {
     common: {
-      localMode: 'Mode local',
+      apiMode: 'Mode API',
       preferences: 'Préférences',
       language: 'Langue',
       currency: 'Devise',
@@ -19,7 +19,7 @@ const DICT = {
   },
   en: {
     common: {
-      localMode: 'Local mode',
+      apiMode: 'API mode',
       preferences: 'Preferences',
       language: 'Language',
       currency: 'Currency',
@@ -34,7 +34,7 @@ const DICT = {
   },
   ja: {
     common: {
-      localMode: 'ローカル',
+      apiMode: 'API',
       preferences: '設定',
       language: '言語',
       currency: '通貨',
