@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import { BookOpen, ScrollText, Users } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
-import { mockDb } from '../../../lib/mockDb.js';
+import { adminApi } from '../../../services/api.js';
 
 function StatCard({ icon: Icon, label, value, hint }) {
   return (
@@ -37,31 +38,61 @@ function StatCard({ icon: Icon, label, value, hint }) {
 }
 
 export function OverviewPage() {
-  const summary = mockDb.getSummary();
-  const audits = mockDb.listAudits().slice(0, 12);
+  const [summary, setSummary] = useState(null);
+  const [audits, setAudits] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    Promise.all([adminApi.summary(), adminApi.audits()])
+      .then(([s, a]) => {
+        if (cancelled) return;
+        setSummary(s);
+        setAudits(Array.isArray(a) ? a.slice(0, 12) : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load overview');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <AdminSectionPage
       title="Overview"
-      description="Quick snapshot of platform activity (local mock data for now)."
+      description="Quick snapshot of platform activity."
     >
+      {error ? (
+        <div className="admin-surface">
+          <div className="admin-surface__inner">
+            <div className="admin-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
       <div className="admin-grid-3">
         <StatCard
           icon={Users}
           label="Users"
-          value={summary.usersTotal}
+          value={summary ? summary.usersTotal : '—'}
           hint="Active + disabled accounts."
         />
         <StatCard
           icon={ScrollText}
           label="Manga requests"
-          value={`${summary.requestsNew} new / ${summary.requestsTotal}`}
+          value={
+            summary ? `${summary.requestsNew} new / ${summary.requestsTotal}` : '—'
+          }
           hint="Triage new requests and mark as resolved."
         />
         <StatCard
           icon={BookOpen}
           label="Content"
-          value={`${summary.mangasPublished} published / ${summary.mangasTotal}`}
+          value={
+            summary ? `${summary.mangasPublished} published / ${summary.mangasTotal}` : '—'
+          }
           hint="Drafts are visible only to admins."
         />
       </div>

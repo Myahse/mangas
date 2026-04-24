@@ -1,8 +1,9 @@
 /* ─── Footer ─── */
 .footer {
-  background: var(--bg-dark);
+  background: var(--surface-bg);
   padding: 56px 0 0;
   margin-top: 40px;
+  border-top: 1px solid var(--surface-border);
 }
 
 .footer__grid {
@@ -10,7 +11,7 @@
   grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 40px;
   padding-bottom: 48px;
-  border-bottom: 1px solid var(--border-dark);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 /* ─── Brand ─── */
@@ -34,7 +35,7 @@
 
 .footer__tagline {
   font-size: 0.84rem;
-  color: rgba(255,255,255,0.5);
+  color: color-mix(in srgb, var(--text) 65%, transparent);
   line-height: 1.6;
   margin-bottom: 20px;
   max-width: 280px;
@@ -51,9 +52,9 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: rgba(255,255,255,0.07);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
   border-radius: var(--radius-sm);
-  color: rgba(255,255,255,0.6);
+  color: color-mix(in srgb, var(--text) 70%, transparent);
   transition: var(--transition);
 }
 
@@ -67,7 +68,7 @@
 .footer__col-title {
   font-size: 0.82rem;
   font-weight: 800;
-  color: var(--text-white);
+  color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 16px;
@@ -81,7 +82,7 @@
 
 .footer__links li a {
   font-size: 0.83rem;
-  color: rgba(255,255,255,0.5);
+  color: color-mix(in srgb, var(--text) 65%, transparent);
   font-weight: 500;
   transition: color 0.2s;
 }
@@ -102,7 +103,7 @@
 
 .footer__copy {
   font-size: 0.82rem;
-  color: rgba(255,255,255,0.4);
+  color: color-mix(in srgb, var(--text) 55%, transparent);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -111,7 +112,7 @@
 
 .footer__disclaimer {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.25);
+  color: color-mix(in srgb, var(--text) 40%, transparent);
   max-width: 400px;
   text-align: right;
 }

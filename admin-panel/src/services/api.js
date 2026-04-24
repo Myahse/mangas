@@ -1,0 +1,78 @@
+const DEFAULT_BASE =
+  import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
+
+function apiBase() {
+  return (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
+}
+
+async function request(path, { method = 'GET', body, headers } = {}) {
+  const base = apiBase();
+  const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      ...(body ? { 'Content-Type': 'application/json' } : null),
+      ...(headers || null),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || `Request failed (${res.status})`);
+  }
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) return res.json();
+  return res.text();
+}
+
+export const adminApi = {
+  summary() {
+    return request('/admin/summary');
+  },
+  audits() {
+    return request('/admin/audits');
+  },
+  users() {
+    return request('/admin/users');
+  },
+  updateUser(id, patch) {
+    return request(`/admin/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch });
+  },
+  creatorRequests() {
+    return request('/admin/creator-requests');
+  },
+  reviewCreatorRequest(id, payload) {
+    return request(`/admin/creator-requests/${encodeURIComponent(id)}/review`, { method: 'POST', body: payload });
+  },
+  mangaSubmissions() {
+    return request('/admin/manga-submissions');
+  },
+  reviewMangaSubmission(id, payload) {
+    return request(`/admin/manga-submissions/${encodeURIComponent(id)}/review`, { method: 'POST', body: payload });
+  },
+  mangaRequests() {
+    return request('/admin/manga-requests');
+  },
+  createMangaRequest(payload) {
+    return request('/admin/manga-requests', { method: 'POST', body: payload });
+  },
+  updateMangaRequest(id, patch) {
+    return request(`/admin/manga-requests/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch });
+  },
+  deleteMangaRequest(id) {
+    return request(`/admin/manga-requests/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+  mangas() {
+    return request('/admin/mangas');
+  },
+  createManga(payload) {
+    return request('/admin/mangas', { method: 'POST', body: payload });
+  },
+  updateManga(id, patch) {
+    return request(`/admin/mangas/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch });
+  },
+  deleteManga(id) {
+    return request(`/admin/mangas/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+};
+

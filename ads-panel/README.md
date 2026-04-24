@@ -6,7 +6,7 @@ Independent admin UI for managing:
 - **Notifications** (mobile push + in-app)
 - **System notices** (maintenance + platform notices)
 
-This panel currently runs in **local mode** (mock DB backed by `localStorage`) so it works immediately.
+This panel runs in **API mode** and talks to the backend.
 
 ## Run
 
@@ -26,5 +26,5 @@ This panel uses a **green** brand theme via `src/styles/admin.css`.
 
 All data is stored in the browser:
 
-- DB: `localStorage["mangaafrik_ads_admin:db_v1"]`
+- Backend: `GET/POST/PATCH/DELETE /api/v1/ads/*`
 

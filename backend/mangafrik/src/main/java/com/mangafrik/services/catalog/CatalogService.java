@@ -113,9 +113,7 @@ public class CatalogService {
 	}
 
 	private CatalogSnapshot readSnapshot() {
-		// Dev-friendly: prefer reading the repo's front/public/db.json if present.
-		Path devPath = Path.of("..", "..", "front", "public", "db.json").normalize();
-		try (InputStream in = open(devPath)) {
+		try (InputStream in = open()) {
 			CatalogFile file = objectMapper.readValue(in, CatalogFile.class);
 			return new CatalogSnapshot(Instant.now(), file.manga(), file.genres());
 		} catch (IOException ex) {
@@ -123,10 +121,7 @@ public class CatalogService {
 		}
 	}
 
-	private InputStream open(Path devPath) throws IOException {
-		if (Files.exists(devPath)) {
-			return Files.newInputStream(devPath);
-		}
+	private InputStream open() throws IOException {
 		return new ClassPathResource("db.json").getInputStream();
 	}
 

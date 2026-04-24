@@ -42,7 +42,7 @@ export default function Footer() {
             <h4 className="footer__col-title">Mode</h4>
             <ul className="footer__links">
               <li>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>Local mode</span>
+                <span style={{ color: 'var(--text-muted)' }}>API mode</span>
               </li>
             </ul>
           </div>
@@ -62,8 +62,7 @@ export default function Footer() {
         <div className="footer__bottom">
           <p className="footer__copy">© {year} MangaAfrik</p>
           <p className="footer__disclaimer">
-            This creator UI is currently running in local mode. It will be connected to the API once
-            the backend is implemented.
+            This creator UI is connected to the backend API.
           </p>
         </div>
       </div>

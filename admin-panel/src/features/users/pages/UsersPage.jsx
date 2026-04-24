@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Ban, CheckCircle2, Shield, UserCog } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
-import { mockDb } from '../../../lib/mockDb.js';
 import { notify } from '../../../services/notify.js';
+import { adminApi } from '../../../services/api.js';
 
 const ROLE_OPTIONS = ['reader', 'creator', 'admin'];
 const STATUS_OPTIONS = ['active', 'disabled'];
@@ -12,16 +12,37 @@ export function UsersPage() {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('all');
   const [status, setStatus] = useState('all');
+  const [allUsers, setAllUsers] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    adminApi
+      .users()
+      .then((rows) => {
+        if (cancelled) return;
+        setAllUsers(Array.isArray(rows) ? rows : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load users');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const rows = useMemo(() => {
-    const all = mockDb.listUsers();
+    const all = allUsers;
     const q = query.trim().toLowerCase();
     return all.filter((u) => {
       if (role !== 'all' && u.role !== role) return false;
       if (status !== 'all' && u.status !== status) return false;
       if (!q) return true;
       return (
-        u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q)
+        (u.email || '').toLowerCase().includes(q) ||
+        ((u.displayName || u.name || '')).toLowerCase().includes(q)
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -30,8 +51,15 @@ export function UsersPage() {
   return (
     <AdminSectionPage
       title="Users"
-      description="View and moderate user accounts (local mock data)."
+      description="View and moderate user accounts."
     >
+      {error ? (
+        <div className="admin-surface">
+          <div className="admin-surface__inner">
+            <div className="admin-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
       <div className="admin-surface">
         <div className="admin-surface__inner">
           <div className="admin-grid-2">
@@ -122,8 +150,10 @@ export function UsersPage() {
                         className="admin-select"
                         value={u.role}
                         onChange={(e) => {
-                          mockDb.updateUser(u.id, { role: e.target.value });
-                          setRefreshKey((k) => k + 1);
+                          adminApi
+                            .updateUser(u.id, { role: e.target.value })
+                            .then(() => setRefreshKey((k) => k + 1))
+                            .catch((err) => notify.error(err?.message || 'Update failed'));
                         }}
                       >
                         {ROLE_OPTIONS.map((r) => (
@@ -138,8 +168,10 @@ export function UsersPage() {
                         className="admin-select"
                         value={u.status}
                         onChange={(e) => {
-                          mockDb.updateUser(u.id, { status: e.target.value });
-                          setRefreshKey((k) => k + 1);
+                          adminApi
+                            .updateUser(u.id, { status: e.target.value })
+                            .then(() => setRefreshKey((k) => k + 1))
+                            .catch((err) => notify.error(err?.message || 'Update failed'));
                         }}
                       >
                         {STATUS_OPTIONS.map((s) => (
@@ -155,8 +187,10 @@ export function UsersPage() {
                           className="admin-btn"
                           type="button"
                           onClick={() => {
-                            mockDb.updateUser(u.id, { role: 'admin' });
-                            setRefreshKey((k) => k + 1);
+                            adminApi
+                              .updateUser(u.id, { role: 'admin' })
+                              .then(() => setRefreshKey((k) => k + 1))
+                              .catch((err) => notify.error(err?.message || 'Update failed'));
                           }}
                           title="Promote to admin"
                         >
@@ -168,8 +202,10 @@ export function UsersPage() {
                             className="admin-btn admin-btn--danger"
                             type="button"
                             onClick={() => {
-                              mockDb.updateUser(u.id, { status: 'disabled' });
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .updateUser(u.id, { status: 'disabled' })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Update failed'));
                             }}
                           >
                             <Ban size={16} />
@@ -180,8 +216,10 @@ export function UsersPage() {
                             className="admin-btn admin-btn--primary"
                             type="button"
                             onClick={() => {
-                              mockDb.updateUser(u.id, { status: 'active' });
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .updateUser(u.id, { status: 'active' })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Update failed'));
                             }}
                           >
                             <CheckCircle2 size={16} />

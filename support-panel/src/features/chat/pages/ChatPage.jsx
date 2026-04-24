@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Send } from 'lucide-react';
 import { SupportSectionPage } from '../../../pages/SupportSectionPage.jsx';
-import { mockDb } from '../../../lib/mockDb.js';
+import { supportApi } from '../../../services/api.js';
+import { notify } from '../../../services/notify.js';
 
 function formatFrom(from) {
   return from === 'support' ? 'Support' : 'User';
@@ -13,22 +14,44 @@ export function ChatPage() {
   const ticketId = params.get('ticket') || '';
   const [refreshKey, setRefreshKey] = useState(0);
   const [text, setText] = useState('');
+  const [ticket, setTicket] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [error, setError] = useState('');
 
-  const ticket = useMemo(() => (ticketId ? mockDb.getTicket(ticketId) : null), [ticketId]);
-  const messages = useMemo(() => {
-    if (!ticketId) return [];
-    return mockDb.listMessages(ticketId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    if (!ticketId) {
+      setTicket(null);
+      setMessages([]);
+      return () => {};
+    }
+
+    Promise.all([supportApi.getTicket(ticketId), supportApi.listMessages(ticketId)])
+      .then(([t, m]) => {
+        if (cancelled) return;
+        setTicket(t || null);
+        setMessages(Array.isArray(m) ? m : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load chat');
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [ticketId, refreshKey]);
+
+  const description = useMemo(() => {
+    if (ticket) return `Talking to ${ticket.user?.name || 'Unknown'} about “${ticket.subject}”.`;
+    return 'Pick a ticket from the Inbox to start chatting.';
+  }, [ticket]);
 
   return (
     <SupportSectionPage
       title="Chat"
-      description={
-        ticket
-          ? `Talking to ${ticket.user?.name || 'Unknown'} about “${ticket.subject}”.`
-          : 'Pick a ticket from the Inbox to start chatting.'
-      }
+      description={description}
       right={
         ticket ? (
           <div className="support-badge">
@@ -40,6 +63,7 @@ export function ChatPage() {
     >
       <div className="support-surface">
         <div className="support-surface__inner">
+          {error ? <div className="support-muted" style={{ marginBottom: 12 }}>{error}</div> : null}
           {!ticket ? (
             <div className="support-muted">
               No ticket selected. Go to Inbox and click “Chat” on a ticket.
@@ -101,9 +125,13 @@ export function ChatPage() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  mockDb.sendMessage(ticketId, 'support', text);
-                  setText('');
-                  setRefreshKey((k) => k + 1);
+                  supportApi
+                    .sendMessage(ticketId, 'support', text)
+                    .then(() => {
+                      setText('');
+                      setRefreshKey((k) => k + 1);
+                    })
+                    .catch((err) => notify.error(err?.message || 'Send failed'));
                 }}
                 style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}
               >

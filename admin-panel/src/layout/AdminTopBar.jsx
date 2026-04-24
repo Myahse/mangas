@@ -26,7 +26,7 @@ export function AdminTopBar() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span className="pill">Local mode (mock DB)</span>
+        <span className="pill">API mode</span>
         <button className="btn" type="button" onClick={toggleTheme}>
           {isDark ? <Sun size={16} /> : <Moon size={16} />}
           Theme

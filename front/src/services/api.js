@@ -1,7 +1,3 @@
-/* ─────────────────────────────────────────────────────────────
-   api.js – Frontend API client (real backend).
-   Backend routes live under: /api/v1
-───────────────────────────────────────────────────────────── */
 
 const DEFAULT_BASE =
   import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
@@ -64,8 +60,7 @@ export async function fetchPopularManga(count = 10) {
 
 /** Recherche par titre, auteur ou genre */
 export async function fetchSearchManga({ query = '', genre = '', status = '', sort = 'popular' } = {}) {
-  // Backend doesn't expose a dedicated search endpoint yet,
-  // so we filter client-side.
+
   let list = await fetchAllManga();
 
   if (query) {
@@ -107,21 +102,14 @@ export async function fetchChapters(slug) {
   return request(`/manga/${encodeURIComponent(slug)}/chapters`);
 }
 
-/**
- * Pages d'un chapitre.
- *
- * Le backend renvoie déjà les URLs (locales ou fallback picsum).
- */
+
 export async function fetchPages(slug, chapterNumber) {
   return request(
     `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/pages`,
   );
 }
 
-/* ════════════════════════════════════════════════════════════
-   Hook utilitaire — useFetch
-   Usage: const { data, loading, error } = useFetch(fetchFn, ...args)
-════════════════════════════════════════════════════════════ */
+
 import { useState, useEffect, useRef } from 'react';
 
 export function useFetch(fetchFn, ...args) {

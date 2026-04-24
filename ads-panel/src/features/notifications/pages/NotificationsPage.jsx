@@ -1,6 +1,7 @@
 import { Bell, Send, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { mockDb } from '../../../lib/mockDb.js';
+import { useEffect, useMemo, useState } from 'react';
+import { adsApi } from '../../../services/api.js';
+import { notify } from '../../../services/notify.js';
 
 const emptyForm = {
   channel: 'push',
@@ -17,23 +18,52 @@ const emptyForm = {
 export function NotificationsPage() {
   const [form, setForm] = useState(emptyForm);
   const [refreshKey, setRefreshKey] = useState(0);
-  const rows = useMemo(() => mockDb.listNotifications(), [refreshKey]);
+  const [allRows, setAllRows] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    adsApi
+      .listNotifications()
+      .then((rows) => {
+        if (cancelled) return;
+        setAllRows(Array.isArray(rows) ? rows : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load notifications');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  const rows = useMemo(() => allRows, [allRows]);
 
   function onCreate(e) {
     e.preventDefault();
-    mockDb.createNotification(form);
-    setForm(emptyForm);
-    setRefreshKey((k) => k + 1);
+    adsApi
+      .createNotification(form)
+      .then(() => {
+        setForm(emptyForm);
+        setRefreshKey((k) => k + 1);
+      })
+      .catch((err) => notify.error(err?.message || 'Create failed'));
   }
 
   function onQueue(id) {
-    mockDb.updateNotification(id, { status: 'queued' });
-    setRefreshKey((k) => k + 1);
+    adsApi
+      .updateNotification(id, { status: 'queued' })
+      .then(() => setRefreshKey((k) => k + 1))
+      .catch((err) => notify.error(err?.message || 'Update failed'));
   }
 
   function onDelete(id) {
-    mockDb.deleteNotification(id);
-    setRefreshKey((k) => k + 1);
+    adsApi
+      .deleteNotification(id)
+      .then(() => setRefreshKey((k) => k + 1))
+      .catch((err) => notify.error(err?.message || 'Delete failed'));
   }
 
   return (
@@ -43,6 +73,14 @@ export function NotificationsPage() {
           <Bell size={18} /> Notifications
         </h1>
       </div>
+
+      {error ? (
+        <div className="admin-surface" style={{ marginBottom: 14 }}>
+          <div className="admin-surface__inner">
+            <div className="admin-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="admin-grid-2">
         <section className="admin-surface">

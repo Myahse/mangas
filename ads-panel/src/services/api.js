@@ -25,6 +25,9 @@ export const adsApi = {
   async summary() {
     return request('/ads/summary');
   },
+  async audits() {
+    return request('/ads/audits');
+  },
   async listHeroAds() {
     return request('/ads/hero-ads');
   },
@@ -36,6 +39,30 @@ export const adsApi = {
   },
   async deleteHeroAd(id) {
     return request(`/ads/hero-ads/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+  async listNotifications() {
+    return request('/ads/notifications');
+  },
+  async createNotification(payload) {
+    return request('/ads/notifications', { method: 'POST', body: payload });
+  },
+  async updateNotification(id, patch) {
+    return request(`/ads/notifications/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch });
+  },
+  async deleteNotification(id) {
+    return request(`/ads/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+  async listSystemNotices() {
+    return request('/ads/system-notices');
+  },
+  async createSystemNotice(payload) {
+    return request('/ads/system-notices', { method: 'POST', body: payload });
+  },
+  async updateSystemNotice(id, patch) {
+    return request(`/ads/system-notices/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch });
+  },
+  async deleteSystemNotice(id) {
+    return request(`/ads/system-notices/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
   async verticalMangaThumbnails() {
     return request('/ads/manga-thumbnails/vertical');

@@ -22,5 +22,5 @@ npm run dev
 ## Notes
 
 - Data persists in the browser in `localStorage` (key prefix: `mangaafrik_support:`).
-- When the API exists, we can swap `mockDb` with real API calls.
+- The UI uses the backend API (`/api/v1/support/*`).
 

@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
-import { mockDb } from '../../../lib/mockDb.js';
 import { notify } from '../../../services/notify.js';
+import { adminApi } from '../../../services/api.js';
 
 const STATUS_OPTIONS = ['draft', 'published', 'archived'];
 
@@ -10,9 +10,29 @@ export function ContentPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [query, setQuery] = useState('');
   const [create, setCreate] = useState({ title: '', slug: '', status: 'draft' });
+  const [allRows, setAllRows] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    adminApi
+      .mangas()
+      .then((rows) => {
+        if (cancelled) return;
+        setAllRows(Array.isArray(rows) ? rows : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load mangas');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const rows = useMemo(() => {
-    const all = mockDb.listMangas();
+    const all = allRows;
     const q = query.trim().toLowerCase();
     if (!q) return all;
     return all.filter(
@@ -30,10 +50,14 @@ export function ContentPage() {
           className="admin-btn admin-btn--primary"
           type="button"
           onClick={() => {
-            const created = mockDb.createManga(create);
-            setCreate({ title: '', slug: '', status: 'draft' });
-            setRefreshKey((k) => k + 1);
-            notify.success(`Manga created: ${created.title}`);
+            adminApi
+              .createManga(create)
+              .then((created) => {
+                setCreate({ title: '', slug: '', status: 'draft' });
+                setRefreshKey((k) => k + 1);
+                notify.success(`Manga created: ${created.title}`);
+              })
+              .catch((err) => notify.error(err?.message || 'Create failed'));
           }}
           disabled={!create.title.trim()}
         >
@@ -42,6 +66,13 @@ export function ContentPage() {
         </button>
       }
     >
+      {error ? (
+        <div className="admin-surface">
+          <div className="admin-surface__inner">
+            <div className="admin-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
       <div className="admin-surface">
         <div className="admin-surface__inner">
           <div className="admin-grid-2">
@@ -148,8 +179,10 @@ export function ContentPage() {
                         className="admin-select"
                         value={m.status}
                         onChange={(e) => {
-                          mockDb.updateManga(m.id, { status: e.target.value });
-                          setRefreshKey((k) => k + 1);
+                          adminApi
+                            .updateManga(m.id, { status: e.target.value })
+                            .then(() => setRefreshKey((k) => k + 1))
+                            .catch((err) => notify.error(err?.message || 'Update failed'));
                         }}
                       >
                         {STATUS_OPTIONS.map((s) => (
@@ -168,8 +201,10 @@ export function ContentPage() {
                             if (
                               confirm(`Delete manga “${m.title}”? This cannot be undone.`)
                             ) {
-                              mockDb.deleteManga(m.id);
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .deleteManga(m.id)
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Delete failed'));
                             }
                           }}
                         >

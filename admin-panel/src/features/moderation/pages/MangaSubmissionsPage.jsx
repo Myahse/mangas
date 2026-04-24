@@ -1,17 +1,37 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, RefreshCcw, XCircle } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
-import { mockDb } from '../../../lib/mockDb.js';
 import { notify } from '../../../services/notify.js';
+import { adminApi } from '../../../services/api.js';
 
 export function MangaSubmissionsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [status, setStatus] = useState('pending');
   const [query, setQuery] = useState('');
   const [reasonById, setReasonById] = useState({});
+  const [allRows, setAllRows] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    adminApi
+      .mangaSubmissions()
+      .then((rows) => {
+        if (cancelled) return;
+        setAllRows(Array.isArray(rows) ? rows : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load submissions');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const rows = useMemo(() => {
-    const all = mockDb.listMangaSubmissions();
+    const all = allRows;
     const q = query.trim().toLowerCase();
     return all.filter((s) => {
       if (status !== 'all' && s.status !== status) return false;
@@ -28,6 +48,13 @@ export function MangaSubmissionsPage() {
       title="Manga submissions"
       description="Review new manga/series created by creators. Approve, reject, or request resubmission with a reason."
     >
+      {error ? (
+        <div className="admin-surface">
+          <div className="admin-surface__inner">
+            <div className="admin-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
       <div className="admin-surface">
         <div className="admin-surface__inner">
           <div className="admin-grid-2">
@@ -125,8 +152,10 @@ export function MangaSubmissionsPage() {
                             type="button"
                             className="admin-btn admin-btn--primary"
                             onClick={() => {
-                              mockDb.reviewMangaSubmission(s.id, 'approved', '');
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .reviewMangaSubmission(s.id, { decision: 'approved', reason: '' })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Review failed'));
                             }}
                           >
                             <CheckCircle2 size={16} />
@@ -141,8 +170,10 @@ export function MangaSubmissionsPage() {
                                 notify.info('Please provide a reason to request resubmission.');
                                 return;
                               }
-                              mockDb.reviewMangaSubmission(s.id, 'resubmit', reason);
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .reviewMangaSubmission(s.id, { decision: 'resubmit', reason })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Review failed'));
                             }}
                           >
                             <RefreshCcw size={16} />
@@ -157,8 +188,10 @@ export function MangaSubmissionsPage() {
                                 notify.info('Please provide a reason to reject.');
                                 return;
                               }
-                              mockDb.reviewMangaSubmission(s.id, 'rejected', reason);
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .reviewMangaSubmission(s.id, { decision: 'rejected', reason })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Review failed'));
                             }}
                           >
                             <XCircle size={16} />

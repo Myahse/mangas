@@ -10,6 +10,7 @@ import BrowsePage from './pages/BrowsePage';
 import Register from './pages/Register/Register';
 import AccountSectionPage from './pages/Account/AccountSectionPage';
 import ProfilePage from './pages/Account/ProfilePage';
+import EpisodesPage from './pages/EpisodesPage';
 
 /* The reader page uses its own full-screen layout */
 function Layout({ children }) {
@@ -36,6 +37,7 @@ export default function App() {
         <Routes>
           <Route path="/"                              element={<HomePage   />} />
           <Route path="/browse"                        element={<BrowsePage />} />
+          <Route path="/episodes"                      element={<EpisodesPage />} />
           <Route path="/manga/:slug"                   element={<MangaPage  />} />
           <Route path="/manga/:slug/chapter/:chapter"  element={<ReaderPage />} />
           <Route path="/register"                      element={<Register   />} />

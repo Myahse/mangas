@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, MessageCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SupportSectionPage } from '../../../pages/SupportSectionPage.jsx';
-import { mockDb } from '../../../lib/mockDb.js';
+import { supportApi } from '../../../services/api.js';
+import { notify } from '../../../services/notify.js';
 
 const TYPE_OPTIONS = ['issue', 'request'];
 const STATUS_OPTIONS = ['new', 'in_review', 'validated', 'rejected'];
@@ -17,9 +18,30 @@ export function InboxPage() {
   const [type, setType] = useState('all');
   const [status, setStatus] = useState('all');
   const navigate = useNavigate();
+  const [summary, setSummary] = useState(null);
+  const [allTickets, setAllTickets] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    Promise.all([supportApi.summary(), supportApi.listTickets()])
+      .then(([s, t]) => {
+        if (cancelled) return;
+        setSummary(s);
+        setAllTickets(Array.isArray(t) ? t : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load inbox');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const rows = useMemo(() => {
-    const all = mockDb.listTickets();
+    const all = allTickets;
     const q = query.trim().toLowerCase();
     return all.filter((t) => {
       if (type !== 'all' && t.type !== type) return false;
@@ -28,8 +50,8 @@ export function InboxPage() {
       return (
         t.subject.toLowerCase().includes(q) ||
         t.description.toLowerCase().includes(q) ||
-        t.user?.email?.toLowerCase().includes(q) ||
-        t.user?.name?.toLowerCase().includes(q)
+        (t.user?.email || '').toLowerCase().includes(q) ||
+        (t.user?.name || '').toLowerCase().includes(q)
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -42,10 +64,17 @@ export function InboxPage() {
       right={
         <div className="support-badge">
           <span style={{ opacity: 0.8 }}>Total</span>
-          <span>{mockDb.getSummary().ticketsTotal}</span>
+          <span>{summary ? summary.ticketsTotal : '—'}</span>
         </div>
       }
     >
+      {error ? (
+        <div className="support-surface">
+          <div className="support-surface__inner">
+            <div className="support-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
       <div className="support-surface">
         <div className="support-surface__inner">
           <div className="support-grid-3">
@@ -145,8 +174,10 @@ export function InboxPage() {
                         className="support-select"
                         value={t.status}
                         onChange={(e) => {
-                          mockDb.updateTicket(t.id, { status: e.target.value });
-                          setRefreshKey((k) => k + 1);
+                          supportApi
+                            .updateTicket(t.id, { status: e.target.value })
+                            .then(() => setRefreshKey((k) => k + 1))
+                            .catch((err) => notify.error(err?.message || 'Update failed'));
                         }}
                       >
                         {STATUS_OPTIONS.map((s) => (
@@ -171,8 +202,10 @@ export function InboxPage() {
                           type="button"
                           onClick={() => {
                             const note = prompt('Validation note (optional):', '') || '';
-                            mockDb.validateTicket(t.id, note);
-                            setRefreshKey((k) => k + 1);
+                            supportApi
+                              .validateTicket(t.id, note)
+                              .then(() => setRefreshKey((k) => k + 1))
+                              .catch((err) => notify.error(err?.message || 'Validate failed'));
                           }}
                         >
                           <CheckCircle2 size={16} />
@@ -183,8 +216,10 @@ export function InboxPage() {
                           type="button"
                           onClick={() => {
                             const reason = prompt('Rejection reason (optional):', '') || '';
-                            mockDb.rejectTicket(t.id, reason);
-                            setRefreshKey((k) => k + 1);
+                            supportApi
+                              .rejectTicket(t.id, reason)
+                              .then(() => setRefreshKey((k) => k + 1))
+                              .catch((err) => notify.error(err?.message || 'Reject failed'));
                           }}
                         >
                           <XCircle size={16} />

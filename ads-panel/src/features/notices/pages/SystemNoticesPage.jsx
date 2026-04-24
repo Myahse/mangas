@@ -1,6 +1,7 @@
 import { AlertTriangle, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { mockDb } from '../../../lib/mockDb.js';
+import { useEffect, useMemo, useState } from 'react';
+import { adsApi } from '../../../services/api.js';
+import { notify } from '../../../services/notify.js';
 
 const emptyForm = {
   severity: 'info',
@@ -14,23 +15,52 @@ const emptyForm = {
 export function SystemNoticesPage() {
   const [form, setForm] = useState(emptyForm);
   const [refreshKey, setRefreshKey] = useState(0);
-  const rows = useMemo(() => mockDb.listSystemNotices(), [refreshKey]);
+  const [allRows, setAllRows] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    adsApi
+      .listSystemNotices()
+      .then((rows) => {
+        if (cancelled) return;
+        setAllRows(Array.isArray(rows) ? rows : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load system notices');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  const rows = useMemo(() => allRows, [allRows]);
 
   function onCreate(e) {
     e.preventDefault();
-    mockDb.createSystemNotice(form);
-    setForm(emptyForm);
-    setRefreshKey((k) => k + 1);
+    adsApi
+      .createSystemNotice(form)
+      .then(() => {
+        setForm(emptyForm);
+        setRefreshKey((k) => k + 1);
+      })
+      .catch((err) => notify.error(err?.message || 'Create failed'));
   }
 
   function onDelete(id) {
-    mockDb.deleteSystemNotice(id);
-    setRefreshKey((k) => k + 1);
+    adsApi
+      .deleteSystemNotice(id)
+      .then(() => setRefreshKey((k) => k + 1))
+      .catch((err) => notify.error(err?.message || 'Delete failed'));
   }
 
   function setActive(id, active) {
-    mockDb.updateSystemNotice(id, { status: active ? 'active' : 'disabled' });
-    setRefreshKey((k) => k + 1);
+    adsApi
+      .updateSystemNotice(id, { status: active ? 'active' : 'disabled' })
+      .then(() => setRefreshKey((k) => k + 1))
+      .catch((err) => notify.error(err?.message || 'Update failed'));
   }
 
   return (
@@ -40,6 +70,14 @@ export function SystemNoticesPage() {
           <AlertTriangle size={18} /> System notices
         </h1>
       </div>
+
+      {error ? (
+        <div className="admin-surface" style={{ marginBottom: 14 }}>
+          <div className="admin-surface__inner">
+            <div className="admin-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="admin-grid-2">
         <section className="admin-surface">

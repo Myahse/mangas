@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
-import { mockDb } from '../../../lib/mockDb.js';
 import { notify } from '../../../services/notify.js';
+import { adminApi } from '../../../services/api.js';
 
 const STATUS_OPTIONS = ['new', 'in_review', 'done', 'rejected'];
 
@@ -10,6 +10,8 @@ export function MangaRequestsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
+  const [allRows, setAllRows] = useState([]);
+  const [error, setError] = useState('');
 
   const [create, setCreate] = useState({
     requestedTitle: '',
@@ -17,8 +19,26 @@ export function MangaRequestsPage() {
     notes: '',
   });
 
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    adminApi
+      .mangaRequests()
+      .then((rows) => {
+        if (cancelled) return;
+        setAllRows(Array.isArray(rows) ? rows : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load requests');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
   const rows = useMemo(() => {
-    const all = mockDb.listMangaRequests();
+    const all = allRows;
     const q = query.trim().toLowerCase();
     return all.filter((r) => {
       if (status !== 'all' && r.status !== status) return false;
@@ -41,10 +61,14 @@ export function MangaRequestsPage() {
           className="admin-btn admin-btn--primary"
           type="button"
           onClick={() => {
-            const created = mockDb.createMangaRequest(create);
-            setCreate({ requestedTitle: '', requestedBy: '', notes: '' });
-            setRefreshKey((k) => k + 1);
-            notify.success(`Request created: ${created.id}`);
+            adminApi
+              .createMangaRequest(create)
+              .then((created) => {
+                setCreate({ requestedTitle: '', requestedBy: '', notes: '' });
+                setRefreshKey((k) => k + 1);
+                notify.success(`Request created: ${created.id}`);
+              })
+              .catch((err) => notify.error(err?.message || 'Create failed'));
           }}
           disabled={!create.requestedTitle.trim()}
         >
@@ -53,6 +77,13 @@ export function MangaRequestsPage() {
         </button>
       }
     >
+      {error ? (
+        <div className="admin-surface">
+          <div className="admin-surface__inner">
+            <div className="admin-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
       <div className="admin-surface">
         <div className="admin-surface__inner">
           <div className="admin-grid-2">
@@ -176,10 +207,10 @@ export function MangaRequestsPage() {
                         className="admin-select"
                         value={r.status}
                         onChange={(e) => {
-                          mockDb.updateMangaRequest(r.id, {
-                            status: e.target.value,
-                          });
-                          setRefreshKey((k) => k + 1);
+                          adminApi
+                            .updateMangaRequest(r.id, { status: e.target.value })
+                            .then(() => setRefreshKey((k) => k + 1))
+                            .catch((err) => notify.error(err?.message || 'Update failed'));
                         }}
                       >
                         {STATUS_OPTIONS.map((s) => (
@@ -200,8 +231,10 @@ export function MangaRequestsPage() {
                                 `Delete request “${r.requestedTitle}”? This cannot be undone.`,
                               )
                             ) {
-                              mockDb.deleteMangaRequest(r.id);
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .deleteMangaRequest(r.id)
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Delete failed'));
                             }
                           }}
                         >

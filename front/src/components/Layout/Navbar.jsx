@@ -146,6 +146,7 @@ export default function Navbar() {
 
   const navLinks = [
     { label: t('nav.browse', 'Browse'), to: '/browse' },
+    { label: t('nav.episodes', 'Episodes'), to: '/episodes' },
     /* Pas de `to` : /genres n’existe pas en route — évite 404 au clic (mobile / touch). */
     { label: t('nav.genres', 'Genres'), hasDropdown: true },
     { label: t('nav.new', 'New'), to: '/browse?sort=new' },

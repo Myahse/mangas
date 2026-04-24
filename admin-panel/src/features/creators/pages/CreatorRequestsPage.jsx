@@ -1,16 +1,37 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
-import { mockDb } from '../../../lib/mockDb.js';
+import { adminApi } from '../../../services/api.js';
+import { notify } from '../../../services/notify.js';
 
 export function CreatorRequestsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [status, setStatus] = useState('pending');
   const [query, setQuery] = useState('');
   const [reasonById, setReasonById] = useState({});
+  const [allRows, setAllRows] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setError('');
+    adminApi
+      .creatorRequests()
+      .then((rows) => {
+        if (cancelled) return;
+        setAllRows(Array.isArray(rows) ? rows : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Failed to load creator requests');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const rows = useMemo(() => {
-    const all = mockDb.listCreatorRequests();
+    const all = allRows;
     const q = query.trim().toLowerCase();
     return all.filter((r) => {
       if (status !== 'all' && r.status !== status) return false;
@@ -29,6 +50,13 @@ export function CreatorRequestsPage() {
       title="Creator requests"
       description="Creator accounts should be reviewed separately before publishing access."
     >
+      {error ? (
+        <div className="admin-surface">
+          <div className="admin-surface__inner">
+            <div className="admin-muted">{error}</div>
+          </div>
+        </div>
+      ) : null}
       <div className="admin-surface">
         <div className="admin-surface__inner">
           <div className="admin-grid-2">
@@ -114,8 +142,13 @@ export function CreatorRequestsPage() {
                             type="button"
                             className="admin-btn admin-btn--primary"
                             onClick={() => {
-                              mockDb.reviewCreatorRequest(r.id, 'approved', reasonById[r.id] || '');
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .reviewCreatorRequest(r.id, {
+                                  decision: 'approved',
+                                  reason: reasonById[r.id] || '',
+                                })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Review failed'));
                             }}
                           >
                             <CheckCircle2 size={16} />
@@ -125,12 +158,13 @@ export function CreatorRequestsPage() {
                             type="button"
                             className="admin-btn admin-btn--danger"
                             onClick={() => {
-                              mockDb.reviewCreatorRequest(
-                                r.id,
-                                'rejected',
-                                reasonById[r.id] || 'Rejected by admin',
-                              );
-                              setRefreshKey((k) => k + 1);
+                              adminApi
+                                .reviewCreatorRequest(r.id, {
+                                  decision: 'rejected',
+                                  reason: reasonById[r.id] || 'Rejected by admin',
+                                })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Review failed'));
                             }}
                           >
                             <XCircle size={16} />
