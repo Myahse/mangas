@@ -1,25 +1,36 @@
 /* ─────────────────────────────────────────────────────────────
-   api.js  –  Couche d'accès aux données depuis /public/db.json
-   Simule une vraie API REST avec délai réseau et cache mémoire.
-   Quand tu auras un vrai backend, remplace DB_URL par ton endpoint.
+   api.js – Frontend API client (real backend).
+   Backend routes live under: /api/v1
 ───────────────────────────────────────────────────────────── */
 
-const DB_URL    = '/db.json';
-const FAKE_DELAY = 300; // ms — simule la latence réseau
+const DEFAULT_BASE =
+  import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
 
-/* ── Cache en mémoire (évite de re-fetcher à chaque navigation) ── */
-let _cache = null;
-
-async function getDB() {
-  if (_cache) return _cache;
-  const res = await fetch(DB_URL);
-  if (!res.ok) throw new Error(`Impossible de charger db.json (${res.status})`);
-  _cache = await res.json();
-  return _cache;
+function apiBase() {
+  return (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function request(path, { method = 'GET', body, headers } = {}) {
+  const base = apiBase();
+  const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      ...(body ? { 'Content-Type': 'application/json' } : null),
+      ...(headers || null),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || `Request failed (${res.status})`);
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) return res.json();
+  return res.text();
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -28,51 +39,41 @@ function delay(ms) {
 
 /** Récupère tous les manga */
 export async function fetchAllManga() {
-  const [db] = await Promise.all([getDB(), delay(FAKE_DELAY)]);
-  return db.manga;
+  return request('/manga');
 }
 
 /** Récupère un manga par son slug */
 export async function fetchMangaBySlug(slug) {
-  const [db] = await Promise.all([getDB(), delay(FAKE_DELAY)]);
-  const manga = db.manga.find(m => m.slug === slug);
-  if (!manga) throw new Error(`Manga introuvable : ${slug}`);
-  return manga;
+  return request(`/manga/${encodeURIComponent(slug)}`);
 }
 
 /** Manga mis en avant (featured: true) */
 export async function fetchFeaturedManga() {
-  const [db] = await Promise.all([getDB(), delay(FAKE_DELAY)]);
-  return db.manga.filter(m => m.featured);
+  return request('/manga/featured');
 }
 
 /** Dernières mises à jour — trié par numéro de chapitre desc */
 export async function fetchLatestUpdated(count = 12) {
-  const [db] = await Promise.all([getDB(), delay(FAKE_DELAY)]);
-  return [...db.manga]
-    .sort((a, b) => b.latestChapter.number - a.latestChapter.number)
-    .slice(0, count);
+  return request(`/manga/latest?count=${encodeURIComponent(count)}`);
 }
 
 /** Les plus populaires — trié par note desc */
 export async function fetchPopularManga(count = 10) {
-  const [db] = await Promise.all([getDB(), delay(FAKE_DELAY)]);
-  return [...db.manga]
-    .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
-    .slice(0, count);
+  return request(`/manga/popular?count=${encodeURIComponent(count)}`);
 }
 
 /** Recherche par titre, auteur ou genre */
 export async function fetchSearchManga({ query = '', genre = '', status = '', sort = 'popular' } = {}) {
-  const [db] = await Promise.all([getDB(), delay(FAKE_DELAY)]);
-  let list = [...db.manga];
+  // Backend doesn't expose a dedicated search endpoint yet,
+  // so we filter client-side.
+  let list = await fetchAllManga();
 
   if (query) {
     const q = query.toLowerCase();
     list = list.filter(m =>
       m.title.toLowerCase().includes(q) ||
-      m.author.toLowerCase().includes(q) ||
-      m.genres.some(g => g.toLowerCase().includes(q))
+      (m.author || '').toLowerCase().includes(q) ||
+      (m.genres || []).some(g => g.toLowerCase().includes(q))
     );
   }
 
@@ -95,8 +96,7 @@ export async function fetchSearchManga({ query = '', genre = '', status = '', so
 ════════════════════════════════════════════════════════════ */
 
 export async function fetchGenres() {
-  const [db] = await Promise.all([getDB(), delay(FAKE_DELAY)]);
-  return db.genres;
+  return request('/genres');
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -104,60 +104,18 @@ export async function fetchGenres() {
 ════════════════════════════════════════════════════════════ */
 
 export async function fetchChapters(slug) {
-  const [manga] = await Promise.all([fetchMangaBySlug(slug), delay(FAKE_DELAY)]);
-  const total = manga.totalChapters;
-  const max   = Math.min(total, 50);
-  return Array.from({ length: max }, (_, i) => {
-    const num = total - max + i + 1;
-    /* Si des images locales sont déclarées pour ce chapitre, on utilise
-       leur nombre réel — sinon on génère une valeur par défaut. */
-    const localCount = manga.localChapters?.[String(num)];
-    return {
-      number: num,
-      title:  `Chapitre ${num}`,
-      date:   num === total   ? 'Il y a 2 jours'
-            : num === total-1 ? 'Il y a 1 semaine'
-            : `Il y a ${(num % 28) + 1} jours`,
-      pages:  localCount ?? (18 + (num % 10)),
-    };
-  }).reverse();
+  return request(`/manga/${encodeURIComponent(slug)}/chapters`);
 }
 
 /**
  * Pages d'un chapitre.
  *
- * Si le manga déclare `localChapters[chapterNumber]` dans db.json,
- * les URLs pointent vers tes images locales dans :
- *   public/chapters/<slug>/<chapterNumber>/001.jpg  (ou .png, .webp…)
- *
- * Sinon, fallback sur des images picsum pour les tests.
- *
- * Format de nommage attendu : 001.jpg, 002.jpg … 999.jpg
- * Extensions supportées (dans l'ordre de priorité) : jpg, png, webp
+ * Le backend renvoie déjà les URLs (locales ou fallback picsum).
  */
 export async function fetchPages(slug, chapterNumber) {
-  const [db] = await Promise.all([getDB(), delay(FAKE_DELAY)]);
-  const manga = db.manga.find(m => m.slug === slug);
-
-  const localCount = manga?.localChapters?.[String(chapterNumber)];
-
-  if (localCount && localCount > 0) {
-    /* ── Images locales ── */
-    return Array.from({ length: localCount }, (_, i) => {
-      const num = String(i + 1).padStart(3, '0'); // "001", "002" …
-      return {
-        number: i + 1,
-        /* Vite sert tout le dossier /public/ à la racine du site */
-        url: `/chapters/${slug}/${chapterNumber}/${num}.jpg`,
-      };
-    });
-  }
-
-  /* ── Fallback picsum ── */
-  return Array.from({ length: 20 }, (_, i) => ({
-    number: i + 1,
-    url:    `https://picsum.photos/seed/${slug}-ch${chapterNumber}-p${i + 1}/800/1200`,
-  }));
+  return request(
+    `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/pages`,
+  );
 }
 
 /* ════════════════════════════════════════════════════════════

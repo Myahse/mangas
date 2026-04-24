@@ -1,8 +1,8 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import Navbar from './components/layout/Navbar';
-import InfoBar from './components/layout/InfoBar';
-import Footer from './components/layout/Footer';
+import Navbar from './components/Layout/Navbar';
+import InfoBar from './components/Layout/InfoBar';
+import Footer from './components/Layout/Footer';
 import HomePage from './pages/HomePage';
 import MangaPage from './pages/MangaPage';
 import ReaderPage from './pages/ReaderPage';

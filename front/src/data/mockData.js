@@ -1,7 +1,7 @@
 /*
  * mockData.js — Constantes statiques uniquement.
- * Toutes les données manga viennent désormais de /public/db.json
- * via src/services/api.js
+ * Les données manga viennent désormais du backend via src/services/api.js
+ * (VITE_API_BASE_URL).
  */
 
 export { useFetch } from '../services/api';

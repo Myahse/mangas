@@ -56,16 +56,33 @@ export default function HeroBanner() {
     return () => clearInterval(timer);
   }, [next, total]);
 
-  if (loading || !featured) return <HeroSkeleton />;
+  if (loading) return <HeroSkeleton />;
+  if (!featured || featured.length === 0) {
+    return (
+      <section className="hero hero--skeleton" aria-label="Aucun manga en vedette">
+        <div className="hero__bg" style={{ background: '#1a1a1a' }} />
+        <div className="hero__overlay-left" />
+        <div className="hero__overlay-bottom" />
+        <div className="hero__content container">
+          <div className="hero__info">
+            <h2 style={{ margin: 0 }}>Aucun manga en vedette</h2>
+            <p style={{ marginTop: 10, opacity: 0.8 }}>
+              Le catalogue est vide pour le moment. Ajoutez des titres côté backend puis rafraîchissez.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
-  const manga = featured[current];
+  const manga = featured[current] || featured[0];
 
   return (
     <section className="hero">
       {/* Background image */}
       <div
         className={`hero__bg${transitioning ? ' hero__bg--fade' : ''}`}
-        style={{ backgroundImage: `url(${manga.banner})` }}
+        style={{ backgroundImage: manga?.banner ? `url(${manga.banner})` : 'none' }}
       />
       <div className="hero__overlay-left" />
       <div className="hero__overlay-bottom" />
@@ -74,8 +91,8 @@ export default function HeroBanner() {
         {/* Info */}
         <div className="hero__info">
           <div className="hero__badges">
-            <span className={`badge badge-${manga.status.toLowerCase()}`}>{manga.status}</span>
-            {manga.genres.slice(0, 3).map(g => (
+            <span className={`badge badge-${(manga.status || 'unknown').toLowerCase()}`}>{manga.status || 'Unknown'}</span>
+            {(manga.genres || []).slice(0, 3).map(g => (
               <span key={g} className="hero__genre-tag">{g}</span>
             ))}
           </div>
@@ -88,14 +105,14 @@ export default function HeroBanner() {
               {manga.rating}
             </span>
             <span className="hero__meta-dot">·</span>
-            <span className="hero__meta-text">{manga.author}</span>
+            <span className="hero__meta-text">{manga.author || '—'}</span>
             <span className="hero__meta-dot">·</span>
             <span className="hero__meta-text">{manga.totalChapters} chapitres</span>
             <span className="hero__meta-dot">·</span>
             <span className="hero__meta-text">{manga.views} vues</span>
           </div>
 
-          <p className="hero__synopsis">{manga.synopsis}</p>
+          <p className="hero__synopsis">{manga.synopsis || ''}</p>
 
           <div className="hero__buttons">
             <Link to={`/manga/${manga.slug}/chapter/1`} className="hero__btn hero__btn--primary">
@@ -115,7 +132,7 @@ export default function HeroBanner() {
             key={manga.id}
             /* Si un visuel de personnage principal est défini,
                on l'utilise, sinon on retombe sur la cover du manga */
-            src={manga.heroCover || manga.cover}
+            src={manga.heroCover || manga.cover || ''}
             alt={manga.title}
             className={`hero__cover${transitioning ? ' hero__cover--fade' : ''}`}
           />

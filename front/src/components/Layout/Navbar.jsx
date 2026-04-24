@@ -12,24 +12,10 @@ import AuthModal from '../auth/AuthModal';
 import PreferencesModal from '../modals/PreferencesModal';
 import './Navbar.css';
 
-/** Si `db.json` est vide ou lent : la grille Genres reste utilisable. */
 const FALLBACK_GENRES = [
   'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy',
   'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Isekai', 'Shonen',
 ];
-
-/** Pile de démo (aperçu visuel) quand aucun manga ne correspond encore au genre survolé. */
-function buildMockGenrePreview(genre, count = 6) {
-  const safe = genre.replace(/\s+/g, '-');
-  return Array.from({ length: count }, (_, i) => ({
-    id: `mock-genre-${safe}-${i}`,
-    title: `Série démo — ${genre} ${i + 1}`,
-    rating: (8.0 + (i % 5) * 0.15).toFixed(1),
-    cover: `https://picsum.photos/seed/mg-${safe}-${i}/100/140`,
-    href: `/browse?genre=${encodeURIComponent(genre)}`,
-    isMock: true,
-  }));
-}
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -155,8 +141,7 @@ export default function Navbar() {
               isMock: false,
             }))
         : [];
-    if (real.length > 0) return real;
-    return buildMockGenrePreview(previewGenre, 6);
+    return real;
   }, [previewGenre, allManga]);
 
   const navLinks = [
@@ -226,9 +211,6 @@ export default function Navbar() {
                       {hoveredGenre ? (
                         <>
                           <p className="navbar__dropdown-preview-title">{hoveredGenre}</p>
-                          {genrePreviewRows.some((r) => r.isMock) && (
-                            <p className="navbar__dropdown-preview-mock-label">Aperçu fictif (maquette)</p>
-                          )}
                           <ul className="navbar__dropdown-stack">
                             {genrePreviewRows.map((row, index) => (
                               <li
@@ -253,6 +235,10 @@ export default function Navbar() {
                             Voir tout →
                           </Link>
                         </>
+                      ) : hoveredGenre ? (
+                        <p className="navbar__dropdown-preview-hint">
+                          Aucun manga pour ce genre (pour l’instant).
+                        </p>
                       ) : (
                         <p className="navbar__dropdown-preview-hint">
                           Survolez un genre pour afficher des mangas.
@@ -494,9 +480,6 @@ export default function Navbar() {
                     {mobilePreviewGenre && (
                       <div className="navbar__mobile-genres-preview">
                         <p className="navbar__dropdown-preview-title">{mobilePreviewGenre}</p>
-                        {genrePreviewRows.some((r) => r.isMock) && (
-                          <p className="navbar__dropdown-preview-mock-label">Aperçu fictif (maquette)</p>
-                        )}
                         <ul className="navbar__dropdown-stack">
                           {genrePreviewRows.map((row, index) => (
                             <li
