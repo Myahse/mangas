@@ -7,10 +7,10 @@ async function request(path, { method = 'GET', body, headers } = {}) {
   const res = await fetch(url, {
     method,
     headers: {
-      ...(body ? { 'Content-Type': 'application/json' } : null),
+      ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : null),
       ...(headers || null),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -32,6 +32,14 @@ function readSession() {
 }
 
 export const creatorApi = {
+  // Storage (R2 via backend)
+  async uploadFile({ file, prefix }) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const qs = prefix ? `?prefix=${encodeURIComponent(prefix)}` : '';
+    return request(`/storage/upload${qs}`, { method: 'POST', body: fd });
+  },
+
   // Series submissions
   async createSubmission(payload) {
     const session = readSession();
