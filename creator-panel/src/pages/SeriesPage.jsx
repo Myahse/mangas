@@ -190,29 +190,47 @@ export default function SeriesPage() {
   const onCreate = async (e) => {
     e.preventDefault();
     if (!canCreate) return;
-    const verticalDataUrl = await readAsDataUrl(thumbVertical.file);
-    const payload = {
-      thumbnails: {
-        square: { name: thumbSquare.file?.name, size: thumbSquare.file?.size, type: thumbSquare.file?.type, dims: thumbSquare.dims },
-        // Vertical thumbnail is exported as a Data URL so other panels (ads) can reuse it.
-        vertical: {
-          name: thumbVertical.file?.name,
-          size: thumbVertical.file?.size,
-          type: thumbVertical.file?.type,
-          dims: thumbVertical.dims,
-          dataUrl: verticalDataUrl,
-        },
-      },
-      category1,
-      category2: category2 || null,
-      title: title.trim(),
-      summary: summary.trim(),
-      acceptPolicies,
-      explicit,
-    };
-    console.log('creator_create_series_submit', payload);
     try {
       setSubmitting(true);
+      const verticalDataUrl = await readAsDataUrl(thumbVertical.file);
+
+      // Upload thumbnails to R2 (via backend)
+      const safeTitle = title.trim().replace(/[^a-z0-9-_]+/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'series';
+      const prefix = `series/${safeTitle}/thumbnails`;
+      const [squareUp, verticalUp] = await Promise.all([
+        creatorApi.uploadFile({ file: thumbSquare.file, prefix }),
+        creatorApi.uploadFile({ file: thumbVertical.file, prefix }),
+      ]);
+
+      const payload = {
+        thumbnails: {
+          square: {
+            name: thumbSquare.file?.name,
+            size: thumbSquare.file?.size,
+            type: thumbSquare.file?.type,
+            dims: thumbSquare.dims,
+            r2Key: squareUp.key,
+            url: squareUp.url,
+          },
+          // Vertical thumbnail remains also available as Data URL so other panels (ads) can reuse it.
+          vertical: {
+            name: thumbVertical.file?.name,
+            size: thumbVertical.file?.size,
+            type: thumbVertical.file?.type,
+            dims: thumbVertical.dims,
+            dataUrl: verticalDataUrl,
+            r2Key: verticalUp.key,
+            url: verticalUp.url,
+          },
+        },
+        category1,
+        category2: category2 || null,
+        title: title.trim(),
+        summary: summary.trim(),
+        acceptPolicies,
+        explicit,
+      };
+
       await creatorApi.createSubmission(payload);
       setCreatedSeriesTitle(payload.title);
       setAfterCreateOpen(true);
