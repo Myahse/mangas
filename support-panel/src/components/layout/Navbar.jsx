@@ -58,7 +58,6 @@ export default function Navbar() {
         </nav>
 
         <div className="navbar__actions">
-          <span className="navbar__pill">{t('common.apiMode', 'API mode')}</span>
           <button
             type="button"
             className="navbar__pill navbar__pill--lang"
