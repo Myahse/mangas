@@ -1,19 +1,23 @@
 package com.mangafrik;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+
 @SpringBootApplication
 @Slf4j
-
 public class Application {
 
 	public static void main(String[] args) {
+		loadDotEnvIfPresent();
+
 		SpringApplication app = new SpringApplication(Application.class);
 		Map<String, Object> defaults = new HashMap<>();
-
 
 		String normalized = normalizeToJdbc(firstNonBlank(
 			System.getenv("SPRING_DATASOURCE_URL"),
@@ -29,6 +33,41 @@ public class Application {
 
 		app.setDefaultProperties(defaults);
 		app.run(args);
+	}
+
+	private static void loadDotEnvIfPresent() {
+		try {
+			Path env = Path.of(".env");
+			if (!Files.isRegularFile(env)) return;
+
+			for (String rawLine : Files.readAllLines(env, StandardCharsets.UTF_8)) {
+				String line = rawLine == null ? "" : rawLine.trim();
+				if (line.isEmpty() || line.startsWith("#")) continue;
+
+				int eq = line.indexOf('=');
+				if (eq <= 0) continue;
+
+				String key = line.substring(0, eq).trim();
+				String value = line.substring(eq + 1).trim();
+
+				// Strip optional quotes
+				if (value.length() >= 2) {
+					char a = value.charAt(0);
+					char b = value.charAt(value.length() - 1);
+					if ((a == '"' && b == '"') || (a == '\'' && b == '\'')) {
+						value = value.substring(1, value.length() - 1);
+					}
+				}
+
+				if (key.isBlank()) continue;
+				if (System.getenv(key) != null) continue; // OS env wins
+				if (System.getProperty(key) != null) continue; // explicit JVM props win
+
+				System.setProperty(key, value);
+			}
+		} catch (Exception e) {
+			log.warn("Failed to load .env: {}", e.toString());
+		}
 	}
 
 	private static String firstNonBlank(String... candidates) {

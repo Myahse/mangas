@@ -208,6 +208,25 @@ export default function EpisodesPage() {
     if (!canSaveDraft) return;
     try {
       setSaving(true);
+      const safeSeries = (seriesTitle || 'series')
+        .trim()
+        .replace(/[^a-z0-9-_]+/gi, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60);
+      const safeEpisode = (episodeTitle || 'episode')
+        .trim()
+        .replace(/[^a-z0-9-_]+/gi, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60);
+      const prefix = `episodes/${safeSeries}/${safeEpisode}`;
+
+      const uploadedThumb = thumb.file ? await creatorApi.uploadFile({ file: thumb.file, prefix }) : null;
+
+      const files = items.filter((x) => x.file).map((x) => x.file);
+      const uploadedImages = await Promise.all(files.map((f) => creatorApi.uploadFile({ file: f, prefix })));
+
       await creatorApi.createDraft({
         seriesTitle,
         episodeTitle: episodeTitle.trim(),
@@ -215,8 +234,15 @@ export default function EpisodesPage() {
         commentsEnabled,
         publishMode,
         publishAt: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : 'now',
-        thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
-        images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
+        thumb: uploadedThumb
+          ? { name: thumb.file.name, size: thumb.file.size, r2Key: uploadedThumb.key, url: uploadedThumb.url }
+          : null,
+        images: uploadedImages.map((up, idx) => ({
+          name: files[idx]?.name,
+          size: files[idx]?.size,
+          r2Key: up.key,
+          url: up.url,
+        })),
       });
       notify.success('Brouillon enregistré.');
     } catch (err) {
@@ -230,14 +256,40 @@ export default function EpisodesPage() {
     if (!canPublish) return;
     try {
       setSaving(true);
+      const safeSeries = (seriesTitle || 'series')
+        .trim()
+        .replace(/[^a-z0-9-_]+/gi, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60);
+      const safeEpisode = (episodeTitle || 'episode')
+        .trim()
+        .replace(/[^a-z0-9-_]+/gi, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60);
+      const prefix = `episodes/${safeSeries}/${safeEpisode}`;
+
+      const uploadedThumb = thumb.file ? await creatorApi.uploadFile({ file: thumb.file, prefix }) : null;
+
+      const files = items.filter((x) => x.file).map((x) => x.file);
+      const uploadedImages = await Promise.all(files.map((f) => creatorApi.uploadFile({ file: f, prefix })));
+
       await creatorApi.createPublished({
         scheduledFor: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : null,
         seriesTitle,
         episodeTitle: episodeTitle.trim(),
         creatorNote: creatorNote.trim() || null,
         commentsEnabled,
-        thumb: thumb.file ? { name: thumb.file.name, size: thumb.file.size } : null,
-        images: items.filter((x) => x.file).map((x) => ({ name: x.file.name, size: x.file.size })),
+        thumb: uploadedThumb
+          ? { name: thumb.file.name, size: thumb.file.size, r2Key: uploadedThumb.key, url: uploadedThumb.url }
+          : null,
+        images: uploadedImages.map((up, idx) => ({
+          name: files[idx]?.name,
+          size: files[idx]?.size,
+          r2Key: up.key,
+          url: up.url,
+        })),
       });
       notify.success('Épisode publié.');
     } catch (err) {
