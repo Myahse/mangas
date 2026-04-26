@@ -13,10 +13,14 @@ import com.mangafrik.dto.admin.AdminDtos.ReviewRequest;
 import com.mangafrik.dto.admin.AdminDtos.UpdateManga;
 import com.mangafrik.dto.admin.AdminDtos.UpdateMangaRequest;
 import com.mangafrik.dto.admin.AdminDtos.UpdateUserRequest;
+import com.mangafrik.dto.admin.CreatorAccountDtos.CreateCreatorAccountRequest;
 import com.mangafrik.dto.creator.MangaSubmissionDto;
 import com.mangafrik.services.admin.AdminStore;
+import com.mangafrik.services.admin.CreatorAccountService;
+import com.mangafrik.services.creator.CreatorRequestService;
 import com.mangafrik.services.creator.CreatorStore;
 import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -31,10 +35,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 	private final AdminStore adminStore;
 	private final CreatorStore creatorStore;
+	private final CreatorRequestService creatorRequestService;
+	private final CreatorAccountService creatorAccountService;
 
-	public AdminController(AdminStore adminStore, CreatorStore creatorStore) {
+	public AdminController(
+			AdminStore adminStore,
+			CreatorStore creatorStore,
+			CreatorRequestService creatorRequestService,
+			CreatorAccountService creatorAccountService
+	) {
 		this.adminStore = adminStore;
 		this.creatorStore = creatorStore;
+		this.creatorRequestService = creatorRequestService;
+		this.creatorAccountService = creatorAccountService;
 	}
 
 	@GetMapping("/summary")
@@ -59,12 +72,12 @@ public class AdminController {
 
 	@GetMapping("/creator-requests")
 	public List<CreatorRequestDto> creatorRequests() {
-		return adminStore.listCreatorRequests();
+		return creatorRequestService.listAll();
 	}
 
 	@PostMapping("/creator-requests/{id}/review")
 	public CreatorRequestDto reviewCreatorRequest(@PathVariable String id, @RequestBody ReviewRequest req) {
-		return adminStore.reviewCreatorRequest(id, req);
+		return creatorRequestService.review(id, req);
 	}
 
 	@GetMapping("/manga-submissions")
@@ -115,6 +128,15 @@ public class AdminController {
 	@DeleteMapping("/mangas/{id}")
 	public boolean deleteManga(@PathVariable String id) {
 		return adminStore.deleteManga(id);
+	}
+
+	/**
+	 * Creates a creator account with a temporary password and emails credentials.
+	 * The creator will be forced to change their password on first login.
+	 */
+	@PostMapping("/creator-accounts")
+	public Map<String, Object> createCreatorAccount(@RequestBody CreateCreatorAccountRequest req) {
+		return creatorAccountService.createCreatorAccountAndEmailCredentials(req);
 	}
 }
 
