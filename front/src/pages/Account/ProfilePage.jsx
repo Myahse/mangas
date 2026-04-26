@@ -81,6 +81,27 @@ export default function ProfilePage() {
           </div>
         ))}
       </div>
+
+      {user.role !== 'creator' && (
+        <div style={{ marginTop: 18 }}>
+          <Link
+            to="/compte/devenir-createur"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              background: 'var(--primary)',
+              color: '#fff',
+              fontWeight: 900,
+              width: 'min(420px, 100%)',
+            }}
+          >
+            Devenir créateur
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

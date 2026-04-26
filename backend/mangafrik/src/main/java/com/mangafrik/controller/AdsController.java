@@ -13,7 +13,10 @@ import com.mangafrik.dto.ads.AdsDtos.SystemNoticeDto;
 import com.mangafrik.dto.ads.AdsDtos.UpdateHeroAd;
 import com.mangafrik.dto.ads.AdsDtos.UpdateNotification;
 import com.mangafrik.dto.ads.AdsDtos.UpdateSystemNotice;
+import com.mangafrik.dto.ads.EmailCampaignDtos.EmailCampaignRequest;
+import com.mangafrik.dto.ads.EmailCampaignDtos.EmailCampaignResponse;
 import com.mangafrik.services.ads.AdsStore;
+import com.mangafrik.services.ads.EmailCampaignService;
 import com.mangafrik.services.creator.CreatorStore;
 import java.util.List;
 import java.util.Map;
@@ -31,10 +34,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdsController {
 	private final AdsStore adsStore;
 	private final CreatorStore creatorStore;
+	private final EmailCampaignService emailCampaignService;
 
-	public AdsController(AdsStore adsStore, CreatorStore creatorStore) {
+	public AdsController(AdsStore adsStore, CreatorStore creatorStore, EmailCampaignService emailCampaignService) {
 		this.adsStore = adsStore;
 		this.creatorStore = creatorStore;
+		this.emailCampaignService = emailCampaignService;
 	}
 
 	@GetMapping("/summary")
@@ -105,6 +110,11 @@ public class AdsController {
 	@DeleteMapping("/system-notices/{id}")
 	public boolean deleteSystemNotice(@PathVariable String id) {
 		return adsStore.deleteSystemNotice(id);
+	}
+
+	@PostMapping("/email-campaign")
+	public EmailCampaignResponse emailCampaign(@RequestBody EmailCampaignRequest req) {
+		return emailCampaignService.sendCampaign(req);
 	}
 
 	/**
