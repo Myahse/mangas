@@ -9,6 +9,9 @@ import com.mangafrik.dto.support.SupportDtos.SupportSummaryDto;
 import com.mangafrik.dto.support.SupportDtos.TicketDto;
 import com.mangafrik.dto.support.SupportDtos.UpdateTicketRequest;
 import com.mangafrik.dto.support.SupportDtos.ValidateTicketRequest;
+import com.mangafrik.dto.admin.AdminDtos.CreatorRequestDto;
+import com.mangafrik.dto.admin.AdminDtos.ReviewRequest;
+import com.mangafrik.services.creator.CreatorRequestService;
 import com.mangafrik.services.support.SupportStore;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,9 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(AppConstants.API_V1 + "/support")
 public class SupportController {
 	private final SupportStore supportStore;
+	private final CreatorRequestService creatorRequestService;
 
-	public SupportController(SupportStore supportStore) {
+	public SupportController(SupportStore supportStore, CreatorRequestService creatorRequestService) {
 		this.supportStore = supportStore;
+		this.creatorRequestService = creatorRequestService;
 	}
 
 	@GetMapping("/summary")
@@ -71,6 +76,17 @@ public class SupportController {
 	@PostMapping("/tickets/{id}/messages")
 	public MessageDto send(@PathVariable String id, @RequestBody SendMessageRequest req) {
 		return supportStore.sendMessage(id, req);
+	}
+
+	// Creator requests (same queue as Admin)
+	@GetMapping("/creator-requests")
+	public List<CreatorRequestDto> creatorRequests() {
+		return creatorRequestService.listAll();
+	}
+
+	@PostMapping("/creator-requests/{id}/review")
+	public CreatorRequestDto reviewCreatorRequest(@PathVariable String id, @RequestBody ReviewRequest req) {
+		return creatorRequestService.review(id, req);
 	}
 }
 

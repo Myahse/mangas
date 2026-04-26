@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { registerUser } from '@/services/api'
 import './Register.css'
 
-type Role = 'reader' | 'creator'
+type Role = 'reader'
 
 type CreatorProfile = {
   penName: string
@@ -21,8 +22,11 @@ export default function Register() {
   const navigate = useNavigate()
   const { signInAfterRegister } = useAuth()
 
-  const [step, setStep] = useState<1 | 2 | 3>(1)
-  const [role, setRole] = useState<Role | null>(null)
+  // Super app: all registrations are readers.
+  const role: Role = 'reader'
+  const [step, setStep] = useState<2 | 3>(2)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const [account, setAccount] = useState({
     name: '',
@@ -35,59 +39,57 @@ export default function Register() {
     readingFrequency: 'weekly',
   })
 
-  const [creator, setCreator] = useState<CreatorProfile>({
-    penName: '',
-    genres: '',
-    publishingGoal: 'web',
-  })
-
   const title = useMemo(() => {
-    if (step === 1) return 'Créer un compte'
-    if (step === 2) return role === 'creator' ? 'Votre profil créateur' : 'Vos préférences de lecture'
+    if (step === 2) return 'Vos préférences de lecture'
     return 'Informations du compte'
   }, [step, role])
 
-  const canContinueStep1 = role !== null
   const canContinueStep2 = role === 'reader'
     ? reader.favoriteGenres.trim().length > 0
-    : role === 'creator'
-      ? creator.penName.trim().length > 0 && creator.genres.trim().length > 0
-      : false
+    : false
 
   const canFinish =
     account.name.trim() &&
     account.email.trim() &&
     account.password.trim().length >= 6 &&
-    role !== null
+    role === 'reader'
 
   const onNext = () => {
-    if (step === 1 && !canContinueStep1) return
     if (step === 2 && !canContinueStep2) return
-    setStep((s) => (s === 1 ? 2 : 3))
+    setStep(3)
   }
 
-  const onBack = () => setStep((s) => (s === 3 ? 2 : 1))
+  const onBack = () => setStep(2)
 
-  const onFinish = (e: React.FormEvent) => {
+  const onFinish = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!canFinish) return
 
-    // TODO: wire to backend later
-    const payload = {
-      role,
-      account: { ...account, password: '***' },
-      profile: role === 'creator' ? creator : reader,
-    }
-    console.log('register_stepper_submit', payload)
-    if (role) {
-      signInAfterRegister({
+    setIsSubmitting(true)
+    setSubmitError(null)
+    try {
+      const profile = reader
+      const res = await registerUser({
         role,
-        displayName: account.name.trim(),
+        name: account.name.trim(),
         email: account.email.trim(),
-        profile: payload.profile,
+        password: account.password,
+        profile,
       })
+
+      signInAfterRegister({
+        role: res?.role ?? role,
+        displayName: res?.displayName ?? account.name.trim(),
+        email: res?.email ?? account.email.trim(),
+        profile: res?.profile ?? profile,
+      })
+      navigate('/')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Inscription impossible'
+      setSubmitError(message)
+    } finally {
+      setIsSubmitting(false)
     }
-    navigate('/')
   }
 
   return (
@@ -119,37 +121,19 @@ export default function Register() {
           </div>
           <h1 className="register__title">{title}</h1>
           <p className="register__subtitle">
-            {step === 1
-              ? 'Choisissez votre profil pour adapter les questions.'
-              : step === 2
-                ? 'Quelques questions rapides pour personnaliser votre expérience.'
-                : 'Dernière étape : vos identifiants de connexion.'}
+            {step === 2
+              ? 'Quelques questions rapides pour personnaliser votre expérience.'
+              : 'Dernière étape : vos identifiants de connexion.'}
           </p>
         </div>
 
-        {step === 1 && (
-          <>
-            <button
-              type="button"
-              className={`register__choice${role === 'reader' ? ' is-selected' : ''}`}
-              onClick={() => setRole('reader')}
-            >
-              <div className="register__choice-title">Lecteur</div>
-              <div className="register__choice-desc">Je veux découvrir, suivre et lire des mangas.</div>
-            </button>
-            <button
-              type="button"
-              className={`register__choice${role === 'creator' ? ' is-selected' : ''}`}
-              onClick={() => setRole('creator')}
-            >
-              <div className="register__choice-title">Créateur</div>
-              <div className="register__choice-desc">Je veux publier mes œuvres et construire mon audience.</div>
-            </button>
-          </>
-        )}
-
-        {step !== 1 && (
+        {(
           <form id="register-form" className="register__fields-bare" onSubmit={onFinish}>
+            {submitError && (
+              <div className="register__hint" role="alert">
+                {submitError}
+              </div>
+            )}
             {step === 2 && role === 'reader' && (
               <>
                 <label className="register__field">
@@ -171,40 +155,6 @@ export default function Register() {
                     <option value="daily">Tous les jours</option>
                     <option value="weekly">Chaque semaine</option>
                     <option value="sometimes">De temps en temps</option>
-                  </select>
-                </label>
-              </>
-            )}
-
-            {step === 2 && role === 'creator' && (
-              <>
-                <label className="register__field">
-                  <span>Nom de plume</span>
-                  <input
-                    value={creator.penName}
-                    onChange={(e) => setCreator((p) => ({ ...p, penName: e.target.value }))}
-                    placeholder="Ex: Kofi Art"
-                  />
-                </label>
-                <label className="register__field">
-                  <span>Genres que vous créez</span>
-                  <input
-                    value={creator.genres}
-                    onChange={(e) => setCreator((p) => ({ ...p, genres: e.target.value }))}
-                    placeholder="Ex: Action, Fantaisie, Thriller"
-                  />
-                </label>
-                <label className="register__field">
-                  <span>Objectif de publication</span>
-                  <select
-                    value={creator.publishingGoal}
-                    onChange={(e) =>
-                      setCreator((p) => ({ ...p, publishingGoal: e.target.value as CreatorProfile['publishingGoal'] }))
-                    }
-                  >
-                    <option value="web">Web</option>
-                    <option value="print">Impression</option>
-                    <option value="both">Les deux</option>
                   </select>
                 </label>
               </>
@@ -239,9 +189,7 @@ export default function Register() {
                   />
                 </label>
                 <div className="register__hint">
-                  {role === 'creator'
-                    ? 'Votre compte créateur pourra publier après validation (à connecter au backend plus tard).'
-                    : 'Vous pourrez personnaliser ces choix plus tard.'}
+                  Vous pourrez personnaliser ces choix plus tard.
                 </div>
               </>
             )}
@@ -264,7 +212,7 @@ export default function Register() {
               type="button"
               className="register__btn register__btn--primary register__nav-next"
               onClick={onNext}
-              disabled={step === 1 ? !canContinueStep1 : !canContinueStep2}
+              disabled={!canContinueStep2}
             >
               Continuer
             </button>
@@ -273,9 +221,9 @@ export default function Register() {
               type="submit"
               form="register-form"
               className="register__btn register__btn--primary register__nav-next"
-              disabled={!canFinish}
+              disabled={!canFinish || isSubmitting}
             >
-              Créer mon compte
+              {isSubmitting ? 'Création…' : 'Créer mon compte'}
             </button>
           )}
         </div>
