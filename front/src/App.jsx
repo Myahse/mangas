@@ -10,6 +10,7 @@ import BrowsePage from './pages/BrowsePage';
 import Register from './pages/Register/Register';
 import AccountSectionPage from './pages/Account/AccountSectionPage';
 import ProfilePage from './pages/Account/ProfilePage';
+import BecomeCreatorPage from './pages/Account/BecomeCreatorPage';
 import EpisodesPage from './pages/EpisodesPage';
 
 /* The reader page uses its own full-screen layout */
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/compte/abonnements"             element={<AccountSectionPage />} />
           <Route path="/compte/favoris"                 element={<AccountSectionPage />} />
           <Route path="/compte/profil"                  element={<ProfilePage />} />
+          <Route path="/compte/devenir-createur"        element={<BecomeCreatorPage />} />
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
