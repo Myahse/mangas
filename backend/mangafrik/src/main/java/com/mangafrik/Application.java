@@ -22,7 +22,10 @@ public class Application {
 		String normalized = normalizeToJdbc(firstNonBlank(
 			System.getenv("SPRING_DATASOURCE_URL"),
 			System.getenv("JDBC_DATABASE_URL"),
-			System.getenv("DATABASE_URL")
+			System.getenv("DATABASE_URL"),
+			System.getProperty("SPRING_DATASOURCE_URL"),
+			System.getProperty("JDBC_DATABASE_URL"),
+			System.getProperty("DATABASE_URL")
 		));
 
 		if (normalized != null) {
@@ -64,6 +67,11 @@ public class Application {
 				if (System.getProperty(key) != null) continue; // explicit JVM props win
 
 				System.setProperty(key, value);
+
+				// Spring maps env var SPRING_PROFILES_ACTIVE, but system properties expect dot notation.
+				if ("SPRING_PROFILES_ACTIVE".equals(key) && System.getProperty("spring.profiles.active") == null) {
+					System.setProperty("spring.profiles.active", value);
+				}
 			}
 		} catch (Exception e) {
 			log.warn("Failed to load .env: {}", e.toString());
