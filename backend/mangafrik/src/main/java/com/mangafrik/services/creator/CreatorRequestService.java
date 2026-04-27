@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -46,18 +48,29 @@ public class CreatorRequestService {
 		if (penName.isBlank()) throw new IllegalArgumentException("penName is required");
 		if (message.isBlank()) throw new IllegalArgumentException("message is required");
 
-		Map<String, Object> row = jdbc.queryForMap("""
+		MapSqlParameterSource params = new MapSqlParameterSource()
+			.addValue("email", email)
+			.addValue("display_name", displayName)
+			.addValue("pen_name", penName)
+			.addValue("genres", genres)
+			.addValue("message", message)
+			.addValue("created_at", Timestamp.from(Instant.now()));
+
+		KeyHolder kh = new GeneratedKeyHolder();
+		jdbc.update("""
 			insert into creator_requests (email, display_name, pen_name, genres, message, status, created_at)
 			values (:email, :display_name, :pen_name, :genres, :message, 'pending', :created_at)
-			returning id, email, display_name, status, coalesce(review_reason,'') as reason, created_at, reviewed_at
-			""",
-			new MapSqlParameterSource()
-				.addValue("email", email)
-				.addValue("display_name", displayName)
-				.addValue("pen_name", penName)
-				.addValue("genres", genres)
-				.addValue("message", message)
-				.addValue("created_at", Timestamp.from(Instant.now()))
+			""", params, kh, new String[] {"id"});
+
+		Number id = kh.getKey();
+		if (id == null) throw new IllegalStateException("Failed to create creator request");
+
+		Map<String, Object> row = jdbc.queryForMap("""
+				select id, email, display_name, status, coalesce(review_reason,'') as reason, created_at, reviewed_at
+				from creator_requests
+				where id = :id
+				""",
+			Map.of("id", id.longValue())
 		);
 
 		return mapRow(row);
