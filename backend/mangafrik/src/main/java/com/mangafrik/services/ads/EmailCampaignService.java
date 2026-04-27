@@ -23,6 +23,12 @@ public class EmailCampaignService {
 	@Value("${spring.mail.host:}")
 	private String mailHost;
 
+	@Value("${app.email.provider:smtp}")
+	private String provider;
+
+	@Value("${app.brevo.api-key:}")
+	private String brevoApiKey;
+
 	public EmailCampaignService(NamedParameterJdbcTemplate jdbc, EmailService emailService) {
 		this.jdbc = jdbc;
 		this.emailService = emailService;
@@ -31,7 +37,14 @@ public class EmailCampaignService {
 	public EmailCampaignResponse sendCampaign(EmailCampaignRequest req) {
 		if (req == null) throw new IllegalArgumentException("payload is required");
 		if (!emailEnabled) throw new IllegalArgumentException("email is disabled (set APP_EMAIL_ENABLED=true)");
-		if (mailHost == null || mailHost.isBlank()) throw new IllegalArgumentException("mail is not configured (set MAIL_HOST, etc)");
+		String p = String.valueOf(provider).trim().toLowerCase();
+		if (Objects.equals(p, "brevo")) {
+			if (String.valueOf(brevoApiKey).trim().isBlank()) {
+				throw new IllegalArgumentException("brevo is not configured (set BREVO_API_KEY)");
+			}
+		} else {
+			if (mailHost == null || mailHost.isBlank()) throw new IllegalArgumentException("mail is not configured (set MAIL_HOST, etc)");
+		}
 
 		String subject = req.subject() == null ? "" : req.subject().trim();
 		if (subject.isBlank()) throw new IllegalArgumentException("subject is required");

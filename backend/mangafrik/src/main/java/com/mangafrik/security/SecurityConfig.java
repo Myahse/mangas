@@ -7,23 +7,26 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
 @Configuration
 public class SecurityConfig {
-	private final SessionAuthFilter sessionAuthFilter;
+	private final JwtAuthenticationConverter jwtAuthenticationConverter;
 
-	public SecurityConfig(SessionAuthFilter sessionAuthFilter) {
-		this.sessionAuthFilter = sessionAuthFilter;
+	public SecurityConfig(JwtAuthenticationConverter jwtAuthenticationConverter) {
+		this.jwtAuthenticationConverter = jwtAuthenticationConverter;
 	}
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		return http
+				.cors(Customizer.withDefaults())
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.addFilterBefore(sessionAuthFilter, UsernamePasswordAuthenticationFilter.class)
 				.authorizeHttpRequests(auth -> auth
+						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+						.requestMatchers("/ws/**").permitAll()
 						.requestMatchers(
 								"/swagger-ui.html",
 								"/swagger-ui/**",
@@ -43,6 +46,9 @@ public class SecurityConfig {
 						.requestMatchers(AppConstants.API_V1 + "/support/**").hasAnyRole("ADMIN", "SUPPORT")
 						.requestMatchers(AppConstants.API_V1 + "/ads/**").hasAnyRole("ADMIN", "ADS")
 						.anyRequest().authenticated()
+				)
+				.oauth2ResourceServer(oauth2 -> oauth2
+						.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
 				)
 				.httpBasic(Customizer.withDefaults())
 				.build();

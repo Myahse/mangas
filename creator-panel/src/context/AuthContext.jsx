@@ -1,17 +1,27 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
-const API_BASE_URL_RAW = import.meta?.env?.VITE_API_BASE_URL;
-const API_BASE_URL_DEFAULT = import.meta?.env?.VITE_API_BASE_URL_DEFAULT;
+function requiredApiBaseUrl() {
+  const raw = String(import.meta.env.VITE_API_BASE_URL ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_API_BASE_URL in creator-panel/.env');
+  }
+  return raw;
+}
+
+function requiredSessionStorageKey() {
+  const raw = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_SESSION_STORAGE_KEY in creator-panel/.env');
+  }
+  return raw;
+}
+
+function storageKey() {
+  return requiredSessionStorageKey();
+}
 
 function apiBase() {
-  const raw = String(API_BASE_URL_RAW ?? '').trim();
-  const fallback = String(API_BASE_URL_DEFAULT ?? '').trim();
-  const chosen = raw && raw !== 'undefined' && raw !== 'null' ? raw : fallback;
-  if (!chosen || chosen === 'undefined' || chosen === 'null') {
-    throw new Error('Missing VITE_API_BASE_URL (or VITE_API_BASE_URL_DEFAULT) in .env');
-  }
-  return chosen;
+  return requiredApiBaseUrl();
 }
 
 async function request(path, { method = 'GET', body, headers } = {}) {
@@ -38,21 +48,22 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const key = storageKey();
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(key);
       if (raw) setUser(JSON.parse(raw));
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(key);
     }
-  }, []);
+  }, [key]);
 
   const persist = useCallback((next) => {
     setUser(next);
-    if (next) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    else localStorage.removeItem(STORAGE_KEY);
-  }, []);
+    if (next) localStorage.setItem(key, JSON.stringify(next));
+    else localStorage.removeItem(key);
+  }, [key]);
 
   const logout = useCallback(() => persist(null), [persist]);
 

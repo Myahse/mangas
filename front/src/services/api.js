@@ -1,22 +1,34 @@
-const API_BASE_URL_RAW = import.meta?.env?.VITE_API_BASE_URL;
-const API_BASE_URL_DEFAULT = import.meta?.env?.VITE_API_BASE_URL_DEFAULT;
+function requiredApiBaseUrl() {
+  const env = import.meta.env;
+  const primary = String(env.VITE_API_BASE_URL ?? '').trim();
+  const fallback = String(env.VITE_API_BASE_URL_DEFAULT ?? '').trim();
+  const v = primary || fallback;
+  if (!v || v === 'undefined' || v === 'null') {
+    const keys = Object.keys(env).sort().join(', ');
+    throw new Error(
+      `Missing VITE_API_BASE_URL in front/.env (available import.meta.env keys: ${keys || '(none)'})`,
+    );
+  }
+  return v;
+}
+
+function requiredSessionStorageKey() {
+  const v = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
+  if (!v || v === 'undefined' || v === 'null') {
+    throw new Error('Missing VITE_SESSION_STORAGE_KEY in front/.env');
+  }
+  return v;
+}
 
 function apiBase() {
-  const raw = String(API_BASE_URL_RAW ?? '').trim();
-  const fallback = String(API_BASE_URL_DEFAULT ?? '').trim();
-  const chosen = raw && raw !== 'undefined' && raw !== 'null' ? raw : fallback;
-  if (!chosen || chosen === 'undefined' || chosen === 'null') {
-    throw new Error('Missing VITE_API_BASE_URL (or VITE_API_BASE_URL_DEFAULT) in .env');
-  }
-  return chosen.replace(/\/$/, '');
+  return requiredApiBaseUrl().replace(/\/$/, '');
 }
 
 async function request(path, { method = 'GET', body, headers } = {}) {
   const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   let token = '';
   try {
-    const key = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
-    if (!key) throw new Error('Missing VITE_SESSION_STORAGE_KEY in .env');
+    const key = requiredSessionStorageKey();
     const raw = localStorage.getItem(key);
     token = raw ? (JSON.parse(raw)?.token || '') : '';
   } catch {}
@@ -33,7 +45,12 @@ async function request(path, { method = 'GET', body, headers } = {}) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(text || `Request failed (${res.status})`);
+    let message = text || `Request failed (${res.status})`;
+    try {
+      const maybeJson = text ? JSON.parse(text) : null;
+      message = maybeJson?.error || maybeJson?.message || message;
+    } catch {}
+    throw new Error(String(message));
   }
 
   const contentType = res.headers.get('content-type') || '';
@@ -135,6 +152,14 @@ export async function loginUser(payload) {
 
 export async function changePassword(payload) {
   return request('/auth/change-password', { method: 'POST', body: payload });
+}
+
+export async function forgotPassword(payload) {
+  return request('/auth/forgot-password', { method: 'POST', body: payload });
+}
+
+export async function resetPassword(payload) {
+  return request('/auth/reset-password', { method: 'POST', body: payload });
 }
 
 export async function submitCreatorRequest(payload) {

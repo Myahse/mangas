@@ -9,17 +9,30 @@ import {
   type ReactNode,
 } from 'react';
 
-const API_BASE_URL_RAW = import.meta?.env?.VITE_API_BASE_URL;
-const API_BASE_URL_DEFAULT = import.meta?.env?.VITE_API_BASE_URL_DEFAULT;
+function requiredApiBaseUrl(): string {
+  const env = import.meta.env as any;
+  const primary = String(env?.VITE_API_BASE_URL ?? '').trim();
+  const fallback = String(env?.VITE_API_BASE_URL_DEFAULT ?? '').trim();
+  const raw = primary || fallback;
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    const keys = Object.keys(env ?? {}).sort().join(', ');
+    throw new Error(
+      `Missing VITE_API_BASE_URL in front/.env (available import.meta.env keys: ${keys || '(none)'})`,
+    );
+  }
+  return raw;
+}
+
+function requiredSessionStorageKey(): string {
+  const raw = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_SESSION_STORAGE_KEY in front/.env');
+  }
+  return raw;
+}
 
 function apiBase() {
-  const raw = String(API_BASE_URL_RAW ?? '').trim();
-  const fallback = String(API_BASE_URL_DEFAULT ?? '').trim();
-  const chosen = raw && raw !== 'undefined' && raw !== 'null' ? raw : fallback;
-  if (!chosen || chosen === 'undefined' || chosen === 'null') {
-    throw new Error('Missing VITE_API_BASE_URL (or VITE_API_BASE_URL_DEFAULT) in .env');
-  }
-  return chosen.replace(/\/$/, '');
+  return requiredApiBaseUrl().replace(/\/$/, '');
 }
 
 async function request(path: string, { method = 'GET', body, headers }: any = {}) {
@@ -41,7 +54,9 @@ async function request(path: string, { method = 'GET', body, headers }: any = {}
   return payload as any;
 }
 
-const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
+function storageKey(): string {
+  return requiredSessionStorageKey();
+}
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
 const AUTH_CONTEXT_GLOBAL_KEY = '__mangafrik_auth_context__';
@@ -76,6 +91,7 @@ type AuthContextValue = {
     displayName: string;
     email: string;
     profile?: ReaderProfile | CreatorProfile;
+    token?: string;
   }) => void;
   login: (payload: { email: string; password: string }) => Promise<void>;
 };
@@ -94,32 +110,33 @@ const AuthContext = getAuthContext();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const key = storageKey();
 
   useEffect(() => {
-    if (!STORAGE_KEY) throw new Error('Missing VITE_SESSION_STORAGE_KEY in .env');
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(key);
       if (raw) setUser(JSON.parse(raw) as AuthUser);
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(key);
     }
-  }, []);
+  }, [key]);
 
   const persist = useCallback((next: AuthUser | null) => {
     setUser(next);
-    if (next) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    else localStorage.removeItem(STORAGE_KEY);
-  }, []);
+    if (next) localStorage.setItem(key, JSON.stringify(next));
+    else localStorage.removeItem(key);
+  }, [key]);
 
   const logout = useCallback(() => persist(null), [persist]);
 
   const signInAfterRegister = useCallback(
-    (payload: { role: AuthUserRole; displayName: string; email: string; profile?: ReaderProfile | CreatorProfile }) => {
+    (payload: { role: AuthUserRole; displayName: string; email: string; profile?: ReaderProfile | CreatorProfile; token?: string }) => {
       persist({
         role: payload.role,
         displayName: payload.displayName.trim(),
         email: payload.email.trim(),
         profile: payload.profile,
+        token: payload.token ? String(payload.token) : undefined,
       });
     },
     [persist],

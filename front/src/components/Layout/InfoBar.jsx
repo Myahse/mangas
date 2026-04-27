@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Megaphone, Wrench, Info } from 'lucide-react';
+import { Client } from '@stomp/stompjs';
 import './InfoBar.css';
 
 const ICON_MAP = {
@@ -16,9 +17,64 @@ export default function InfoBar() {
 
   useEffect(() => {
     let cancelled = false;
+    let stomp = null;
 
-    const API_BASE_URL = import.meta?.env?.VITE_API_BASE_URL;
-    fetch(`${API_BASE_URL}/ads/system-notices`)
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    let token = '';
+    try {
+      const key = String(import.meta.env.VITE_SESSION_STORAGE_KEY || '').trim();
+      const raw = key ? localStorage.getItem(key) : null;
+      token = raw ? (JSON.parse(raw)?.token || '') : '';
+    } catch {}
+
+    // Realtime: subscribe to active system notices.
+    try {
+      const wsBase = String(API_BASE_URL || '').trim()
+        .replace(/^https?:\/\//, (m) => (m === 'https://' ? 'wss://' : 'ws://'))
+        .replace(/\/$/, '');
+      const brokerURL = `${wsBase}/ws`;
+
+      stomp = new Client({
+        brokerURL,
+        connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+        reconnectDelay: 1500,
+        heartbeatIncoming: 10000,
+        heartbeatOutgoing: 10000,
+        onConnect: () => {
+          if (cancelled) return;
+          stomp.subscribe('/topic/system-notices', (msg) => {
+            if (cancelled) return;
+            try {
+              const rows = JSON.parse(msg.body || '[]');
+              const list = Array.isArray(rows) ? rows : [];
+              const normalized = list
+                .map((n) => {
+                  const severity = (n?.severity || '').toLowerCase();
+                  const icon =
+                    severity === 'maintenance'
+                      ? 'maintenance'
+                      : severity === 'info'
+                        ? 'info'
+                        : 'announce';
+                  const title = n?.title ? String(n.title) : '';
+                  const message = n?.message ? String(n.message) : '';
+                  const text = title && message ? `${title} — ${message}` : (title || message);
+                  return { icon, text };
+                })
+                .filter((m) => m.text);
+              setMessages(normalized);
+              setCurrent(0);
+            } catch {}
+          });
+        },
+      });
+
+      stomp.activate();
+    } catch {}
+
+    fetch(`${API_BASE_URL}/ads/system-notices`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
       .then(async (res) => {
         const text = await res.text().catch(() => '');
         if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
@@ -54,6 +110,9 @@ export default function InfoBar() {
 
     return () => {
       cancelled = true;
+      try {
+        stomp?.deactivate();
+      } catch {}
     };
   }, []);
 

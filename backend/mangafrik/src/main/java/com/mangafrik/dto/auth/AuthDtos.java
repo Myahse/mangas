@@ -1,7 +1,5 @@
 package com.mangafrik.dto.auth;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 public final class AuthDtos {
 	private AuthDtos() {}
 
@@ -10,7 +8,7 @@ public final class AuthDtos {
 			String email,
 			String password,
 			String role,
-			JsonNode profile
+			Object profile
 	) {}
 
 	public record RegisterResponse(
@@ -18,7 +16,7 @@ public final class AuthDtos {
 			String email,
 			String displayName,
 			String role,
-			JsonNode profile
+			Object profile
 	) {}
 
 	public record LoginRequest(String email, String password) {}

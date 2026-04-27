@@ -8,8 +8,8 @@ import PreferencesModal from '../components/modals/PreferencesModal';
 import { useI18n } from '../i18n/i18n';
 import './CreatorTopBar.css';
 
-const STORAGE_KEY =
-  import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
+const PREFIX =
+  import.meta.env.VITE_CREATOR_STORAGE_PREFIX;
 
 export default function CreatorTopBar() {
   const location = useLocation();
@@ -20,7 +20,7 @@ export default function CreatorTopBar() {
   const { t } = useI18n();
   let session = null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(PREFIX);
     session = raw ? JSON.parse(raw) : null;
   } catch {
     session = null;

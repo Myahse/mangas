@@ -12,6 +12,7 @@ import com.mangafrik.dto.ads.AdsDtos.UpdateHeroAd;
 import com.mangafrik.dto.ads.AdsDtos.UpdateNotification;
 import com.mangafrik.dto.ads.AdsDtos.UpdateSystemNotice;
 import com.mangafrik.exception.NotFoundException;
+import com.mangafrik.realtime.SystemNoticesRealtime;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -22,12 +23,14 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AdsStore {
+	private final SystemNoticesRealtime systemNoticesRealtime;
 	private final CopyOnWriteArrayList<HeroAdDto> heroAds = new CopyOnWriteArrayList<>();
 	private final CopyOnWriteArrayList<NotificationDto> notifications = new CopyOnWriteArrayList<>();
 	private final CopyOnWriteArrayList<SystemNoticeDto> systemNotices = new CopyOnWriteArrayList<>();
 	private final CopyOnWriteArrayList<AdsAuditDto> audits = new CopyOnWriteArrayList<>();
 
-	public AdsStore() {
+	public AdsStore(SystemNoticesRealtime systemNoticesRealtime) {
+		this.systemNoticesRealtime = systemNoticesRealtime;
 		seed();
 	}
 
@@ -171,6 +174,7 @@ public class AdsStore {
 		);
 		systemNotices.add(0, row);
 		audit("system_notice.create", java.util.Map.of("id", row.id()));
+		publishActiveNotices();
 		return row;
 	}
 
@@ -191,6 +195,7 @@ public class AdsStore {
 				);
 				systemNotices.set(i, next);
 				audit("system_notice.update", java.util.Map.of("id", id));
+				publishActiveNotices();
 				return next;
 			}
 		}
@@ -199,7 +204,10 @@ public class AdsStore {
 
 	public boolean deleteSystemNotice(String id) {
 		boolean removed = systemNotices.removeIf(n -> Objects.equals(n.id(), id));
-		if (removed) audit("system_notice.delete", java.util.Map.of("id", id));
+		if (removed) {
+			audit("system_notice.delete", java.util.Map.of("id", id));
+			publishActiveNotices();
+		}
 		return removed;
 	}
 
@@ -227,6 +235,14 @@ public class AdsStore {
 		heroAds.add(new HeroAdDto(uuid(), "Welcome promo", "New chapters every week", "", "Explore", "/explore", "active", now.toString(), "", now, now));
 		notifications.add(new NotificationDto(uuid(), "push", "New release", "A new manga chapter is out now.", "all", "", "", "/home", "draft", "", now, now));
 		systemNotices.add(new SystemNoticeDto(uuid(), "info", "Maintenance window", "Scheduled maintenance tonight at 02:00 UTC.", "scheduled", now.toString(), "", now, now));
+	}
+
+	private void publishActiveNotices() {
+		List<SystemNoticeDto> active = systemNotices.stream()
+				.filter(n -> Objects.equals(String.valueOf(n.status()).toLowerCase(), "active"))
+				.sorted(Comparator.comparing(SystemNoticeDto::updatedAt).reversed())
+				.toList();
+		systemNoticesRealtime.publish(active);
 	}
 }
 

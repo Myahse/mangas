@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import './CreatorSectionPage.css';
 
-const STORAGE_KEY =
-  import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
+const PREFIX =
+  import.meta.env.VITE_CREATOR_STORAGE_PREFIX;
 
 const CREATOR_GOAL = {
   web: 'Web',

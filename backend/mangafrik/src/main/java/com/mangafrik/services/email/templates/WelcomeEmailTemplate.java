@@ -21,12 +21,7 @@ public final class WelcomeEmailTemplate {
 		);
 	}
 
-	/**
-	 * Loads HTML from `src/main/resources/email/welcome.html`.
-	 * Placeholders:
-	 * - {{displayName}}
-	 * - {{appUrl}}
-	 */
+	
 	public static String html(String displayName, String appUrl) {
 		String name = escapeHtml(safe(displayName, "là"));
 		String url = escapeHtmlAttr(safe(appUrl, "https://mangafrik.com"));

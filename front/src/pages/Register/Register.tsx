@@ -82,6 +82,7 @@ export default function Register() {
         displayName: res?.displayName ?? account.name.trim(),
         email: res?.email ?? account.email.trim(),
         profile: res?.profile ?? profile,
+        token: res?.token,
       })
       navigate('/')
     } catch (err) {
@@ -100,7 +101,7 @@ export default function Register() {
             <button
               type="button"
               className="register__btn register__btn--ghost register__nav-back register__nav-back--top"
-              onClick={step === 1 ? () => navigate(-1) : onBack}
+              onClick={step === 2 ? () => navigate(-1) : onBack}
               aria-label="Retour"
             >
               <ChevronLeft size={18} />
@@ -200,7 +201,7 @@ export default function Register() {
           <button
             type="button"
             className="register__btn register__btn--ghost register__nav-back register__nav-back--footer"
-            onClick={step === 1 ? () => navigate(-1) : onBack}
+            onClick={step === 2 ? () => navigate(-1) : onBack}
             aria-label="Retour"
           >
             <ChevronLeft size={18} />

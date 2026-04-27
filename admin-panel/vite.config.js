@@ -9,11 +9,11 @@ export default defineConfig({
   envDir: __dirname,
   plugins: [react()],
   server: {
-    port: 5175,
+    port: 5195,
     strictPort: true,
   },
   preview: {
-    port: 5176,
+    port: 5196,
     strictPort: true,
   },
 });

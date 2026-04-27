@@ -3,7 +3,7 @@ import { Eye, EyeOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Modal from './Modal';
-import { changePassword, loginUser } from '../../services/api';
+import { changePassword, forgotPassword, loginUser } from '../../services/api';
 
 import './AuthModal.css';
 
@@ -23,6 +23,8 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [forcePasswordChange, setForcePasswordChange] = useState(false);
   const [passwordChangeData, setPasswordChangeData] = useState({ oldPassword: '', newPassword: '' });
+  const [forgotData, setForgotData] = useState({ email: '' });
+  const [forgotSent, setForgotSent] = useState(false);
   const [registrationData, setRegistrationData] = useState({
     firstName: '',
     lastName: '',
@@ -32,6 +34,21 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const setAuthError = (err) => {
+    const raw = err instanceof Error ? err.message : String(err || '');
+    const msg = raw.toLowerCase();
+
+    if (msg.includes('account not found')) {
+      setError("Compte introuvable. Vous pouvez créer un compte avec cet email.");
+      return;
+    }
+    if (msg.includes('invalid credentials') || msg.includes('email is invalid')) {
+      setError("Email ou mot de passe incorrect.");
+      return;
+    }
+    setError(raw || "Connexion impossible.");
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -43,6 +60,8 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
     setLoginData({ email: '', password: '' });
     setForcePasswordChange(false);
     setPasswordChangeData({ oldPassword: '', newPassword: '' });
+    setForgotData({ email: '' });
+    setForgotSent(false);
     setRegistrationData({ firstName: '', lastName: '', enterpriseIdentifier: '', description: '' });
   }, [isOpen]);
 
@@ -103,6 +122,8 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
         console.log('registration_request', registrationData);
         onClose?.();
       }
+    } catch (err) {
+      setAuthError(err);
     } finally {
       setIsBusy(false);
     }
@@ -119,6 +140,25 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
     setShowRegistrationForm(false);
     setShowLoginForm(false);
     setError('');
+    setForgotSent(false);
+  };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    const email = (forgotData.email || loginData.email || '').trim();
+    if (!email) {
+      setError('Veuillez saisir votre email.');
+      return;
+    }
+    try {
+      setIsBusy(true);
+      await forgotPassword({ email });
+      setForgotSent(true);
+    } catch (err) {
+      setAuthError(err);
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   const panelClassName = `auth-modal__panel${showRegistrationForm ? ' auth-modal__panel--register' : ''}${
@@ -218,8 +258,20 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
                 {error && <div className="auth-modal__error">{error}</div>}
 
                 <div className="auth-modal__forgot">
-                  <button type="button">Mot de passe oublié ?</button>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={isBusy}
+                  >
+                    Mot de passe oublié ?
+                  </button>
                 </div>
+
+                {forgotSent && (
+                  <div className="auth-modal__hint">
+                    Si ce compte existe, un lien de réinitialisation a été envoyé à votre email.
+                  </div>
+                )}
               </form>
             )}
 

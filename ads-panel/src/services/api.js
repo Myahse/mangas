@@ -1,24 +1,28 @@
-const API_BASE_URL_RAW =
-import.meta?.env?.VITE_API_BASE_URL;
-const API_BASE_URL_DEFAULT =
-import.meta?.env?.VITE_API_BASE_URL_DEFAULT;
+function requiredApiBaseUrl() {
+  const raw = String(import.meta.env.VITE_API_BASE_URL ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_API_BASE_URL in ads-panel/.env');
+  }
+  return raw;
+}
+
+function requiredSessionStorageKey() {
+  const raw = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_SESSION_STORAGE_KEY in ads-panel/.env');
+  }
+  return raw;
+}
 
 function apiBase() {
-  const raw = String(API_BASE_URL_RAW ?? '').trim();
-  const fallback = String(API_BASE_URL_DEFAULT ?? '').trim();
-  const chosen = raw && raw !== 'undefined' && raw !== 'null' ? raw : fallback;
-  if (!chosen || chosen === 'undefined' || chosen === 'null') {
-    throw new Error('Missing VITE_API_BASE_URL (or VITE_API_BASE_URL_DEFAULT) in .env');
-  }
-  return chosen.replace(/\/$/, '');
+  return requiredApiBaseUrl().replace(/\/$/, '');
 }
 
 async function request(path, { method = 'GET', body, headers } = {}) {
   const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   let token = '';
   try {
-    const key = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
-    if (!key) throw new Error('Missing VITE_SESSION_STORAGE_KEY in .env');
+    const key = requiredSessionStorageKey();
     const raw = localStorage.getItem(key);
     token = raw ? JSON.parse(raw)?.token || '' : '';
   } catch {}

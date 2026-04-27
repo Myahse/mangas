@@ -216,6 +216,13 @@
   font-size: 0.86rem;
 }
 
+.auth-modal__hint {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
 .auth-modal__primary {
   position: absolute;
   left: 50%;

@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^5.0.4",
     "@heroui/react": "^3.0.2",
+    "@stomp/stompjs": "^7.3.0",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

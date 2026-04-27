@@ -1,5 +1,5 @@
 const PREFIX =
-  import.meta?.env?.VITE_ADS_STORAGE_PREFIX || 'mangaafrik_ads_admin:';
+  import.meta.env.VITE_ADS_STORAGE_PREFIX;
 
 export function readJson(key, fallback) {
   try {

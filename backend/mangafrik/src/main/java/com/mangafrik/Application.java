@@ -40,41 +40,45 @@ public class Application {
 
 	private static void loadDotEnvIfPresent() {
 		try {
-			Path env = Path.of(".env");
-			if (!Files.isRegularFile(env)) return;
-
-			for (String rawLine : Files.readAllLines(env, StandardCharsets.UTF_8)) {
-				String line = rawLine == null ? "" : rawLine.trim();
-				if (line.isEmpty() || line.startsWith("#")) continue;
-
-				int eq = line.indexOf('=');
-				if (eq <= 0) continue;
-
-				String key = line.substring(0, eq).trim();
-				String value = line.substring(eq + 1).trim();
-
-				// Strip optional quotes
-				if (value.length() >= 2) {
-					char a = value.charAt(0);
-					char b = value.charAt(value.length() - 1);
-					if ((a == '"' && b == '"') || (a == '\'' && b == '\'')) {
-						value = value.substring(1, value.length() - 1);
-					}
-				}
-
-				if (key.isBlank()) continue;
-				if (System.getenv(key) != null) continue; // OS env wins
-				if (System.getProperty(key) != null) continue; // explicit JVM props win
-
-				System.setProperty(key, value);
-
-				// Spring maps env var SPRING_PROFILES_ACTIVE, but system properties expect dot notation.
-				if ("SPRING_PROFILES_ACTIVE".equals(key) && System.getProperty("spring.profiles.active") == null) {
-					System.setProperty("spring.profiles.active", value);
-				}
-			}
+			loadEnvFileIfPresent(Path.of(".env"));
+			loadEnvFileIfPresent(Path.of(".env.local"));
 		} catch (Exception e) {
 			log.warn("Failed to load .env: {}", e.toString());
+		}
+	}
+
+	private static void loadEnvFileIfPresent(Path env) throws Exception {
+		if (!Files.isRegularFile(env)) return;
+
+		for (String rawLine : Files.readAllLines(env, StandardCharsets.UTF_8)) {
+			String line = rawLine == null ? "" : rawLine.trim();
+			if (line.isEmpty() || line.startsWith("#")) continue;
+
+			int eq = line.indexOf('=');
+			if (eq <= 0) continue;
+
+			String key = line.substring(0, eq).trim();
+			String value = line.substring(eq + 1).trim();
+
+		
+			if (value.length() >= 2) {
+				char a = value.charAt(0);
+				char b = value.charAt(value.length() - 1);
+				if ((a == '"' && b == '"') || (a == '\'' && b == '\'')) {
+					value = value.substring(1, value.length() - 1);
+				}
+			}
+
+			if (key.isBlank()) continue;
+			if (System.getenv(key) != null) continue; 
+			if (System.getProperty(key) != null) continue; 
+
+			System.setProperty(key, value);
+
+		
+			if ("SPRING_PROFILES_ACTIVE".equals(key) && System.getProperty("spring.profiles.active") == null) {
+				System.setProperty("spring.profiles.active", value);
+			}
 		}
 	}
 

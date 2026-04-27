@@ -12,6 +12,7 @@ import AccountSectionPage from './pages/Account/AccountSectionPage';
 import ProfilePage from './pages/Account/ProfilePage';
 import BecomeCreatorPage from './pages/Account/BecomeCreatorPage';
 import EpisodesPage from './pages/EpisodesPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 /* The reader page uses its own full-screen layout */
 function Layout({ children }) {
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/manga/:slug"                   element={<MangaPage  />} />
           <Route path="/manga/:slug/chapter/:chapter"  element={<ReaderPage />} />
           <Route path="/register"                      element={<Register   />} />
+          <Route path="/reset-password"                element={<ResetPasswordPage />} />
           <Route path="/compte"                         element={<AccountSectionPage />} />
           <Route path="/compte/abonnements"             element={<AccountSectionPage />} />
           <Route path="/compte/favoris"                 element={<AccountSectionPage />} />
