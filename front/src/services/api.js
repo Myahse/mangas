@@ -109,6 +109,26 @@ export async function fetchPages(slug, chapterNumber) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════
+   AUTH
+════════════════════════════════════════════════════════════ */
+
+export async function registerUser(payload) {
+  return request('/auth/register', { method: 'POST', body: payload });
+}
+
+export async function loginUser(payload) {
+  return request('/auth/login', { method: 'POST', body: payload });
+}
+
+export async function changePassword(payload) {
+  return request('/auth/change-password', { method: 'POST', body: payload });
+}
+
+export async function submitCreatorRequest(payload) {
+  return request('/creator-requests', { method: 'POST', body: payload });
+}
+
 
 import { useState, useEffect, useRef } from 'react';
 
