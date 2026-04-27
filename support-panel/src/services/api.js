@@ -1,12 +1,16 @@
 const API_BASE_URL_RAW =
   import.meta?.env?.VITE_API_BASE_URL;
+const API_BASE_URL_DEFAULT =
+  import.meta?.env?.VITE_API_BASE_URL_DEFAULT;
 
 function apiBase() {
   const raw = String(API_BASE_URL_RAW ?? '').trim();
-  if (!raw || raw === 'undefined' || raw === 'null') {
-    throw new Error('Missing VITE_API_BASE_URL in .env');
+  const fallback = String(API_BASE_URL_DEFAULT ?? '').trim();
+  const chosen = raw && raw !== 'undefined' && raw !== 'null' ? raw : fallback;
+  if (!chosen || chosen === 'undefined' || chosen === 'null') {
+    throw new Error('Missing VITE_API_BASE_URL (or VITE_API_BASE_URL_DEFAULT) in .env');
   }
-  return raw.replace(/\/$/, '');
+  return chosen.replace(/\/$/, '');
 }
  
 async function request(path, { method = 'GET', body, headers } = {}) {
