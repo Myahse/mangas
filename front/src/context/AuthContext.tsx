@@ -9,10 +9,18 @@ import {
   type ReactNode,
 } from 'react';
 
-const API_BASE_URL = import.meta?.env?.VITE_API_BASE_URL;
+const API_BASE_URL_RAW = import.meta?.env?.VITE_API_BASE_URL;
+
+function apiBase() {
+  const raw = String(API_BASE_URL_RAW ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_API_BASE_URL in .env');
+  }
+  return raw.replace(/\/$/, '');
+}
 
 async function request(path: string, { method = 'GET', body, headers }: any = {}) {
-  const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   const res = await fetch(url, {
     method,
     headers: {
@@ -30,8 +38,7 @@ async function request(path: string, { method = 'GET', body, headers }: any = {}
   return payload as any;
 }
 
-const STORAGE_KEY =
-  import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
+const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
 const AUTH_CONTEXT_GLOBAL_KEY = '__mangafrik_auth_context__';
@@ -86,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
+    if (!STORAGE_KEY) throw new Error('Missing VITE_SESSION_STORAGE_KEY in .env');
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setUser(JSON.parse(raw) as AuthUser);

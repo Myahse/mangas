@@ -1,11 +1,20 @@
-const API_BASE_URL =
+const API_BASE_URL_RAW =
   import.meta?.env?.VITE_API_BASE_URL;
 
+function apiBase() {
+  const raw = String(API_BASE_URL_RAW ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_API_BASE_URL in .env');
+  }
+  return raw.replace(/\/$/, '');
+}
+
 async function request(path, { method = 'GET', body, headers } = {}) {
-  const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   let token = '';
   try {
     const key = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
+    if (!key) throw new Error('Missing VITE_SESSION_STORAGE_KEY in .env');
     const raw = localStorage.getItem(key);
     token = raw ? JSON.parse(raw)?.token || '' : '';
   } catch {}

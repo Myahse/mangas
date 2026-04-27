@@ -1,11 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
-const DEFAULT_BASE = import.meta?.env?.VITE_API_BASE_URL_DEFAULT;
-const API_BASE_URL = import.meta?.env?.VITE_API_BASE_URL;
+const API_BASE_URL_RAW = import.meta?.env?.VITE_API_BASE_URL;
+
+function apiBase() {
+  const raw = String(API_BASE_URL_RAW ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_API_BASE_URL in .env');
+  }
+  return raw;
+}
 
 async function request(path, { method = 'GET', body, headers } = {}) {  
-  const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  const base = apiBase().replace(/\/$/, '');
+  const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
   const res = await fetch(url, {
     method,
     headers: {
