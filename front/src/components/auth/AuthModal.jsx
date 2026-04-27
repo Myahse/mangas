@@ -9,7 +9,7 @@ import './AuthModal.css';
 
 export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
   const navigate = useNavigate();
-  const { signInAfterLogin } = useAuth();
+  const { login } = useAuth();
   const [mode, setMode] = useState(initialMode);
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
           });
           // Re-login after password change.
           const res = await loginUser({ email: loginData.email.trim(), password: passwordChangeData.newPassword });
-          signInAfterLogin(res?.email ?? loginData.email);
+          await login({ email: res?.email ?? loginData.email, password: passwordChangeData.newPassword });
           onClose?.();
           return;
         } else {
@@ -85,7 +85,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
             setError('Vous devez changer votre mot de passe avant de continuer.');
             return;
           }
-          signInAfterLogin(res?.email ?? loginData.email);
+          await login({ email: res?.email ?? loginData.email, password: loginData.password });
           onClose?.();
           return;
         }

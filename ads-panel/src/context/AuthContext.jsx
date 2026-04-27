@@ -1,6 +1,30 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
+const DEFAULT_BASE = import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
+
+function apiBase() {
+  return (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
+}
+
+async function request(path, { method = 'GET', body, headers } = {}) {
+  const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      ...(body ? { 'Content-Type': 'application/json' } : null),
+      ...(headers || null),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const contentType = res.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json') ? await res.json().catch(() => null) : await res.text().catch(() => '');
+  if (!res.ok) {
+    const msg = payload?.error || payload?.message || payload || `Request failed (${res.status})`;
+    throw new Error(String(msg));
+  }
+  return payload;
+}
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
 const AUTH_CONTEXT_GLOBAL_KEY = '__mangafrik_auth_context__';
@@ -35,15 +59,18 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => persist(null), [persist]);
 
-  /** Connexion provisoire (sans backend) : traité comme lecteur. */
-  const signInAfterLogin = useCallback(
-    (email) => {
-      const e = (email || '').trim();
+  const login = useCallback(
+    async ({ email, password }) => {
+      const res = await request('/auth/login', { method: 'POST', body: { email, password } });
       persist({
-        role: 'reader',
-        displayName: e.split('@')[0] || 'Lecteur',
-        email: e,
+        id: res.id,
+        email: res.email,
+        displayName: res.displayName,
+        role: res.role,
+        token: res.token,
+        mustChangePassword: Boolean(res.mustChangePassword),
       });
+      return res;
     },
     [persist],
   );
@@ -53,9 +80,9 @@ export function AuthProvider({ children }) {
       user,
       isAuthenticated: Boolean(user),
       logout,
-      signInAfterLogin,
+      login,
     }),
-    [user, logout, signInAfterLogin],
+    [user, logout, login],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

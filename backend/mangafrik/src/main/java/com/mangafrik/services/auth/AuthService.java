@@ -10,9 +10,11 @@ import com.mangafrik.dto.auth.AuthDtos.RegisterResponse;
 import com.mangafrik.services.email.EmailService;
 import com.mangafrik.services.email.templates.WelcomeEmailTemplate;
 import jakarta.mail.MessagingException;
+import java.time.Duration;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -35,6 +37,9 @@ public class AuthService {
 
 	@Value("${app.public.base-url:https://mangafrik.com}")
 	private String publicBaseUrl;
+
+	@Value("${app.auth.session.ttl-hours:168}")
+	private long sessionTtlHours;
 
 	public AuthService(
 			NamedParameterJdbcTemplate jdbc,
@@ -121,13 +126,33 @@ public class AuthService {
 		if (mcp instanceof Boolean b) mustChange = b;
 		else if (mcp != null) mustChange = Boolean.parseBoolean(String.valueOf(mcp));
 
+		String token = createSession(((Number) row.get("id")).longValue());
+
 		return new LoginResponse(
 				((Number) row.get("id")).longValue(),
 				String.valueOf(row.get("email")),
 				String.valueOf(row.get("display_name")),
 				String.valueOf(row.get("role")),
-				mustChange
+				mustChange,
+				token
 		);
+	}
+
+	private String createSession(long userId) {
+		UUID token = UUID.randomUUID();
+		Instant now = Instant.now();
+		Instant expires = now.plus(Duration.ofHours(Math.max(1, sessionTtlHours)));
+		jdbc.update("""
+				insert into app_sessions (token, user_id, created_at, expires_at)
+				values (:token, :user_id, :created_at, :expires_at)
+				""",
+			new MapSqlParameterSource()
+				.addValue("token", token)
+				.addValue("user_id", userId)
+				.addValue("created_at", Timestamp.from(now))
+				.addValue("expires_at", Timestamp.from(expires))
+		);
+		return token.toString();
 	}
 
 	public Map<String, Object> changePassword(ChangePasswordRequest req) {

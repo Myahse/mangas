@@ -4,10 +4,17 @@ const DEFAULT_BASE =
 async function request(path, { method = 'GET', body, headers } = {}) {
   const base = (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
   const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  let token = '';
+  try {
+    const key = import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
+    const raw = localStorage.getItem(key);
+    token = raw ? JSON.parse(raw)?.token || '' : '';
+  } catch {}
   const res = await fetch(url, {
     method,
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : null),
+      ...(token ? { Authorization: `Bearer ${token}` } : null),
       ...(headers || null),
     },
     body: body ? JSON.stringify(body) : undefined,

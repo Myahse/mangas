@@ -6,7 +6,7 @@ import Modal from './Modal';
 import './AuthModal.css';
 
 export default function AuthModal({ isOpen, onClose }) {
-  const { signInAfterLogin } = useAuth();
+  const { login } = useAuth();
   const [showLoginForm, setShowLoginForm] = useState(false);
 
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -38,7 +38,7 @@ export default function AuthModal({ isOpen, onClose }) {
           setError('Please enter both login and password.');
           return;
         }
-        signInAfterLogin(loginData.email);
+        await login({ email: loginData.email, password: loginData.password });
         onClose?.();
         return;
       }

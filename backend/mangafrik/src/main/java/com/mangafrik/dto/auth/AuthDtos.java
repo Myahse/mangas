@@ -28,7 +28,8 @@ public final class AuthDtos {
 			String email,
 			String displayName,
 			String role,
-			boolean mustChangePassword
+			boolean mustChangePassword,
+			String token
 	) {}
 
 	public record ChangePasswordRequest(String email, String oldPassword, String newPassword) {}
