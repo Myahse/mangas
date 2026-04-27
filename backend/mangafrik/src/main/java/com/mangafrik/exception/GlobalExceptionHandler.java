@@ -5,8 +5,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -14,6 +17,24 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(NotFoundException.class)
 	public ResponseEntity<ErrorResponseDto> handleNotFound(NotFoundException ex, HttpServletRequest req) {
 		return build(HttpStatus.NOT_FOUND, ex, req);
+	}
+
+	/**
+	 * When a request does not match any controller mapping, Spring may route it
+	 * through the static resource chain and throw a "no resource found" exception.
+	 * Treat these as proper 404s rather than generic 500s.
+	 */
+	@ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+	public ResponseEntity<ErrorResponseDto> handleFrameworkNotFound(Exception ex, HttpServletRequest req) {
+		return build(HttpStatus.NOT_FOUND, ex, req);
+	}
+
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ErrorResponseDto> handleMethodNotAllowed(
+			HttpRequestMethodNotSupportedException ex,
+			HttpServletRequest req
+	) {
+		return build(HttpStatus.METHOD_NOT_ALLOWED, ex, req);
 	}
 
 	@ExceptionHandler(AppException.class)
