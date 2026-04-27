@@ -40,6 +40,7 @@ public class SecurityConfig {
 								AppConstants.API_V1 + "/genres",
 								AppConstants.API_V1 + "/storage/{key:.+}"
 						).permitAll()
+						.requestMatchers(HttpMethod.POST, AppConstants.API_V1 + "/creator-requests").permitAll()
 						.requestMatchers(AppConstants.API_V1 + "/storage/upload").authenticated()
 						.requestMatchers(AppConstants.API_V1 + "/creator/**").hasRole("CREATOR")
 						.requestMatchers(AppConstants.API_V1 + "/admin/**").hasRole("ADMIN")

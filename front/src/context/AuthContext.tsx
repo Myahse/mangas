@@ -15,10 +15,7 @@ function requiredApiBaseUrl(): string {
   const fallback = String(env?.VITE_API_BASE_URL_DEFAULT ?? '').trim();
   const raw = primary || fallback;
   if (!raw || raw === 'undefined' || raw === 'null') {
-    const keys = Object.keys(env ?? {}).sort().join(', ');
-    throw new Error(
-      `Missing VITE_API_BASE_URL in front/.env (available import.meta.env keys: ${keys || '(none)'})`,
-    );
+    throw new Error('Missing VITE_API_BASE_URL (set it in your build environment as VITE_API_BASE_URL)');
   }
   return raw;
 }
@@ -26,7 +23,7 @@ function requiredApiBaseUrl(): string {
 function requiredSessionStorageKey(): string {
   const raw = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
   if (!raw || raw === 'undefined' || raw === 'null') {
-    throw new Error('Missing VITE_SESSION_STORAGE_KEY in front/.env');
+    throw new Error('Missing VITE_SESSION_STORAGE_KEY (set it in your build environment as VITE_SESSION_STORAGE_KEY)');
   }
   return raw;
 }

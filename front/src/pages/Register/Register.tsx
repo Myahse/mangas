@@ -7,12 +7,6 @@ import './Register.css'
 
 type Role = 'reader'
 
-type CreatorProfile = {
-  penName: string
-  genres: string
-  publishingGoal: 'web' | 'print' | 'both'
-}
-
 type ReaderProfile = {
   favoriteGenres: string
   readingFrequency: 'daily' | 'weekly' | 'sometimes'
@@ -86,7 +80,11 @@ export default function Register() {
       })
       navigate('/')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Inscription impossible'
+      const raw = err instanceof Error ? err.message : 'Inscription impossible'
+      const normalized = String(raw).toLowerCase()
+      const message = normalized.includes('email already exists')
+        ? 'This email is already in use'
+        : String(raw)
       setSubmitError(message)
     } finally {
       setIsSubmitting(false)
