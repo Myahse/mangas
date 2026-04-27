@@ -3,6 +3,7 @@ import { Eye, EyeOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Modal from './Modal';
+import { changePassword, loginUser } from '../../services/api';
 
 import './AuthModal.css';
 
@@ -20,6 +21,8 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
 
   const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [forcePasswordChange, setForcePasswordChange] = useState(false);
+  const [passwordChangeData, setPasswordChangeData] = useState({ oldPassword: '', newPassword: '' });
   const [registrationData, setRegistrationData] = useState({
     firstName: '',
     lastName: '',
@@ -38,6 +41,8 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
     setIsBusy(false);
     setShowPassword(false);
     setLoginData({ email: '', password: '' });
+    setForcePasswordChange(false);
+    setPasswordChangeData({ oldPassword: '', newPassword: '' });
     setRegistrationData({ firstName: '', lastName: '', enterpriseIdentifier: '', description: '' });
   }, [isOpen]);
 
@@ -53,14 +58,37 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
       }
       setIsBusy(true);
       if (showLoginForm) {
-        if (!loginData.email.trim() || !loginData.password.trim()) {
-          setError('Please enter both login and password.');
+        if (forcePasswordChange) {
+          if (!passwordChangeData.oldPassword.trim() || passwordChangeData.newPassword.trim().length < 6) {
+            setError('Veuillez saisir votre ancien mot de passe et un nouveau (min. 6 caractères).');
+            return;
+          }
+          await changePassword({
+            email: loginData.email.trim(),
+            oldPassword: passwordChangeData.oldPassword,
+            newPassword: passwordChangeData.newPassword,
+          });
+          // Re-login after password change.
+          const res = await loginUser({ email: loginData.email.trim(), password: passwordChangeData.newPassword });
+          signInAfterLogin(res?.email ?? loginData.email);
+          onClose?.();
+          return;
+        } else {
+          if (!loginData.email.trim() || !loginData.password.trim()) {
+            setError('Veuillez saisir votre email et votre mot de passe.');
+            return;
+          }
+          const res = await loginUser({ email: loginData.email.trim(), password: loginData.password });
+          if (res?.mustChangePassword) {
+            setForcePasswordChange(true);
+            setPasswordChangeData({ oldPassword: loginData.password, newPassword: '' });
+            setError('Vous devez changer votre mot de passe avant de continuer.');
+            return;
+          }
+          signInAfterLogin(res?.email ?? loginData.email);
+          onClose?.();
           return;
         }
-        console.log('login', loginData);
-        signInAfterLogin(loginData.email);
-        onClose?.();
-        return;
       }
       if (showRegistrationForm) {
         if (
@@ -146,14 +174,18 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
                 </div>
 
                 <div className="auth-modal__field">
-                  <label htmlFor="auth-password">Mot de passe</label>
+                  <label htmlFor="auth-password">{forcePasswordChange ? 'Ancien mot de passe' : 'Mot de passe'}</label>
                   <div className="auth-modal__password">
                     <input
                       id="auth-password"
                       type={showPassword ? 'text' : 'password'}
-                      value={loginData.password}
-                      onChange={(e) => setLoginData((p) => ({ ...p, password: e.target.value }))}
-                      placeholder="Entrez votre mot de passe"
+                      value={forcePasswordChange ? passwordChangeData.oldPassword : loginData.password}
+                      onChange={(e) =>
+                        forcePasswordChange
+                          ? setPasswordChangeData((p) => ({ ...p, oldPassword: e.target.value }))
+                          : setLoginData((p) => ({ ...p, password: e.target.value }))
+                      }
+                      placeholder={forcePasswordChange ? 'Entrez votre ancien mot de passe' : 'Entrez votre mot de passe'}
                       required
                     />
                     <button
@@ -166,6 +198,22 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
                     </button>
                   </div>
                 </div>
+
+                {forcePasswordChange && (
+                  <div className="auth-modal__field">
+                    <label htmlFor="auth-new-password">Nouveau mot de passe</label>
+                    <div className="auth-modal__password">
+                      <input
+                        id="auth-new-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={passwordChangeData.newPassword}
+                        onChange={(e) => setPasswordChangeData((p) => ({ ...p, newPassword: e.target.value }))}
+                        placeholder="Minimum 6 caractères"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {error && <div className="auth-modal__error">{error}</div>}
 
