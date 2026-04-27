@@ -4,6 +4,7 @@ import com.mangafrik.storage.ObjectStorageService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -16,6 +17,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 @Service
+@ConditionalOnBean(S3Client.class)
 public class R2StorageService implements ObjectStorageService {
 	private final S3Client s3;
 	private final R2Properties props;

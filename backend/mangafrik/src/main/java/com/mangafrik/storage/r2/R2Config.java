@@ -1,6 +1,7 @@
 package com.mangafrik.storage.r2;
 
 import java.net.URI;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class R2Config {
 
 	@Bean
+	@ConditionalOnProperty(prefix = "r2", name = "endpoint")
 	public S3Client r2S3Client(R2Properties props) {
 		if (props.endpoint() == null || props.endpoint().isBlank()) {
 			throw new IllegalStateException("Missing r2.endpoint");
