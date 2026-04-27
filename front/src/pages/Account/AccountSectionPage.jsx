@@ -18,11 +18,8 @@ export default function AccountSectionPage() {
 
   useEffect(() => {
     let cancelled = false;
-
-    const DEFAULT_BASE =
-      import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
-    const base = (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
-    const url = `${base}/health`;
+    const API_BASE_URL = import.meta?.env?.VITE_API_BASE_URL;
+    const url = `${API_BASE_URL}/health`;
 
     fetch(url)
       .then(async (res) => {

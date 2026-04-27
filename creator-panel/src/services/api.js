@@ -1,9 +1,8 @@
-const DEFAULT_BASE =
-  import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
+  const API_BASE_URL =
+  import.meta?.env?.VITE_API_BASE_URL;
 
 async function request(path, { method = 'GET', body, headers } = {}) {
-  const base = (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
-  const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
   const res = await fetch(url, {
     method,
     headers: {
@@ -23,7 +22,7 @@ async function request(path, { method = 'GET', body, headers } = {}) {
 
 function readSession() {
   try {
-    const key = import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
+    const key = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
   } catch {

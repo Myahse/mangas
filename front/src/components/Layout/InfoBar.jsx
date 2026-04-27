@@ -17,12 +17,8 @@ export default function InfoBar() {
   useEffect(() => {
     let cancelled = false;
 
-    const DEFAULT_BASE =
-      import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
-    const base = (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
-    const url = `${base}/ads/system-notices`;
-
-    fetch(url)
+    const API_BASE_URL = import.meta?.env?.VITE_API_BASE_URL;
+    fetch(`${API_BASE_URL}/ads/system-notices`)
       .then(async (res) => {
         const text = await res.text().catch(() => '');
         if (!res.ok) throw new Error(text || `HTTP ${res.status}`);

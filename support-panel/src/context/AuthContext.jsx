@@ -1,14 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
-const DEFAULT_BASE = import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
+const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
+const DEFAULT_BASE = import.meta?.env?.VITE_API_BASE_URL_DEFAULT;
+const API_BASE_URL = import.meta?.env?.VITE_API_BASE_URL;
 
-function apiBase() {
-  return (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
-}
-
-async function request(path, { method = 'GET', body, headers } = {}) {
-  const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
+async function request(path, { method = 'GET', body, headers } = {}) {  
+  const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
   const res = await fetch(url, {
     method,
     headers: {
@@ -26,18 +23,7 @@ async function request(path, { method = 'GET', body, headers } = {}) {
   return payload;
 }
 
-/** Stable across Vite HMR so Provider and consumers keep the same context identity. */
-const AUTH_CONTEXT_GLOBAL_KEY = '__mangafrik_auth_context__';
-
-function getAuthContext() {
-  const g = globalThis;
-  if (!g[AUTH_CONTEXT_GLOBAL_KEY]) {
-    g[AUTH_CONTEXT_GLOBAL_KEY] = createContext(null);
-  }
-  return g[AUTH_CONTEXT_GLOBAL_KEY];
-}
-
-const AuthContext = getAuthContext();
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -89,7 +75,7 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  const ctx = useContext(getAuthContext());
+  const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }

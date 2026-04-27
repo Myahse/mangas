@@ -1,14 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY || 'mangafrik_session';
-const DEFAULT_BASE = import.meta?.env?.VITE_API_BASE_URL_DEFAULT || 'http://localhost:8082/api/v1';
-
-function apiBase() {
-  return (import.meta?.env?.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, '');
-}
+const STORAGE_KEY = import.meta?.env?.VITE_SESSION_STORAGE_KEY;
+const API_BASE_URL = import.meta?.env?.VITE_API_BASE_URL;
 
 async function request(path, { method = 'GET', body, headers } = {}) {
-  const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
+  const url = `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
   const res = await fetch(url, {
     method,
     headers: {
