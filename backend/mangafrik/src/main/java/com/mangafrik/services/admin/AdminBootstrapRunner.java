@@ -57,6 +57,29 @@ public class AdminBootstrapRunner implements ApplicationRunner {
 		boolean exists = adminExists(email);
 		if (exists) return;
 
+		// Safety net: ensure auth columns exist even if Flyway hasn't run yet.
+		// (Flyway should normally create these via migrations.)
+		jdbc.getJdbcTemplate().execute("""
+			alter table if exists app_users
+			  add column if not exists role text not null default 'reader';
+			""");
+		jdbc.getJdbcTemplate().execute("""
+			alter table if exists app_users
+			  add column if not exists password_hash text;
+			""");
+		jdbc.getJdbcTemplate().execute("""
+			alter table if exists app_users
+			  add column if not exists must_change_password boolean not null default false;
+			""");
+		jdbc.getJdbcTemplate().execute("""
+			alter table if exists app_users
+			  add column if not exists profile jsonb not null default '{}'::jsonb;
+			""");
+		jdbc.getJdbcTemplate().execute("""
+			alter table if exists app_users
+			  add column if not exists updated_at timestamptz not null default now();
+			""");
+
 		Instant now = Instant.now();
 		String passwordHash = passwordEncoder.encode(password);
 
