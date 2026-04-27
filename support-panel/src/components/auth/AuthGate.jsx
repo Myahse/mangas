@@ -3,17 +3,21 @@ import AuthModal from './AuthModal';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AuthGate({ children }) {
-  const { isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
-    setOpen(!isAuthenticated);
-  }, [isAuthenticated]);
+    const role = String(user?.role || '');
+    const ok = isAuthenticated && (role === 'support' || role === 'admin');
+    setOpen(!ok);
+    if (isAuthenticated && !(role === 'support' || role === 'admin')) logout();
+  }, [isAuthenticated, user, logout]);
 
   const onClose = useMemo(() => {
-    if (!isAuthenticated) return () => {};
+    const role = String(user?.role || '');
+    if (!(isAuthenticated && (role === 'support' || role === 'admin'))) return () => {};
     return () => setOpen(false);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   return (
     <>
