@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { submitCreatorRequest } from '../../services/api';
+import { getMyCreatorRequest, submitCreatorRequest } from '../../services/api';
 import './AccountSectionPage.css';
 
 export default function BecomeCreatorPage() {
@@ -13,10 +13,13 @@ export default function BecomeCreatorPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitOk, setSubmitOk] = useState(false);
+  const [existingRequest, setExistingRequest] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   const [form, setForm] = useState({
     email: user?.email || '',
     displayName: user?.displayName || '',
+    creatorEmail: '',
     penName: '',
     genres: '',
     message: '',
@@ -24,9 +27,38 @@ export default function BecomeCreatorPage() {
 
   const title = useMemo(() => {
     if (submitOk) return 'Demande envoyée';
+    if (existingRequest) {
+      const s = String(existingRequest.status || '').toLowerCase();
+      if (s === 'rejected') return 'Soumettre une nouvelle demande';
+      return 'Votre demande';
+    }
     if (step === 1) return 'Devenir créateur';
     return 'Votre demande';
-  }, [step, submitOk]);
+  }, [step, submitOk, existingRequest]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    let cancelled = false;
+    setLoadingExisting(true);
+    setExistingRequest(null);
+    getMyCreatorRequest()
+      .then((r) => {
+        if (cancelled) return;
+        setExistingRequest(r || null);
+      })
+      .catch((e) => {
+        // 401/404 => not logged in yet or no request yet, ignore
+        const msg = String(e?.message || '');
+        if (msg.includes('401') || msg.includes('403') || msg.includes('404')) return;
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoadingExisting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user]);
 
   if (!isAuthenticated || !user) {
     return (
@@ -45,9 +77,13 @@ export default function BecomeCreatorPage() {
   }
 
   const canContinue =
+    form.creatorEmail.trim().length > 0 &&
     form.penName.trim().length > 0 &&
     form.genres.trim().length > 0 &&
     form.message.trim().length > 0;
+
+  const existingStatus = useMemo(() => String(existingRequest?.status || '').toLowerCase(), [existingRequest]);
+  const canRetry = existingStatus === 'rejected';
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -57,6 +93,7 @@ export default function BecomeCreatorPage() {
     try {
       await submitCreatorRequest({
         email: form.email.trim(),
+        creatorEmail: form.creatorEmail.trim(),
         displayName: form.displayName.trim(),
         penName: form.penName.trim(),
         genres: form.genres.trim(),
@@ -64,7 +101,17 @@ export default function BecomeCreatorPage() {
       });
       setSubmitOk(true);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Erreur');
+      const msg = err instanceof Error ? err.message : 'Erreur';
+      const low = String(msg).toLowerCase();
+      if (low.includes('already submitted')) {
+        setSubmitError('Vous avez déjà une demande en cours. Vous pouvez consulter son statut ici.');
+        getMyCreatorRequest().then(setExistingRequest).catch(() => {});
+      } else if (low.includes('already approved')) {
+        setSubmitError('Votre demande a déjà été approuvée. Vous ne pouvez plus en soumettre une nouvelle.');
+        getMyCreatorRequest().then(setExistingRequest).catch(() => {});
+      } else {
+        setSubmitError(msg);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -85,7 +132,7 @@ export default function BecomeCreatorPage() {
               <span className="register__nav-back-text">Retour</span>
             </button>
 
-            <div className="register__brand" aria-label="MangAfrik">
+            <div className="register__brand" aria-label="MangAfriq">
               <span>Mang</span>
               <span className="register__brand-accent">Afrik</span>
             </div>
@@ -93,7 +140,7 @@ export default function BecomeCreatorPage() {
             <div className="register__topbar-spacer" aria-hidden="true" />
           </div>
 
-          <div className="register__brand register__brand--header" aria-label="MangAfrik">
+          <div className="register__brand register__brand--header" aria-label="MangAfriq">
             <span>Mang</span>
             <span className="register__brand-accent">Afrik</span>
           </div>
@@ -107,7 +154,36 @@ export default function BecomeCreatorPage() {
           </p>
         </div>
 
-        {!submitOk && (
+        {!submitOk && loadingExisting && (
+          <div className="register__fields-bare">
+            <div className="register__hint">Chargement…</div>
+          </div>
+        )}
+
+        {!submitOk && !loadingExisting && existingRequest && (
+          <div className="register__fields-bare">
+            <div className="register__hint">
+              <div style={{ fontWeight: 900, marginBottom: 6 }}>Statut: {existingRequest.status}</div>
+              <div className="admin-muted" style={{ fontSize: 12 }}>
+                Envoyée le {existingRequest.createdAt ? new Date(existingRequest.createdAt).toLocaleString() : '—'}
+              </div>
+              {existingRequest.reason ? (
+                <div style={{ marginTop: 8 }}>Raison: {existingRequest.reason}</div>
+              ) : null}
+            </div>
+            <div className="register__hint">
+              <strong>Nom</strong>: {existingRequest.displayName}
+              <br />
+              <strong>Email créateur</strong>: {existingRequest.creatorEmail || '—'}
+              <br />
+              <strong>Nom de plume</strong>: {existingRequest.penName || '—'}
+              <br />
+              <strong>Genres</strong>: {existingRequest.genres || '—'}
+            </div>
+          </div>
+        )}
+
+        {!submitOk && !loadingExisting && (!existingRequest || canRetry) && (
           <form id="become-creator-form" className="register__fields-bare" onSubmit={onSubmit}>
             {submitError && (
               <div className="register__hint" role="alert">
@@ -115,8 +191,26 @@ export default function BecomeCreatorPage() {
               </div>
             )}
 
+            {canRetry && step === 1 ? (
+              <div className="register__hint" style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>Votre précédente demande a été rejetée.</div>
+                <div className="admin-muted" style={{ fontSize: 12 }}>
+                  Vous pouvez corriger les informations et soumettre une nouvelle demande.
+                </div>
+                {existingRequest?.reason ? <div style={{ marginTop: 8 }}>Raison: {existingRequest.reason}</div> : null}
+              </div>
+            ) : null}
+
             {step === 1 && (
               <>
+                <label className="register__field">
+                  <span>Email créateur (pour le panneau créateur)</span>
+                  <input
+                    value={form.creatorEmail}
+                    onChange={(e) => setForm((p) => ({ ...p, creatorEmail: e.target.value }))}
+                    placeholder="ex: creator@email.com"
+                  />
+                </label>
                 <label className="register__field">
                   <span>Nom de plume</span>
                   <input value={form.penName} onChange={(e) => setForm((p) => ({ ...p, penName: e.target.value }))} />
@@ -146,6 +240,8 @@ export default function BecomeCreatorPage() {
                   <strong>Email</strong>: {form.email}
                   <br />
                   <strong>Nom</strong>: {form.displayName}
+                  <br />
+                  <strong>Email créateur</strong>: {form.creatorEmail}
                 </div>
                 <div className="register__hint">
                   <strong>Nom de plume</strong>: {form.penName}
@@ -174,6 +270,10 @@ export default function BecomeCreatorPage() {
           )}
 
           {submitOk ? (
+            <button type="button" className="register__btn register__btn--primary register__nav-next" onClick={() => navigate('/compte/profil')}>
+              Retour au profil
+            </button>
+          ) : loadingExisting || (existingRequest && !canRetry) ? (
             <button type="button" className="register__btn register__btn--primary register__nav-next" onClick={() => navigate('/compte/profil')}>
               Retour au profil
             </button>

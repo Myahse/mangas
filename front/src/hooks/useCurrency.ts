@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 export type Currency = 'XOF' | 'USD' | 'EUR';
 
-const STORAGE_KEY = 'mangaafrik_front_currency';
+const STORAGE_KEY = 'MangAfriq_front_currency';
 const SUPPORTED: Currency[] = ['XOF', 'USD', 'EUR'];
 
 function normalize(value: string | null): Currency {

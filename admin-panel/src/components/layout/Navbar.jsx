@@ -6,6 +6,7 @@ import { useLocale } from '../../hooks/useLocale.js';
 import { useCurrency } from '../../hooks/useCurrency.js';
 import PreferencesModal from '../modals/PreferencesModal.jsx';
 import { useI18n } from '../../i18n/i18n.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -16,6 +17,7 @@ export default function Navbar() {
   const { label: localeLabel } = useLocale();
   const { label: currencyLabel } = useCurrency();
   const { t } = useI18n();
+  const { logout } = useAuth();
 
   const navLinks = [
     { label: t('nav.overview', 'Overview'), to: '/overview' },
@@ -37,11 +39,11 @@ export default function Navbar() {
       <div className="navbar__inner container">
         <Link to="/overview" className="navbar__logo">
           <span className="navbar__logo-mark">
-            <span>Mang</span>
-            <span className="navbar__logo-accent">Afrik</span>
-            <span className="navbar__badge" aria-hidden="true">
-              Admin
-            </span>
+            <img
+              src="/admin-logo.png"
+              alt="MangAfriq Admin"
+              className="navbar__logo-img"
+            />
           </span>
         </Link>
 
@@ -81,6 +83,16 @@ export default function Navbar() {
           >
             {resolved === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
+          <button
+            type="button"
+            className="navbar__pill"
+            onClick={() => {
+              logout();
+              setMenuOpen(false);
+            }}
+          >
+            {t('common.logout', 'Logout')}
+          </button>
 
           <button
             className="navbar__burger"
@@ -105,6 +117,16 @@ export default function Navbar() {
               {link.label}
             </NavLink>
           ))}
+          <button
+            type="button"
+            className="navbar__mobile-link"
+            onClick={() => {
+              logout();
+              setMenuOpen(false);
+            }}
+          >
+            {t('common.logout', 'Logout')}
+          </button>
         </div>
       ) : null}
       <PreferencesModal isOpen={prefsOpen} onClose={() => setPrefsOpen(false)} />

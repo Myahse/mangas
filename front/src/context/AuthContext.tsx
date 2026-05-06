@@ -8,6 +8,7 @@ import {
   type Context,
   type ReactNode,
 } from 'react';
+import { looksUsableBearerToken } from '../utils/authToken';
 
 function requiredApiBaseUrl(): string {
   const env = import.meta.env as any;
@@ -56,9 +57,10 @@ function storageKey(): string {
 }
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
-const AUTH_CONTEXT_GLOBAL_KEY = '__mangafrik_auth_context__';
+const AUTH_CONTEXT_GLOBAL_KEY = '__MangAfriq_auth_context__';
 
-export type AuthUserRole = 'reader' | 'creator';
+// Roles that are allowed to use the main "front" app.
+export type AuthUserRole = 'reader' | 'support' | 'admin';
 
 export type ReaderProfile = {
   favoriteGenres: string;
@@ -118,6 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [key]);
 
+  useEffect(() => {
+    const role = String(user?.role || '').trim();
+    if (user && (!looksUsableBearerToken(user?.token) || !role)) {
+      localStorage.removeItem(key);
+      setUser(null);
+    }
+  }, [user, key]);
+
   const persist = useCallback((next: AuthUser | null) => {
     setUser(next);
     if (next) localStorage.setItem(key, JSON.stringify(next));
@@ -142,11 +152,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async ({ email, password }: { email: string; password: string }) => {
       const res = await request('/auth/login', { method: 'POST', body: { email, password } });
+      const roleRaw = String(res?.role ?? 'reader').trim().toLowerCase();
+      if (roleRaw !== 'reader' && roleRaw !== 'support' && roleRaw !== 'admin') {
+        // Prevent creator/ads/etc. accounts from using the main reader-facing app.
+        throw new Error("Ce compte n'a pas accès à l'application lecteur.");
+      }
+      const token = String(res?.token ?? '').trim();
+      if (!token) {
+        throw new Error('Connexion impossible (token manquant).');
+      }
       persist({
-        role: (res?.role ?? 'reader') as AuthUserRole,
+        role: roleRaw as AuthUserRole,
         displayName: String(res?.displayName ?? email.split('@')[0] ?? 'User'),
         email: String(res?.email ?? email),
-        token: String(res?.token ?? ''),
+        token,
       });
     },
     [persist],
@@ -155,7 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
-      isAuthenticated: Boolean(user),
+      isAuthenticated: Boolean(
+        user && looksUsableBearerToken(user?.token) && String(user?.role || '').trim(),
+      ),
       logout,
       signInAfterRegister,
       login,

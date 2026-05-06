@@ -3,7 +3,7 @@ import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, MangAfrik } from '@/constants/theme';
+import { Colors, MangAfriq } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
@@ -13,12 +13,12 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: MangAfrik.textMuted,
+        tabBarInactiveTintColor: MangAfriq.textMuted,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: MangAfrik.bgWhite,
-          borderTopColor: MangAfrik.border,
+          backgroundColor: MangAfriq.bgWhite,
+          borderTopColor: MangAfriq.border,
         },
       }}
     >

@@ -8,14 +8,17 @@ export default function AuthGate({ children }) {
 
   useEffect(() => {
     const role = String(user?.role || '');
-    const ok = isAuthenticated && (role === 'support' || role === 'admin');
+    const roleOk = role === 'support' || role === 'admin';
+    const mustChangePassword = Boolean(user?.mustChangePassword);
+    const ok = isAuthenticated && roleOk && !mustChangePassword;
     setOpen(!ok);
-    if (isAuthenticated && !(role === 'support' || role === 'admin')) logout();
+    if (isAuthenticated && !roleOk) logout();
   }, [isAuthenticated, user, logout]);
 
   const onClose = useMemo(() => {
     const role = String(user?.role || '');
-    if (!(isAuthenticated && (role === 'support' || role === 'admin'))) return () => {};
+    const roleOk = isAuthenticated && (role === 'support' || role === 'admin') && !Boolean(user?.mustChangePassword);
+    if (!roleOk) return () => {};
     return () => setOpen(false);
   }, [isAuthenticated, user]);
 

@@ -1,11 +1,11 @@
 import { StyleSheet } from 'react-native';
 
-import { MangAfrik } from '@/constants/theme';
+import { MangAfriq } from '@/constants/theme';
 
 export const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: MangAfrik.bgLight,
+    backgroundColor: MangAfriq.bgLight,
   },
   headerRow: {
     flexDirection: 'row',
@@ -17,13 +17,13 @@ export const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '900',
-    color: MangAfrik.textDark,
+    color: MangAfriq.textDark,
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: MangAfrik.textMuted,
+    color: MangAfriq.textMuted,
     fontWeight: '500',
   },
   filterToggle: {
@@ -34,20 +34,20 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: MangAfrik.border,
-    backgroundColor: MangAfrik.bgWhite,
+    borderColor: MangAfriq.border,
+    backgroundColor: MangAfriq.bgWhite,
   },
   filterToggleActive: {
-    borderColor: MangAfrik.primary,
+    borderColor: MangAfriq.primary,
     backgroundColor: 'rgba(230, 57, 70, 0.04)',
   },
   filterToggleText: {
     fontSize: 14,
     fontWeight: '700',
-    color: MangAfrik.textSecondary,
+    color: MangAfriq.textSecondary,
   },
   filterToggleTextActive: {
-    color: MangAfrik.primary,
+    color: MangAfriq.primary,
   },
   searchWrap: {
     position: 'relative',
@@ -64,10 +64,10 @@ export const styles = StyleSheet.create({
     paddingRight: 40,
     paddingVertical: 11,
     fontSize: 15,
-    color: MangAfrik.textDark,
-    backgroundColor: MangAfrik.bgWhite,
+    color: MangAfriq.textDark,
+    backgroundColor: MangAfriq.bgWhite,
     borderWidth: 1.5,
-    borderColor: MangAfrik.border,
+    borderColor: MangAfriq.border,
     borderRadius: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -89,7 +89,7 @@ export const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 4,
     paddingHorizontal: 4,
-    backgroundColor: MangAfrik.bgWhite,
+    backgroundColor: MangAfriq.bgWhite,
     borderRadius: 6,
     alignSelf: 'flex-start',
     shadowColor: '#000',
@@ -104,18 +104,18 @@ export const styles = StyleSheet.create({
     borderRadius: 5,
   },
   sortBtnActive: {
-    backgroundColor: MangAfrik.primary,
+    backgroundColor: MangAfriq.primary,
   },
   sortBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: MangAfrik.textMuted,
+    color: MangAfriq.textMuted,
   },
   sortBtnTextActive: {
     color: '#fff',
   },
   filtersPanel: {
-    backgroundColor: MangAfrik.bgWhite,
+    backgroundColor: MangAfriq.bgWhite,
     borderRadius: 10,
     padding: 18,
     marginBottom: 16,
@@ -129,7 +129,7 @@ export const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 13,
     fontWeight: '800',
-    color: MangAfrik.textDark,
+    color: MangAfriq.textDark,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 10,
@@ -143,7 +143,7 @@ export const styles = StyleSheet.create({
   clearGenres: {
     fontSize: 12,
     fontWeight: '600',
-    color: MangAfrik.primary,
+    color: MangAfriq.primary,
   },
   chipWrap: {
     flexDirection: 'row',
@@ -155,17 +155,17 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: MangAfrik.border,
-    backgroundColor: MangAfrik.bgLight,
+    borderColor: MangAfriq.border,
+    backgroundColor: MangAfriq.bgLight,
   },
   chipActive: {
-    backgroundColor: MangAfrik.primary,
-    borderColor: MangAfrik.primary,
+    backgroundColor: MangAfriq.primary,
+    borderColor: MangAfriq.primary,
   },
   chipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: MangAfrik.textSecondary,
+    color: MangAfriq.textSecondary,
   },
   chipTextActive: {
     color: '#fff',
@@ -190,7 +190,7 @@ export const styles = StyleSheet.create({
   activeChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: MangAfrik.primary,
+    color: MangAfriq.primary,
   },
   gridRow: {
     gap: 12,
@@ -200,7 +200,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: MangAfrik.bgWhite,
+    backgroundColor: MangAfriq.bgWhite,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -235,18 +235,18 @@ export const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 19,
     fontWeight: '700',
-    color: MangAfrik.textDark,
+    color: MangAfriq.textDark,
     marginTop: 12,
     marginBottom: 6,
   },
   emptySub: {
     fontSize: 15,
-    color: MangAfrik.textMuted,
+    color: MangAfriq.textMuted,
     textAlign: 'center',
     marginBottom: 16,
   },
   emptyBtn: {
-    backgroundColor: MangAfrik.primary,
+    backgroundColor: MangAfriq.primary,
     paddingVertical: 11,
     paddingHorizontal: 22,
     borderRadius: 6,

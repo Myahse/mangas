@@ -21,6 +21,6 @@ npm run dev
 
 ## Notes
 
-- Data persists in the browser in `localStorage` (key prefix: `mangaafrik_support:`).
+- Data persists in the browser in `localStorage` (key prefix: `MangAfriq_support:`).
 - The UI uses the backend API (`/api/v1/support/*`).
 
