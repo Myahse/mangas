@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = 'mangaafrik_support_locale';
+const STORAGE_KEY = 'MangAfriq_support_locale';
 const SUPPORTED = ['fr', 'en', 'ja'];
 
 function normalize(value) {

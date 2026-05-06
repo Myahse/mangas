@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, ChevronDown, Sun, Moon, User } from 'lucide-react';
-import { useFetch, fetchAllManga, fetchGenres } from '../../services/api';
+import { Search, Menu, X, ChevronDown, Sun, Moon, User, Coins } from 'lucide-react';
+import { Client } from '@stomp/stompjs';
+import { useFetch, fetchAllManga, fetchGenres, fetchWallet } from '../../services/api';
 import { useTheme } from '../../hooks/useTheme';
 import { useLocale } from '../../hooks/useLocale';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useI18n } from '../../i18n/i18n';
 import { useAuth } from '../../context/AuthContext';
 import { CREATOR_PANEL_URL } from '../../config/publicUrls';
+import { emitWalletUpdated } from '../../realtime/walletEvents';
 import AuthModal from '../auth/AuthModal';
 import PreferencesModal from '../modals/PreferencesModal';
 import './Navbar.css';
@@ -31,6 +33,7 @@ export default function Navbar() {
   const [hoveredGenre, setHoveredGenre] = useState(null);
   const [mobileGenresOpen, setMobileGenresOpen] = useState(false);
   const [mobilePreviewGenre, setMobilePreviewGenre] = useState(null);
+  const [walletKey, setWalletKey] = useState(0);
   const searchRef = useRef(null);
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
@@ -119,6 +122,52 @@ export default function Navbar() {
 
   const { data: genres } = useFetch(fetchGenres);
   const { data: allManga } = useFetch(fetchAllManga);
+  const { data: wallet } = useFetch(fetchWallet, walletKey);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    setWalletKey((k) => k + 1);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const token = String(user?.token || '').trim();
+    if (!isAuthenticated || !token) return;
+
+    // Convert http(s)://host/.../api/v1 -> ws(s)://host/ws
+    const api = String(import.meta?.env?.VITE_API_BASE_URL || import.meta?.env?.VITE_API_BASE_URL_DEFAULT || '').trim();
+    const base = api.replace(/\/+$/, '').replace(/\/api\/v1\/?$/i, '');
+    const wsUrl = base
+      .replace(/^http:\/\//i, 'ws://')
+      .replace(/^https:\/\//i, 'wss://') + '/ws';
+
+    const client = new Client({
+      brokerURL: wsUrl,
+      connectHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
+      reconnectDelay: 3000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      onConnect: () => {
+        client.subscribe('/user/queue/wallet', (msg) => {
+          let payload = null;
+          try {
+            payload = msg?.body ? JSON.parse(msg.body) : null;
+          } catch {}
+          // Refresh wallet everywhere
+          setWalletKey((k) => k + 1);
+          emitWalletUpdated(payload);
+        });
+      },
+    });
+
+    client.activate();
+    return () => {
+      try {
+        client.deactivate();
+      } catch {}
+    };
+  }, [isAuthenticated, user?.token]);
 
   const displayGenres = genres?.length ? genres : FALLBACK_GENRES;
 
@@ -156,12 +205,11 @@ export default function Navbar() {
   return (
     <>
       <header className={`navbar${scrolled ? ' navbar--scrolled' : ''}`}>
-      <div className="navbar__inner container">
+      <div className="navbar__inner">
 
         {/* Logo */}
         <Link to="/" className="navbar__logo">
-    
-          <span>Mang<span className="navbar__logo-accent">Afrik</span></span>
+          <img className="navbar__logo-img" src="/magafrik-logo.png" alt="MangAfriq" />
         </Link>
 
         {/* Desktop Nav */}
@@ -255,6 +303,12 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="navbar__actions">
+          {isAuthenticated && user ? (
+            <Link to="/store" className="navbar__coins-pill" title="Coins">
+              <Coins size={16} aria-hidden />
+              <span>{wallet?.balance ?? '—'}</span>
+            </Link>
+          ) : null}
           {/* Search */}
           <div className="navbar__search" ref={searchRef}>
             <button
@@ -390,6 +444,14 @@ export default function Navbar() {
                       Mon profil
                     </a>
                   ) : null}
+                  <Link
+                    to="/store"
+                    className="navbar__user-menu-item"
+                    role="menuitem"
+                    onClick={closeUserMenu}
+                  >
+                    Boutique (coins)
+                  </Link>
                   <Link
                     to="/compte/abonnements"
                     className="navbar__user-menu-item"
@@ -528,6 +590,9 @@ export default function Navbar() {
           <div className="navbar__mobile-divider" />
           {isAuthenticated && user ? (
             <>
+              <Link to="/store" className="navbar__mobile-link" onClick={() => setMenuOpen(false)}>
+                Coins: <strong>{wallet?.balance ?? '—'}</strong>
+              </Link>
               {user.role === 'reader' ? (
                 <Link to="/compte" className="navbar__mobile-link" onClick={() => setMenuOpen(false)}>
                   Mon espace
@@ -560,6 +625,9 @@ export default function Navbar() {
                   Mon profil
                 </a>
               ) : null}
+              <Link to="/store" className="navbar__mobile-link" onClick={() => setMenuOpen(false)}>
+                Boutique (coins)
+              </Link>
               <Link to="/compte/abonnements" className="navbar__mobile-link" onClick={() => setMenuOpen(false)}>
                 Mes abonnements
               </Link>

@@ -45,7 +45,7 @@ async function request(path, { method = 'GET', body, headers } = {}) {
 }
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
-const AUTH_CONTEXT_GLOBAL_KEY = '__mangafrik_auth_context__';
+const AUTH_CONTEXT_GLOBAL_KEY = '__MangAfriq_auth_context__';
 
 function getAuthContext() {
   const g = globalThis;
@@ -70,6 +70,15 @@ export function AuthProvider({ children }) {
     }
   }, [key]);
 
+  useEffect(() => {
+    const token = String(user?.token || '').trim();
+    const role = String(user?.role || '').trim();
+    if (user && (!token || !role)) {
+      localStorage.removeItem(key);
+      setUser(null);
+    }
+  }, [user, key]);
+
   const persist = useCallback((next) => {
     setUser(next);
     if (next) localStorage.setItem(key, JSON.stringify(next));
@@ -81,13 +90,17 @@ export function AuthProvider({ children }) {
   const login = useCallback(
     async ({ email, password }) => {
       const res = await request('/auth/login', { method: 'POST', body: { email, password } });
+      const token = String(res?.token || '').trim();
+      const role = String(res?.role || '').trim();
+      if (!token || !role) throw new Error("Compte invalide (token/role manquant).");
       persist({
         id: res.id,
         email: res.email,
         displayName: res.displayName,
         role: res.role,
-        token: res.token,
-        mustChangePassword: Boolean(res.mustChangePassword),
+        token: token,
+        mustChangePassword:
+          Boolean(res?.mustChangePassword) || Boolean(res?.must_change_password),
       });
       return res;
     },
@@ -97,7 +110,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       user,
-      isAuthenticated: Boolean(user),
+      isAuthenticated: Boolean(user && String(user?.token || '').trim() && String(user?.role || '').trim()),
       logout,
       login,
     }),

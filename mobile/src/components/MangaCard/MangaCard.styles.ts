@@ -1,11 +1,11 @@
 import { StyleSheet } from 'react-native';
 
-import { MangAfrik } from '@/constants/theme';
+import { MangAfriq } from '@/constants/theme';
 
 export const styles = StyleSheet.create({
   pressable: {
     borderRadius: 10,
-    backgroundColor: MangAfrik.bgWhite,
+    backgroundColor: MangAfriq.bgWhite,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -37,7 +37,7 @@ export const styles = StyleSheet.create({
   ratingText: {
     fontSize: 11,
     fontWeight: '700',
-    color: MangAfrik.rating,
+    color: MangAfriq.rating,
   },
   statusBadge: {
     position: 'absolute',
@@ -61,7 +61,7 @@ export const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: MangAfrik.textDark,
+    color: MangAfriq.textDark,
     lineHeight: 18,
     marginBottom: 6,
   },
@@ -74,7 +74,7 @@ export const styles = StyleSheet.create({
   genrePill: {
     fontSize: 11,
     fontWeight: '600',
-    color: MangAfrik.primary,
+    color: MangAfriq.primary,
     backgroundColor: 'rgba(230, 57, 70, 0.08)',
     borderRadius: 3,
     paddingHorizontal: 6,
@@ -88,7 +88,7 @@ export const styles = StyleSheet.create({
   },
   latestText: {
     fontSize: 12,
-    color: MangAfrik.textMuted,
+    color: MangAfriq.textMuted,
     fontWeight: '500',
     flex: 1,
   },

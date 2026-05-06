@@ -54,14 +54,29 @@ export const adminApi = {
   users() {
     return request('/admin/users');
   },
+  createUser(payload) {
+    return request('/admin/users', { method: 'POST', body: payload });
+  },
   updateUser(id, patch) {
     return request(`/admin/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch });
+  },
+  resetUserCredentials(id) {
+    return request(`/admin/users/${encodeURIComponent(id)}/reset-credentials`, { method: 'POST' });
   },
   creatorRequests() {
     return request('/admin/creator-requests');
   },
   reviewCreatorRequest(id, payload) {
     return request(`/admin/creator-requests/${encodeURIComponent(id)}/review`, { method: 'POST', body: payload });
+  },
+  getCreatorContractForRequest(id) {
+    return request(`/admin/creator-contracts/creator-requests/${encodeURIComponent(id)}`);
+  },
+  adminSignCreatorContract(id, payload) {
+    return request(`/admin/creator-contracts/creator-requests/${encodeURIComponent(id)}/admin-sign`, { method: 'POST', body: payload });
+  },
+  sendCreatorContractPdf(id) {
+    return request(`/admin/creator-contracts/creator-requests/${encodeURIComponent(id)}/send-pdf`, { method: 'POST' });
   },
   mangaSubmissions() {
     return request('/admin/manga-submissions');
@@ -84,14 +99,23 @@ export const adminApi = {
   mangas() {
     return request('/admin/mangas');
   },
-  createManga(payload) {
-    return request('/admin/mangas', { method: 'POST', body: payload });
-  },
   updateManga(id, patch) {
     return request(`/admin/mangas/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch });
   },
   deleteManga(id) {
     return request(`/admin/mangas/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+  grantCoins(payload) {
+    return request('/admin/wallet/grant', { method: 'POST', body: payload });
+  },
+  featureFlags() {
+    return request('/admin/feature-flags');
+  },
+  updateFeatureFlag(key, enabled) {
+    return request('/admin/feature-flags', { method: 'PATCH', body: { key, enabled } });
+  },
+  markCoinPurchasePaid(id) {
+    return request(`/admin/store/coin-purchase-intents/${encodeURIComponent(id)}/mark-paid`, { method: 'POST' });
   },
 };
 

@@ -232,6 +232,14 @@ export default function SeriesPage() {
       };
 
       await creatorApi.createSubmission(payload);
+      try {
+        localStorage.setItem(
+          'MangAfriq_creator_series_thumbs_v1',
+          JSON.stringify({ title: payload.title, thumbnails: payload.thumbnails }),
+        );
+      } catch {
+        /* ignore quota / private mode */
+      }
       setCreatedSeriesTitle(payload.title);
       setAfterCreateOpen(true);
     } catch (err) {

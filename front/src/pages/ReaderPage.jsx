@@ -4,7 +4,8 @@ import {
   ChevronLeft, ChevronRight, Home, List,
   ZoomIn, ZoomOut, Settings, ArrowLeft,
 } from 'lucide-react';
-import { useFetch, fetchMangaBySlug, fetchChapters, fetchPages } from '../services/api';
+import { useFetch, fetchMangaBySlug, fetchChapters, fetchPages, fetchWallet, dailyClaimCoins, unlockChapter } from '../services/api';
+import { onWalletUpdated } from '../realtime/walletEvents';
 import './ReaderPage.css';
 
 export default function ReaderPage() {
@@ -12,8 +13,11 @@ export default function ReaderPage() {
   const chapterNum = parseInt(chapter, 10);
 
   const { data: manga }    = useFetch(fetchMangaBySlug, slug);
-  const { data: pages }    = useFetch(fetchPages, slug, chapterNum);
+  const [pagesKey, setPagesKey] = useState(0);
+  const { data: pages, error: pagesError } = useFetch(fetchPages, slug, chapterNum, pagesKey);
   const { data: chapters } = useFetch(fetchChapters, slug);
+  const [walletKey, setWalletKey] = useState(0);
+  const { data: wallet } = useFetch(fetchWallet, walletKey);
 
   const pageList    = pages    ?? [];
   const chapterList = chapters ?? [];
@@ -40,6 +44,8 @@ export default function ReaderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => onWalletUpdated(() => setWalletKey((k) => k + 1)), []);
+
   if (!manga) {
     return (
       <div className="reader-notfound">
@@ -48,6 +54,9 @@ export default function ReaderPage() {
       </div>
     );
   }
+
+  const isLocked = Boolean(pagesError && String(pagesError).toLowerCase().includes('locked'));
+  const needsLogin = Boolean(pagesError && String(pagesError).toLowerCase().includes('unauthorized'));
 
   return (
     <div className="reader reader--dark">
@@ -114,16 +123,64 @@ export default function ReaderPage() {
 
       {/* Scroll mode */}
       <div className="reader__scroll-mode">
-        {pageList.map((p, i) => (
-          <img
-            key={p.url}
-            src={p.url}
-            alt={`Page ${i + 1}`}
-            className="reader__scroll-page"
-            style={{ maxWidth: `${zoom}%` }}
-            loading="lazy"
-          />
-        ))}
+        {needsLogin ? (
+          <div className="reader-notfound" style={{ padding: 24 }}>
+            <p>Connectez-vous pour lire ce chapitre.</p>
+            <Link to={`/manga/${slug}`}>Retour</Link>
+          </div>
+        ) : isLocked ? (
+          <div className="reader-notfound" style={{ padding: 24 }}>
+            <p style={{ fontWeight: 900 }}>Chapitre verrouillé</p>
+            <p style={{ opacity: 0.85, marginTop: 6 }}>
+              Solde: <strong>{wallet?.balance ?? 0}</strong> coins
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+              <button
+                className="reader__chapter-index-btn"
+                type="button"
+                onClick={() => {
+                  unlockChapter(slug, chapterNum)
+                    .then(() => {
+                      setWalletKey((k) => k + 1);
+                      setPagesKey((k) => k + 1);
+                    })
+                    .catch((e) => alert(e?.message || 'Unlock failed'));
+                }}
+              >
+                Débloquer ce chapitre
+              </button>
+              {wallet?.rewardsEnabled ? (
+                <button
+                  className="reader__chapter-nav-btn"
+                  type="button"
+                  onClick={() => {
+                    dailyClaimCoins()
+                      .then(() => setWalletKey((k) => k + 1))
+                      .catch(() => {});
+                  }}
+                >
+                  Réclamer bonus quotidien
+                </button>
+              ) : null}
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Link to={`/manga/${slug}`} className="reader__back-btn">
+                Retour aux chapitres
+              </Link>
+            </div>
+          </div>
+        ) : (
+          pageList.map((p, i) => (
+            <img
+              key={p.url}
+              src={p.url}
+              alt={`Page ${i + 1}`}
+              className="reader__scroll-page"
+              style={{ maxWidth: `${zoom}%` }}
+              loading="lazy"
+            />
+          ))
+        )}
       </div>
 
       {/* Bottom bar */}

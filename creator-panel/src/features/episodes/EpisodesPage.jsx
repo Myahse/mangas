@@ -1,45 +1,50 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import '../../pages/SeriesPage.css';
 import '../../pages/EpisodesPage.css';
 import { creatorApi } from '../../services/api';
 import { notify } from '../../services/notify';
-import { formatBytes, isValidAlphaNumFilename, resizeForUpload } from './utils';
+import { formatBytes, resizeForUpload } from './utils';
+
+const LS_SERIES_THUMBS = 'MangAfriq_creator_series_thumbs_v1';
+
+function normalizeSeriesTitle(t) {
+  return (t || '').trim().toLowerCase();
+}
+
+function readStoredSeriesThumbnails(seriesTitle) {
+  try {
+    const raw = localStorage.getItem(LS_SERIES_THUMBS);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (!o?.thumbnails?.square?.url || !o?.thumbnails?.vertical?.url) return null;
+    if (normalizeSeriesTitle(o.title) !== normalizeSeriesTitle(seriesTitle)) return null;
+    return o.thumbnails;
+  } catch {
+    return null;
+  }
+}
+
+/** Attach série thumbnails to episode API when the series title matches (no UI on this page). */
+function thumbPayloadFromBundle(bundle) {
+  if (!bundle?.square?.url || !bundle?.vertical?.url) return null;
+  return {
+    thumbnails: {
+      square: JSON.parse(JSON.stringify(bundle.square)),
+      vertical: JSON.parse(JSON.stringify(bundle.vertical)),
+    },
+  };
+}
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-const THUMB_MAX_BYTES = 800 * 1024;
 const EP_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 const EP_TOTAL_MAX_BYTES = 20 * 1024 * 1024;
 const EP_TOTAL_MAX_FILES = 100;
 
-function getImageDimensions(file) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const dims = { width: img.naturalWidth, height: img.naturalHeight };
-      URL.revokeObjectURL(url);
-      resolve(dims);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('invalid_image'));
-    };
-    img.src = url;
-  });
-}
-
-function getPublishBlockingReasons({
-  episodeTitle,
-  thumb,
-  thumbError,
-  items,
-  totals,
-}) {
+function getPublishBlockingReasons({ episodeTitle, items, totals }) {
   const reasons = [];
   if (!episodeTitle.trim()) reasons.push("Titre d'épisode requis.");
   if (episodeTitle.length > 60) reasons.push("Titre d'épisode: maximum 60 caractères.");
-  if (!thumb.file) reasons.push('Thumbnail requis.');
-  if (thumbError) reasons.push(`Thumbnail: ${thumbError}`);
   if (items.length === 0) reasons.push('Importer au moins 1 image.');
   if (items.length > EP_TOTAL_MAX_FILES) reasons.push('Maximum 100 images.');
   if (totals.totalBytes > EP_TOTAL_MAX_BYTES) reasons.push('Limite totale 20MB dépassée.');
@@ -55,8 +60,8 @@ export default function EpisodesPage() {
   const [creatorNote, setCreatorNote] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const [thumb, setThumb] = useState({ file: null, url: '', error: '' });
-  const thumbInputRef = useRef(null);
+  /** Loaded from série submission / localStorage — used only for API thumb + preview header. */
+  const [seriesThumbBundle, setSeriesThumbBundle] = useState(null);
 
   const [items, setItems] = useState([]);
   const filesInputRef = useRef(null);
@@ -72,16 +77,57 @@ export default function EpisodesPage() {
     const params = new URLSearchParams(location.search);
     const fromUrl = (params.get('seriesTitle') || '').trim();
     if (fromUrl) setSeriesTitle(fromUrl);
-    // only when URL changes
   }, [location.search]);
 
   useEffect(() => {
     return () => {
-      if (thumb.url) URL.revokeObjectURL(thumb.url);
-      for (const it of items) if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+      for (const it of items) if (it.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(it.previewUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const st = seriesTitle.trim();
+    if (!st) {
+      setSeriesThumbBundle(null);
+      return;
+    }
+
+    const applyBundle = (thumbnails) => {
+      if (!thumbnails?.square?.url || !thumbnails?.vertical?.url) return;
+      setSeriesThumbBundle({
+        square: { ...thumbnails.square },
+        vertical: { ...thumbnails.vertical },
+      });
+    };
+
+    const fromLs = readStoredSeriesThumbnails(st);
+    if (fromLs) {
+      if (!cancelled) applyBundle(fromLs);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    (async () => {
+      try {
+        const list = await creatorApi.listMySubmissions();
+        if (!Array.isArray(list) || cancelled) return;
+        const match = list.find(
+          (s) => s?.payload && normalizeSeriesTitle(s.payload.title) === normalizeSeriesTitle(st),
+        );
+        const th = match?.payload?.thumbnails;
+        if (th?.square?.url && th?.vertical?.url && !cancelled) applyBundle(th);
+      } catch {
+        /* ignore */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [seriesTitle]);
 
   const episodeTitleLeft = 60 - episodeTitle.length;
   const noteLeft = 400 - creatorNote.length;
@@ -91,47 +137,22 @@ export default function EpisodesPage() {
     return { totalBytes, count: items.length };
   }, [items]);
 
-  const thumbError = thumb.error;
-
   const canSaveDraft = episodeTitle.trim().length > 0 && episodeTitle.length <= 60;
 
   const publishBlockingReasons = useMemo(
-    () => getPublishBlockingReasons({ episodeTitle, thumb, thumbError, items, totals }),
-    [episodeTitle, thumb, thumbError, items, totals],
+    () =>
+      getPublishBlockingReasons({
+        episodeTitle,
+        items,
+        totals,
+      }),
+    [episodeTitle, items, totals],
   );
 
   const canPublish = publishBlockingReasons.length === 0;
 
-  const setThumbWithValidation = async (file) => {
-    if (thumb.url) URL.revokeObjectURL(thumb.url);
-    if (!file) {
-      setThumb({ file: null, url: '', error: '' });
-      return;
-    }
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      setThumb({ file: null, url: '', error: 'Format non autorisé (JPG, JPEG, PNG).' });
-      return;
-    }
-    if (!isValidAlphaNumFilename(file.name)) {
-      setThumb({ file: null, url: '', error: "Nom de fichier invalide (lettres et chiffres uniquement)." });
-      return;
-    }
-    try {
-      const dims = await getImageDimensions(file);
-      if (dims.width !== 202 || dims.height !== 142) {
-        setThumb({ file: null, url: '', error: `Dimensions invalides: ${dims.width}×${dims.height}px. Requis: 202×142px.` });
-        return;
-      }
-      if (file.size > THUMB_MAX_BYTES) {
-        setThumb({ file: null, url: '', error: `Fichier trop lourd: ${formatBytes(file.size)}. Maximum: 500kb.` });
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      setThumb({ file, url, error: '' });
-    } catch {
-      setThumb({ file: null, url: '', error: "Impossible de lire l'image. Essayez un autre fichier." });
-    }
-  };
+  const previewHeaderThumbUrl =
+    seriesThumbBundle?.square?.url || items.find((x) => x.previewUrl)?.previewUrl || '';
 
   const addEpisodeFiles = async (fileList) => {
     const list = Array.from(fileList ?? []);
@@ -199,7 +220,7 @@ export default function EpisodesPage() {
   };
 
   const clearAll = () => {
-    for (const it of items) if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+    for (const it of items) if (it.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(it.previewUrl);
     setItems([]);
     if (filesInputRef.current) filesInputRef.current.value = '';
   };
@@ -222,7 +243,7 @@ export default function EpisodesPage() {
         .slice(0, 60);
       const prefix = `episodes/${safeSeries}/${safeEpisode}`;
 
-      const uploadedThumb = thumb.file ? await creatorApi.uploadFile({ file: thumb.file, prefix }) : null;
+      const thumbPayload = thumbPayloadFromBundle(seriesThumbBundle);
 
       const files = items.filter((x) => x.file).map((x) => x.file);
       const uploadedImages = await Promise.all(files.map((f) => creatorApi.uploadFile({ file: f, prefix })));
@@ -234,9 +255,7 @@ export default function EpisodesPage() {
         commentsEnabled,
         publishMode,
         publishAt: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : 'now',
-        thumb: uploadedThumb
-          ? { name: thumb.file.name, size: thumb.file.size, r2Key: uploadedThumb.key, url: uploadedThumb.url }
-          : null,
+        thumb: thumbPayload,
         images: uploadedImages.map((up, idx) => ({
           name: files[idx]?.name,
           size: files[idx]?.size,
@@ -270,7 +289,7 @@ export default function EpisodesPage() {
         .slice(0, 60);
       const prefix = `episodes/${safeSeries}/${safeEpisode}`;
 
-      const uploadedThumb = thumb.file ? await creatorApi.uploadFile({ file: thumb.file, prefix }) : null;
+      const thumbPayload = thumbPayloadFromBundle(seriesThumbBundle);
 
       const files = items.filter((x) => x.file).map((x) => x.file);
       const uploadedImages = await Promise.all(files.map((f) => creatorApi.uploadFile({ file: f, prefix })));
@@ -281,9 +300,7 @@ export default function EpisodesPage() {
         episodeTitle: episodeTitle.trim(),
         creatorNote: creatorNote.trim() || null,
         commentsEnabled,
-        thumb: uploadedThumb
-          ? { name: thumb.file.name, size: thumb.file.size, r2Key: uploadedThumb.key, url: uploadedThumb.url }
-          : null,
+        thumb: thumbPayload,
         images: uploadedImages.map((up, idx) => ({
           name: files[idx]?.name,
           size: files[idx]?.size,
@@ -313,42 +330,6 @@ export default function EpisodesPage() {
       <div className="creator__grid">
         <main className="creator__main">
           <h1 className="creator__title">Publier un épisode</h1>
-
-          {/* Thumbnail */}
-          <div className="ep__section">
-            <div className="ep__label">Thumbnail</div>
-            <div className="ep__placeholder-line">
-              <span className="ep__file-name">{thumb.file?.name ?? 'No file chosen'}</span>
-            </div>
-            <label
-              className={`ep__thumb${thumb.url ? ' has-preview' : ''}`}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setThumbWithValidation(e.dataTransfer?.files?.[0] ?? null);
-              }}
-            >
-              <input
-                ref={thumbInputRef}
-                type="file"
-                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                onChange={(e) => setThumbWithValidation(e.target.files?.[0] ?? null)}
-              />
-              <div className="ep__thumb-preview">
-                {thumb.url ? <img src={thumb.url} alt="Aperçu thumbnail épisode" /> : <div className="ep__thumb-ph" />}
-              </div>
-              <div className="ep__thumb-meta">
-                <div className="ep__file-sub">Choisissez une image à importer. Ou glissez le fichier d'image ici.</div>
-              </div>
-            </label>
-            <div className="ep__help">
-              Taille recommandée : 202x142. L'image doit être inférieure à 500kb. Seuls les formats JPG, JPEG et PNG sont
-              autorisés. Le nom du fichier ne peut être que des lettres de l'alphabet et des chiffres.
-            </div>
-            <div className="ep__help ep__help--nb">NB : Les images téléchargées 160×151 avant juin 2025 apparaîtront au format 202x142.</div>
-            {thumbError && <div className="ep__error">{thumbError}</div>}
-          </div>
 
           {/* Titles */}
           <div className="ep__section">
@@ -454,7 +435,11 @@ export default function EpisodesPage() {
             <div className={`ep__preview ep__preview--${previewMode}`} aria-label={`Aperçu ${previewMode === 'pc' ? 'PC' : 'Mobile'}`}>
               <div className="ep__preview-header">
                 <div className="ep__preview-thumb">
-                  {thumb.url ? <img src={thumb.url} alt="Thumbnail épisode" /> : <div className="ep__thumb-ph" aria-hidden="true" />}
+                  {previewHeaderThumbUrl ? (
+                    <img src={previewHeaderThumbUrl} alt="Visuel série ou première page" />
+                  ) : (
+                    <div className="ep__thumb-ph" aria-hidden="true" />
+                  )}
                 </div>
                 <div className="ep__preview-headings">
                   <div className="ep__preview-series">{seriesTitle}</div>
@@ -545,4 +530,3 @@ export default function EpisodesPage() {
     </div>
   );
 }
-

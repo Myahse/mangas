@@ -47,6 +47,18 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
       setError("Email ou mot de passe incorrect.");
       return;
     }
+    if (msg.includes('email is required') || msg.includes('password is required') || msg.includes('payload is required')) {
+      setError('Merci de remplir email et mot de passe.');
+      return;
+    }
+    if (msg.includes('account is disabled')) {
+      setError('Ce compte est désactivé.');
+      return;
+    }
+    if (msg.includes('account has no password')) {
+      setError('Ce compte ne permet pas la connexion par mot de passe.');
+      return;
+    }
     setError(raw || "Connexion impossible.");
   };
 
@@ -177,7 +189,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
         </button>
 
         <div className="auth-modal__center">
-          <div className="auth-modal__brand" aria-label="MangAfrik">
+          <div className="auth-modal__brand" aria-label="MangAfriq">
             <span>Mang</span>
             <span className="auth-modal__brand-accent">Afrik</span>
           </div>
@@ -376,7 +388,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose }) {
 
         <div className={`auth-modal__footer${showRegistrationForm ? ' auth-modal__footer--up' : ''}`}>
           <p>
-            MangAfrik © 2026 — <button type="button">Conditions d’utilisation</button> et{' '}
+            MangAfriq © 2026 — <button type="button">Conditions d’utilisation</button> et{' '}
             <button type="button">Politique de confidentialité</button>.
           </p>
         </div>

@@ -1,11 +1,11 @@
 import { StyleSheet } from 'react-native';
 
-import { MangAfrik } from '@/constants/theme';
+import { MangAfriq } from '@/constants/theme';
 
 export const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: MangAfrik.bgLight,
+    backgroundColor: MangAfriq.bgLight,
   },
   scrollContent: {
     paddingBottom: 32,
@@ -83,7 +83,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: MangAfrik.primary,
+    backgroundColor: MangAfriq.primary,
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 8,
@@ -166,13 +166,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: MangAfrik.border,
-    backgroundColor: MangAfrik.bgWhite,
+    borderColor: MangAfriq.border,
+    backgroundColor: MangAfriq.bgWhite,
   },
   genreChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: MangAfrik.textSecondary,
+    color: MangAfriq.textSecondary,
   },
   section: {
     paddingHorizontal: 16,
@@ -193,19 +193,19 @@ export const styles = StyleSheet.create({
     width: 4,
     height: 20,
     borderRadius: 2,
-    backgroundColor: MangAfrik.primary,
+    backgroundColor: MangAfriq.primary,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: MangAfrik.textDark,
+    color: MangAfriq.textDark,
   },
   seeAll: {
     fontSize: 13,
     fontWeight: '600',
-    color: MangAfrik.primary,
+    color: MangAfriq.primary,
     borderWidth: 1.5,
-    borderColor: MangAfrik.primary,
+    borderColor: MangAfriq.primary,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -222,12 +222,12 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sidebarBlock: {
-    backgroundColor: MangAfrik.bgWhite,
+    backgroundColor: MangAfriq.bgWhite,
     borderRadius: 10,
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: MangAfrik.border,
+    borderColor: MangAfriq.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -241,12 +241,12 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: MangAfrik.border,
+    borderBottomColor: MangAfriq.border,
   },
   sidebarTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: MangAfrik.textDark,
+    color: MangAfriq.textDark,
   },
   rankedRow: {
     flexDirection: 'row',
@@ -254,14 +254,14 @@ export const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: MangAfrik.bgLight,
+    borderBottomColor: MangAfriq.bgLight,
   },
   rankBadge: {
     width: 22,
     textAlign: 'center',
     fontSize: 13,
     fontWeight: '800',
-    color: MangAfrik.textMuted,
+    color: MangAfriq.textMuted,
   },
   rankTop1: { color: '#d4af37' },
   rankTop2: { color: '#a8a8a8' },
@@ -279,11 +279,11 @@ export const styles = StyleSheet.create({
   rankedTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: MangAfrik.textDark,
+    color: MangAfriq.textDark,
   },
   rankedMeta: {
     fontSize: 11,
-    color: MangAfrik.textMuted,
+    color: MangAfriq.textMuted,
     marginTop: 2,
   },
   rankedStats: {
@@ -297,7 +297,7 @@ export const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: MangAfrik.bgLight,
+    borderBottomColor: MangAfriq.bgLight,
   },
   newCover: {
     width: 48,
@@ -313,7 +313,7 @@ export const styles = StyleSheet.create({
   newTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: MangAfrik.textDark,
+    color: MangAfriq.textDark,
   },
   newGenres: {
     flexDirection: 'row',
@@ -324,7 +324,7 @@ export const styles = StyleSheet.create({
   newGenrePill: {
     fontSize: 10,
     fontWeight: '600',
-    color: MangAfrik.primary,
+    color: MangAfriq.primary,
     backgroundColor: 'rgba(230, 57, 70, 0.08)',
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -333,7 +333,7 @@ export const styles = StyleSheet.create({
   },
   newChapters: {
     fontSize: 11,
-    color: MangAfrik.textMuted,
+    color: MangAfriq.textMuted,
     marginTop: 4,
   },
   skeletonHero: {

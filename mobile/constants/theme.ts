@@ -1,10 +1,10 @@
 /**
- * MangAfrik — aligned with front/src/styles/global.css
+ * MangAfriq — aligned with front/src/styles/global.css
  */
 import { DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native';
 import { Platform } from 'react-native';
 
-export const MangAfrik = {
+export const MangAfriq = {
   primary: '#e63946',
   primaryDark: '#c1121f',
   primaryLight: '#ff6b6b',
@@ -27,16 +27,16 @@ export const MangAfrik = {
   accentPurple: '#a855f7',
 } as const;
 
-const tintLight = MangAfrik.primary;
+const tintLight = MangAfriq.primary;
 const tintDark = '#ff6b6b';
 
 export const Colors = {
   light: {
-    text: MangAfrik.textDark,
-    background: MangAfrik.bgLight,
+    text: MangAfriq.textDark,
+    background: MangAfriq.bgLight,
     tint: tintLight,
-    icon: MangAfrik.textMuted,
-    tabIconDefault: MangAfrik.textMuted,
+    icon: MangAfriq.textMuted,
+    tabIconDefault: MangAfriq.textMuted,
     tabIconSelected: tintLight,
   },
   dark: {
@@ -53,12 +53,12 @@ export const NavigationLightTheme: Theme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: MangAfrik.primary,
-    background: MangAfrik.bgLight,
-    card: MangAfrik.bgWhite,
-    text: MangAfrik.textDark,
-    border: MangAfrik.border,
-    notification: MangAfrik.primary,
+    primary: MangAfriq.primary,
+    background: MangAfriq.bgLight,
+    card: MangAfriq.bgWhite,
+    text: MangAfriq.textDark,
+    border: MangAfriq.border,
+    notification: MangAfriq.primary,
   },
 };
 
@@ -66,12 +66,12 @@ export const NavigationDarkTheme: Theme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: MangAfrik.primaryLight,
+    primary: MangAfriq.primaryLight,
     background: '#0d0d0d',
     card: '#1a1a1a',
     text: '#f4f4f6',
     border: '#2e2e2e',
-    notification: MangAfrik.primary,
+    notification: MangAfriq.primary,
   },
 };
 
