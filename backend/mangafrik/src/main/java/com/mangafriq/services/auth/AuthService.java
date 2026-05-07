@@ -249,7 +249,7 @@ public class AuthService {
 		String msg = "Si ce compte existe, un lien de réinitialisation a été envoyé.";
 		if (email.isBlank() || !email.contains("@")) return new ForgotPasswordResponse(msg);
 
-		if (!emailEnabled || mailHost == null || mailHost.isBlank()) return new ForgotPasswordResponse(msg);
+		if (!emailEnabled || !emailService.isConfigured()) return new ForgotPasswordResponse(msg);
 
 		Map<String, Object> row;
 		try {
@@ -282,8 +282,9 @@ public class AuthService {
 		);
 
 		String base = (publicFrontendUrl == null ? "" : publicFrontendUrl.trim());
-		if (base.isEmpty()) base = publicBaseUrl;
-		base = base.replaceAll("/$", "");
+		if (base.isEmpty()) base = (publicBaseUrl == null ? "" : publicBaseUrl.trim());
+		if (base.isEmpty()) base = emailService.getPublicBaseUrlNormalized();
+		base = base.replaceAll("/+$", "");
 
 		String resetUrl = base + "/reset-password?token=" + token;
 		String subject = PasswordResetEmailTemplate.subject();
@@ -493,11 +494,16 @@ public class AuthService {
 
 	private void maybeSendWelcomeEmail(RegisterResponse user) {
 		if (!emailEnabled) return;
-		if (mailHost == null || mailHost.isBlank()) return;
+		if (!emailService.isConfigured()) return;
+
+		String base = (publicFrontendUrl == null ? "" : publicFrontendUrl.trim());
+		if (base.isEmpty()) base = (publicBaseUrl == null ? "" : publicBaseUrl.trim());
+		if (base.isEmpty()) base = emailService.getPublicBaseUrlNormalized();
+		base = base.replaceAll("/+$", "");
 
 		String subject = WelcomeEmailTemplate.subject();
-		String html = WelcomeEmailTemplate.html(user.displayName(), publicBaseUrl, emailService.resolveEmailLogoUrl());
-		String text = WelcomeEmailTemplate.text(user.displayName(), publicBaseUrl);
+		String html = WelcomeEmailTemplate.html(user.displayName(), base, emailService.resolveEmailLogoUrl());
+		String text = WelcomeEmailTemplate.text(user.displayName(), base);
 
 		try {
 			// Use displayName in Brevo "to" payload to avoid "name is missing in to".
