@@ -6,6 +6,12 @@
   margin-top: 14px;
 }
 
+.ep__section--thumbs .ep__thumbs-series-layout {
+  display: grid;
+  gap: 18px;
+  margin-top: 8px;
+}
+
 .ep__section-head {
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = 'mangaafrik_ads_admin_theme';
+const STORAGE_KEY = 'MangAfric_ads_admin_theme';
 
 function getSystemPrefersDark() {
   return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false;

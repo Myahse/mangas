@@ -1,4 +1,4 @@
--- Core domain schema for MangAfrik.
+-- Core domain schema for MangAfric.
 -- Flyway will run this once on the target database.
 
 create table if not exists app_users (
