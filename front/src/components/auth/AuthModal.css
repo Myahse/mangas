@@ -2,6 +2,8 @@
   position: fixed;
   inset: 0;
   background: var(--overlay-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 2000;
   display: flex;
   align-items: flex-start;
@@ -235,7 +237,8 @@
   color: #fff;
   font-weight: 800;
   font-size: 0.95rem;
-  transition: background 120ms ease, transform 120ms ease, opacity 120ms ease;
+  transition: background 120ms ease, box-shadow 120ms ease, filter 120ms ease, opacity 120ms ease;
+  will-change: filter;
 }
 
 .auth-modal__primary--inline {
@@ -255,13 +258,13 @@
 
 .auth-modal__primary:hover {
   background: var(--primary-dark);
-  transform: translate(-50%, -50%) translateY(-1px);
+  filter: brightness(1.02);
 }
 
 .auth-modal__primary:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-  transform: translate(-50%, -50%);
+  filter: none;
 }
 
 .auth-modal__divider {
@@ -448,11 +451,11 @@
   }
 
   .auth-modal__primary:hover {
-    transform: translateY(-1px);
+    filter: brightness(1.02);
   }
 
   .auth-modal__primary:disabled {
-    transform: none;
+    filter: none;
   }
 
   .auth-modal__footer {

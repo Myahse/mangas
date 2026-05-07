@@ -20,10 +20,17 @@ function apiBase() {
 
 async function request(path, { method = 'GET', body, headers } = {}) {
   const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
+  let token = '';
+  try {
+    const key = requiredSessionStorageKey();
+    const raw = localStorage.getItem(key);
+    token = raw ? JSON.parse(raw)?.token || '' : '';
+  } catch {}
   const res = await fetch(url, {
     method,
     headers: {
       ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : null),
+      ...(token ? { Authorization: `Bearer ${token}` } : null),
       ...(headers || null),
     },
     body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
@@ -99,6 +106,15 @@ export const creatorApi = {
       method: 'POST',
       body: comment,
     });
+  },
+
+  async createSupportTicket(payload) {
+    return request('/support/public/tickets', { method: 'POST', body: payload });
+  },
+
+  // Coins / wallet
+  async wallet() {
+    return request('/wallet');
   },
 };
 
