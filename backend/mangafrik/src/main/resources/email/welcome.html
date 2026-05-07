@@ -1,76 +1,56 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bienvenue sur MangAfrik</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenue sur MangAfric</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px 0;">
-        <tr>
-            <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
-                    <!-- Brand (like rental template) -->
-                    <tr>
-                        <td style="padding: 30px 0; text-align: center; background-color: #ffffff;">
-                            <div style="text-align: center; margin-bottom: 12px;">
-                                <img src="{{logoUrl}}" alt="MangAfrik" style="height: 72px; width: auto; max-width: 240px;">
-                            </div>
-                            <h1 style="margin: 0; font-size: 32px; color: #111827;">
-                                <span style="color: #111827; font-size: 20px;">Mang</span>
-                                <span style="color: #f59e0b; font-size: 32px; font-weight: bold;"> Afrik</span>
-                            </h1>
-                            <p style="margin: 5px 0 0 0; font-size: 14px; color: #6c757d;">Plateforme Mangas &amp; Webtoons</p>
-                        </td>
-                    </tr>
-
-                    <!-- Header Banner -->
-                    <tr>
-                        <td style="background-color: #667eea; color: #ffffff; padding: 40px 30px; text-align: center;">
-                            <p style="margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">BIENVENUE CHEZ</p>
-                            <h2 style="margin: 0; font-size: 36px; font-weight: bold;">MANGAFRIK</h2>
-                        </td>
-                    </tr>
-
-                    <!-- Content -->
-                    <tr>
-                        <td style="padding: 40px 30px;">
-                            <p style="margin: 0 0 15px 0; font-size: 16px; font-weight: bold; color: #333333;">BONJOUR {{displayName}}</p>
-
-                            <p style="margin: 0 0 25px 0; font-size: 14px; color: #333333; line-height: 1.6;">
-                                Félicitations, votre compte MangAfrik a été créé. Vous pouvez dès à présent découvrir des mangas, suivre vos créateurs préférés et rejoindre la communauté.
-                            </p>
-
-                            <div style="margin: 25px 0; padding: 20px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px;">
-                                <p style="margin: 0; font-size: 14px; color: #333333; line-height: 1.6;">
-                                    <strong>Conseil de sécurité :</strong> ne partage jamais ton mot de passe. MangAfrik ne te demandera jamais tes identifiants par email.
-                                </p>
-                            </div>
-
-                            <div style="text-align: center; margin: 30px 0 10px 0;">
-                                <a href="{{appUrl}}" style="display: inline-block; padding: 14px 32px; background: #f59e0b; color: #111827; text-decoration: none; border-radius: 10px; font-size: 14px; font-weight: bold;">
-                                    Accéder à MangAfrik
-                                </a>
-                            </div>
-
-                            <p style="margin: 25px 0 5px 0; font-size: 14px; color: #333333;">Cordialement,</p>
-                            <p style="margin: 0; font-size: 14px; color: #333333;">L'équipe MangAfrik.</p>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background-color: #ffffff; padding: 30px; text-align: center; border-top: 1px solid #e9ecef;">
-                            <p style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; color: #333333;">Merci et bienvenue!</p>
-                            <p style="margin: 5px 0; font-size: 12px; color: #6c757d;">Plateforme communautaire de mangas &amp; webtoons africains</p>
-                            <p style="margin: 15px 0 5px 0; font-size: 12px; color: #6c757d;">Si tu n’es pas à l’origine de cette inscription, tu peux ignorer cet email.</p>
-                            <p style="margin: 15px 0 5px 0; font-size: 12px; color: #6c757d;">© 2026 Tous droits réservés</p>
-                        </td>
-                    </tr>
-                </table>
+<body style="margin:0;padding:0;background-color:#fff7ed;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fff7ed;padding:28px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(230,57,70,0.18);">
+          <tr>
+            <td style="padding:28px 28px 12px 28px;text-align:center;background-color:#ffffff;">
+              <img src="{{logoUrl}}" alt="MangAfric" width="200" height="auto" style="display:block;margin:0 auto;max-width:200px;height:auto;">
+              <p style="margin:14px 0 0 0;font-size:22px;font-weight:800;color:#e63946;letter-spacing:-0.03em;">Bienvenue sur MangAfric</p>
+              <p style="margin:8px 0 0 0;font-size:13px;color:#64748b;">Mangas &amp; webtoons</p>
             </td>
-        </tr>
-    </table>
+          </tr>
+          <tr>
+            <td style="background-color:#e63946;padding:26px 28px;text-align:center;">
+              <p style="margin:0;font-size:14px;font-weight:700;color:rgba(255,255,255,0.9);text-transform:uppercase;letter-spacing:0.12em;">Inscription confirmée</p>
+              <p style="margin:10px 0 0 0;font-size:22px;font-weight:800;color:#ffffff;line-height:1.2;">Bonjour {{displayName}}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 28px;background-color:#ffffff;">
+              <p style="margin:0 0 16px 0;font-size:15px;color:#334155;line-height:1.65;">
+                Félicitations, votre compte a bien été créé. Vous pouvez explorer le catalogue, suivre vos créateurs préférés et rejoindre la communauté.
+              </p>
+              <p style="margin:16px 0 0 0;font-size:13px;color:#64748b;line-height:1.55;">
+                <strong style="color:#e63946;">Sécurité :</strong> ne partagez jamais votre mot de passe. MangAfric ne vous demandera jamais vos identifiants par email.
+              </p>
+              <div style="text-align:center;margin:28px 0 8px 0;">
+                <a href="{{appUrl}}" style="display:inline-block;padding:14px 32px;background-color:#ff6a00;color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:800;">Accéder à MangAfric</a>
+              </div>
+              <p style="margin:24px 0 0 0;font-size:14px;color:#334155;">Cordialement,<br><strong>L’équipe MangAfric</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#e63946;padding:22px 28px;text-align:center;">
+              <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.92);">Prêt à explorer des centaines de titres ?</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:22px 28px;text-align:center;background-color:#ffffff;border-top:1px solid #e2e8f0;">
+              <p style="margin:0 0 8px 0;font-size:12px;color:#64748b;">Si vous n’êtes pas à l’origine de cette inscription, vous pouvez ignorer cet email.</p>
+              <p style="margin:0;font-size:12px;color:#94a3b8;">© {{year}} MangAfric — Tous droits réservés</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
-

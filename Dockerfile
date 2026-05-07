@@ -25,4 +25,3 @@ ENV PORT=8088
 EXPOSE 8088
 
 CMD ["sh", "-c", "java -Dserver.port=${PORT} -jar /app/app.war"]
-

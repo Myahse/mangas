@@ -5,7 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useLayoutEffect } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
-import { MangAfrik } from '@/constants/theme';
+import { MangAfric } from '@/constants/theme';
 import { useFetch } from '@/src/hooks/useFetch';
 import { fetchMangaBySlug } from '@/src/services/api';
 
@@ -22,16 +22,16 @@ export default function MangaDetailScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       title: manga?.title ?? 'Manga',
-      headerTintColor: MangAfrik.primary,
-      headerStyle: { backgroundColor: MangAfrik.bgWhite },
+      headerTintColor: MangAfric.primary,
+      headerStyle: { backgroundColor: MangAfric.bgWhite },
       headerShadowVisible: true,
     });
   }, [navigation, manga?.title]);
 
   if (!slug) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: MangAfrik.bgLight }}>
-        <Text style={{ color: MangAfrik.textMuted }}>Manga introuvable</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: MangAfric.bgLight }}>
+        <Text style={{ color: MangAfric.textMuted }}>Manga introuvable</Text>
       </View>
     );
   }
@@ -43,10 +43,10 @@ export default function MangaDetailScreen() {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: MangAfrik.bgLight,
+          backgroundColor: MangAfric.bgLight,
         }}
       >
-        <ActivityIndicator size="large" color={MangAfrik.primary} />
+        <ActivityIndicator size="large" color={MangAfric.primary} />
       </View>
     );
   }
@@ -59,17 +59,17 @@ export default function MangaDetailScreen() {
           justifyContent: 'center',
           alignItems: 'center',
           padding: 24,
-          backgroundColor: MangAfrik.bgLight,
+          backgroundColor: MangAfric.bgLight,
         }}
       >
-        <Text style={{ color: MangAfrik.textDark, textAlign: 'center' }}>{error ?? 'Manga introuvable'}</Text>
+        <Text style={{ color: MangAfric.textDark, textAlign: 'center' }}>{error ?? 'Manga introuvable'}</Text>
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: MangAfrik.bgLight }}
+      style={{ flex: 1, backgroundColor: MangAfric.bgLight }}
       contentContainerStyle={{ paddingBottom: 32 }}
     >
       <Image
@@ -91,22 +91,22 @@ export default function MangaDetailScreen() {
             contentFit="cover"
           />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 20, fontWeight: '800', color: MangAfrik.textDark, marginBottom: 6 }}>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: MangAfric.textDark, marginBottom: 6 }}>
               {manga.title}
             </Text>
-            <Text style={{ fontSize: 14, color: MangAfrik.textSecondary, marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, color: MangAfric.textSecondary, marginBottom: 8 }}>
               {manga.author}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-              <Ionicons name="star" size={16} color={MangAfrik.rating} style={{ marginRight: 6 }} />
-              <Text style={{ fontWeight: '700', color: MangAfrik.rating, marginRight: 6 }}>
+              <Ionicons name="star" size={16} color={MangAfric.rating} style={{ marginRight: 6 }} />
+              <Text style={{ fontWeight: '700', color: MangAfric.rating, marginRight: 6 }}>
                 {manga.rating}
               </Text>
-              <Text style={{ color: MangAfrik.textMuted }}>· {manga.status}</Text>
+              <Text style={{ color: MangAfric.textMuted }}>· {manga.status}</Text>
             </View>
           </View>
         </View>
-        <Text style={{ marginTop: 20, fontSize: 15, lineHeight: 22, color: MangAfrik.textDark }}>
+        <Text style={{ marginTop: 20, fontSize: 15, lineHeight: 22, color: MangAfric.textDark }}>
           {manga.synopsis}
         </Text>
       </View>

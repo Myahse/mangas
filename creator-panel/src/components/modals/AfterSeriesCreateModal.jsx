@@ -51,7 +51,8 @@ export default function AfterSeriesCreateModal({
         </div>
 
         <div className="after-series__hint">
-          Vous pourrez suivre le statut (en attente / accepté / refusé) dans l’onglet Publications.
+          Un email de confirmation vous sera envoyé : nos modérateurs examinent votre série (réponse habituelle sous 24 h).
+          Suivi du statut dans l’onglet Publications.
         </div>
       </div>
     </div>,

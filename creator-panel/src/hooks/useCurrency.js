@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = 'mangaafrik_creator_currency';
+const STORAGE_KEY = 'MangAfric_creator_currency';
 const SUPPORTED = ['XOF', 'USD', 'EUR'];
 
 function normalize(value) {

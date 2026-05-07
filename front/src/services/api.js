@@ -4,10 +4,7 @@ function requiredApiBaseUrl() {
   const fallback = String(env.VITE_API_BASE_URL_DEFAULT ?? '').trim();
   const v = primary || fallback;
   if (!v || v === 'undefined' || v === 'null') {
-    const keys = Object.keys(env).sort().join(', ');
-    throw new Error(
-      `Missing VITE_API_BASE_URL in front/.env (available import.meta.env keys: ${keys || '(none)'})`,
-    );
+    throw new Error('Missing VITE_API_BASE_URL (set it in your build environment as VITE_API_BASE_URL)');
   }
   return v;
 }
@@ -15,7 +12,7 @@ function requiredApiBaseUrl() {
 function requiredSessionStorageKey() {
   const v = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
   if (!v || v === 'undefined' || v === 'null') {
-    throw new Error('Missing VITE_SESSION_STORAGE_KEY in front/.env');
+    throw new Error('Missing VITE_SESSION_STORAGE_KEY (set it in your build environment as VITE_SESSION_STORAGE_KEY)');
   }
   return v;
 }
@@ -24,7 +21,14 @@ function apiBase() {
   return requiredApiBaseUrl().replace(/\/$/, '');
 }
 
-async function request(path, { method = 'GET', body, headers } = {}) {
+/** Public URL to fetch an object stored under `key` (same host as API). */
+export function storageObjectUrl(key) {
+  const k = String(key || '').trim();
+  if (!k) return '';
+  return `${apiBase()}/storage/${k}`;
+}
+
+async function postMultipart(path, formData) {
   const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   let token = '';
   try {
@@ -34,10 +38,43 @@ async function request(path, { method = 'GET', body, headers } = {}) {
   } catch {}
 
   const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : null),
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    let message = text || `Request failed (${res.status})`;
+    try {
+      const maybeJson = text ? JSON.parse(text) : null;
+      message = maybeJson?.error || maybeJson?.message || message;
+    } catch {}
+    throw new Error(String(message));
+  }
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) return res.json();
+  return res.text();
+}
+
+async function request(path, { method = 'GET', body, headers, auth = true } = {}) {
+  const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
+  let token = '';
+  try {
+    const key = requiredSessionStorageKey();
+    const raw = localStorage.getItem(key);
+    token = raw ? (JSON.parse(raw)?.token || '') : '';
+  } catch {}
+
+  const sendAuth = auth && String(token || '').trim();
+
+  const res = await fetch(url, {
     method,
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : null),
-      ...(token ? { Authorization: `Bearer ${token}` } : null),
+      ...(sendAuth ? { Authorization: `Bearer ${token}` } : null),
       ...(headers || null),
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -132,10 +169,59 @@ export async function fetchChapters(slug) {
 }
 
 
-export async function fetchPages(slug, chapterNumber) {
+export async function fetchPages(slug, chapterNumber, _nonce) {
+  void _nonce;
   return request(
     `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/pages`,
   );
+}
+
+/* ════════════════════════════════════════════════════════════
+   COINS / WALLET
+════════════════════════════════════════════════════════════ */
+
+export async function fetchWallet() {
+  return request('/wallet');
+}
+
+export async function dailyClaimCoins() {
+  return request('/wallet/daily-claim', { method: 'POST' });
+}
+
+export async function fetchDailyClaimStatus() {
+  return request('/wallet/daily-claim/status');
+}
+
+export async function fetchReferralInfo() {
+  return request('/wallet/referral');
+}
+
+export async function fetchPendingReferralRewards() {
+  return request('/wallet/referral/pending');
+}
+
+export async function claimPendingReferralReward(id) {
+  return request(`/wallet/referral/pending/${encodeURIComponent(id)}/claim`, { method: 'POST' });
+}
+
+export async function unlockManga(mangaSlug) {
+  return request('/unlocks/manga', { method: 'POST', body: { mangaSlug } });
+}
+
+export async function unlockChapter(mangaSlug, chapterNumber) {
+  return request('/unlocks/chapter', { method: 'POST', body: { mangaSlug, chapterNumber } });
+}
+
+/* ════════════════════════════════════════════════════════════
+   STORE (coins)
+════════════════════════════════════════════════════════════ */
+
+export async function fetchCoinPacks() {
+  return request('/store/coin-packs');
+}
+
+export async function createCoinPurchaseIntent(packId) {
+  return request('/store/coin-purchase-intents', { method: 'POST', body: { packId } });
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -143,27 +229,83 @@ export async function fetchPages(slug, chapterNumber) {
 ════════════════════════════════════════════════════════════ */
 
 export async function registerUser(payload) {
-  return request('/auth/register', { method: 'POST', body: payload });
+  return request('/auth/register', { method: 'POST', body: payload, auth: false });
 }
 
 export async function loginUser(payload) {
-  return request('/auth/login', { method: 'POST', body: payload });
+  return request('/auth/login', { method: 'POST', body: payload, auth: false });
 }
 
 export async function changePassword(payload) {
-  return request('/auth/change-password', { method: 'POST', body: payload });
+  return request('/auth/change-password', { method: 'POST', body: payload, auth: false });
 }
 
 export async function forgotPassword(payload) {
-  return request('/auth/forgot-password', { method: 'POST', body: payload });
+  return request('/auth/forgot-password', { method: 'POST', body: payload, auth: false });
 }
 
 export async function resetPassword(payload) {
-  return request('/auth/reset-password', { method: 'POST', body: payload });
+  return request('/auth/reset-password', { method: 'POST', body: payload, auth: false });
 }
 
 export async function submitCreatorRequest(payload) {
   return request('/creator-requests', { method: 'POST', body: payload });
+}
+
+export async function getMyCreatorRequest() {
+  return request('/creator-requests/me');
+}
+
+export async function getMyCreatorContract() {
+  return request('/creator-requests/me/contract');
+}
+
+export async function getCreatorContractByToken(token) {
+  return request(`/creator-contracts/${encodeURIComponent(token)}`);
+}
+
+export async function signCreatorContract(token, payload) {
+  return request(`/creator-contracts/${encodeURIComponent(token)}/sign`, { method: 'POST', body: payload });
+}
+
+/* ════════════════════════════════════════════════════════════
+   SUPPORT (public)
+════════════════════════════════════════════════════════════ */
+
+export async function createSupportTicket(payload) {
+  return request('/support/public/tickets', { method: 'POST', body: payload });
+}
+
+export async function fetchSupportTicket(ticketId) {
+  const id = String(ticketId || '').trim();
+  if (!id) throw new Error('Missing ticket reference');
+  return request(`/support/public/tickets/${encodeURIComponent(id)}`);
+}
+
+export async function fetchSupportTicketMessages(ticketId, _nonce) {
+  void _nonce;
+  const id = String(ticketId || '').trim();
+  if (!id) throw new Error('Missing ticket reference');
+  return request(`/support/public/tickets/${encodeURIComponent(id)}/messages`);
+}
+
+export async function sendSupportTicketMessage(ticketId, payload) {
+  const id = String(ticketId || '').trim();
+  if (!id) throw new Error('Missing ticket reference');
+  return request(`/support/public/tickets/${encodeURIComponent(id)}/messages`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+/** Upload a file for a ticket (anonymous). Returns { key, url, fileName, contentType, size }. */
+export async function uploadSupportPublicAttachment(ticketId, file) {
+  const id = String(ticketId || '').trim();
+  if (!id) throw new Error('Missing ticket reference');
+  if (!file) throw new Error('Missing file');
+  const fd = new FormData();
+  fd.append('file', file);
+  return postMultipart(`/support/public/tickets/${encodeURIComponent(id)}/attachments`, fd);
 }
 
 
