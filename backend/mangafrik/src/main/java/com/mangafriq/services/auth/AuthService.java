@@ -38,7 +38,7 @@ public class AuthService {
 	private final JwtService jwtService;
 	private final WalletService walletService;
 
-	@Value("${app.email.enabled:false}")
+	@Value("${app.email.enabled:true}")
 	private boolean emailEnabled;
 
 	@Value("${spring.mail.host:}")

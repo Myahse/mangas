@@ -30,7 +30,7 @@ public class CreatorContractService {
 	@Value("${app.public.base-url:http://localhost:5173}")
 	private String publicBaseUrl;
 
-	@Value("${app.email.enabled:false}")
+	@Value("${app.email.enabled:true}")
 	private boolean emailEnabled;
 
 	@Value("${spring.mail.host:}")

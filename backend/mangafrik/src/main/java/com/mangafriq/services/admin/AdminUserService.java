@@ -27,7 +27,7 @@ public class AdminUserService {
 	private final PasswordEncoder passwordEncoder;
 	private final EmailService emailService;
 
-	@Value("${app.email.enabled:false}")
+	@Value("${app.email.enabled:true}")
 	private boolean emailEnabled;
 
 	@Value("${spring.mail.host:}")

@@ -25,7 +25,7 @@ public class CreatorAccountService {
 	private final EmailService emailService;
 	private final SecureRandom secureRandom = new SecureRandom();
 
-	@Value("${app.email.enabled:false}")
+	@Value("${app.email.enabled:true}")
 	private boolean emailEnabled;
 
 	@Value("${spring.mail.host:}")

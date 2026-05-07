@@ -29,7 +29,7 @@ public class CreatorRequestService {
 	private final EmailService emailService;
 	private final CreatorContractService contractService;
 
-	@Value("${app.email.enabled:false}")
+	@Value("${app.email.enabled:true}")
 	private boolean emailEnabled;
 
 	@Value("${spring.mail.host:}")
