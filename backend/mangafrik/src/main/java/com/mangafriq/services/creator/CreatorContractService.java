@@ -317,20 +317,17 @@ public class CreatorContractService {
 
 	private void maybeSendContractEmail(CreatorRequestDto req, UUID token) {
 		if (!emailEnabled) return;
-		if (mailHost == null || mailHost.isBlank()) return;
+		if (!emailService.isConfigured()) return;
 
 		String frontend = (publicFrontendUrl == null ? "" : publicFrontendUrl.trim());
 		String base = (publicBaseUrl == null ? "" : publicBaseUrl.trim());
-	
-		String chosen = !frontend.isEmpty() ? frontend : base;
-		if (chosen.toLowerCase().contains("mangafric.com") && base.toLowerCase().contains("localhost")) {
-			chosen = base;
+
+		// Prefer explicitly configured frontend/public URLs. Fall back to EmailService normalization.
+		String chosen = !frontend.isBlank() ? frontend : base;
+		if (chosen.isBlank()) {
+			chosen = emailService.getPublicBaseUrlNormalized();
 		}
-		// Hard safety: never generate GoDaddy/parked-domain links in local dev by accident.
-		if (chosen.toLowerCase().contains("mangafric.com")) {
-			chosen = "http://localhost:5173";
-		}
-		chosen = chosen.replaceAll("/$", "");
+		chosen = chosen.replaceAll("/+$", "");
 
 		String link = chosen + "/compte/contrat-createur?token=" + token;
 		String subject = "Contrat créateur à signer";
