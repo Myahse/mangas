@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.mangafrik.app'
+    namespace 'com.mangafriq.app'
     defaultConfig {
-        applicationId 'com.mangafrik.app'
+        applicationId 'com.mangafriq.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
