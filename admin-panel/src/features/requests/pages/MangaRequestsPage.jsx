@@ -49,8 +49,7 @@ export function MangaRequestsPage() {
         (r.notes || '').toLowerCase().includes(q)
       );
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, status, refreshKey]);
+  }, [allRows, query, status]);
 
   return (
     <AdminSectionPage

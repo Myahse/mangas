@@ -1,6 +1,8 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { dailyClaimCoins, fetchReferralInfo, fetchWallet, useFetch } from '../../services/api';
+import { onWalletUpdated } from '../../realtime/walletEvents';
 import './AccountSectionPage.css';
 
 const TITLES = {
@@ -14,37 +16,17 @@ export default function AccountSectionPage() {
   const { pathname } = useLocation();
   const title = TITLES[pathname] || 'Compte';
   const { user, isAuthenticated } = useAuth();
-  const [apiStatus, setApiStatus] = useState({ loading: true, ok: false, message: '' });
+  const [walletKey, setWalletKey] = useState(0);
+  const { data: wallet } = useFetch(fetchWallet, walletKey);
+  const [claimMsg, setClaimMsg] = useState('');
+  const { data: referral } = useFetch(fetchReferralInfo, walletKey);
+
+  const referralLink = useMemo(() => String(referral?.link || '').trim(), [referral]);
 
   useEffect(() => {
-    let cancelled = false;
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-    const url = `${API_BASE_URL}/health`;
-
-    fetch(url)
-      .then(async (res) => {
-        const text = await res.text().catch(() => '');
-        if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
-        try {
-          return JSON.parse(text);
-        } catch {
-          return { status: text || 'ok' };
-        }
-      })
-      .then((payload) => {
-        if (cancelled) return;
-        const s = payload?.status ?? 'ok';
-        setApiStatus({ loading: false, ok: true, message: String(s) });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setApiStatus({ loading: false, ok: false, message: err?.message || 'Backend unreachable' });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (!isAuthenticated) return;
+    return onWalletUpdated(() => setWalletKey((k) => k + 1));
+  }, [isAuthenticated]);
 
   return (
     <div className="account-section container">
@@ -54,16 +36,6 @@ export default function AccountSectionPage() {
         <span>{title}</span>
       </nav>
       <h1 className="account-section__title">{title}</h1>
-      <p className="account-section__lead">
-        Backend:{' '}
-        {apiStatus.loading ? (
-          <span>connexion…</span>
-        ) : apiStatus.ok ? (
-          <span>connecté ({apiStatus.message})</span>
-        ) : (
-          <span>indisponible ({apiStatus.message})</span>
-        )}
-      </p>
 
       <div style={{ marginTop: 16 }}>
         {isAuthenticated && user ? (
@@ -73,6 +45,86 @@ export default function AccountSectionPage() {
               <div><strong>Nom</strong>: {user.displayName}</div>
               <div><strong>Email</strong>: {user.email}</div>
               <div><strong>Rôle</strong>: {user.role}</div>
+            </div>
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+              <div style={{ fontWeight: 900 }}>Coins</div>
+              <div style={{ marginTop: 6 }}>
+                <div><strong>Solde total</strong>: {wallet?.balance ?? 0}</div>
+                <div style={{ opacity: 0.85, marginTop: 4 }}>
+                  <strong>Achetés</strong>: {wallet?.balancePaid ?? 0} · <strong>Récompenses</strong>: {wallet?.balanceReward ?? 0}
+                </div>
+              </div>
+              {wallet?.rewardsEnabled ? (
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className="manga-page__btn manga-page__btn--outline"
+                    onClick={() => {
+                      setClaimMsg('');
+                      dailyClaimCoins()
+                        .then((res) => {
+                          const credited = Boolean(res?.credited);
+                          const amt = Number(res?.creditedAmount || 0);
+                          setClaimMsg(credited ? `Bonus reçu: +${amt} coins` : 'Bonus déjà réclamé aujourd’hui.');
+                          setWalletKey((k) => k + 1);
+                        })
+                        .catch((e) => setClaimMsg(e?.message || 'Impossible de réclamer le bonus.'));
+                    }}
+                  >
+                    Réclamer bonus quotidien
+                  </button>
+                  {claimMsg ? (
+                    <div style={{ marginTop: 8, fontSize: 12, opacity: 0.85 }}>{claimMsg}</div>
+                  ) : null}
+                </div>
+              ) : (
+                <div style={{ marginTop: 10, opacity: 0.75 }}>
+                  Bonus quotidien désactivé.
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+              <div style={{ fontWeight: 900 }}>Parrainage</div>
+              <div style={{ marginTop: 6, opacity: 0.85, fontSize: 13 }}>
+                Invitez un ami avec votre lien. Quand il crée un compte, vous gagnez des coins.
+              </div>
+              {referralLink ? (
+                <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                  <input
+                    value={referralLink}
+                    readOnly
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(0,0,0,0.14)',
+                      fontSize: 13,
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="manga-page__btn manga-page__btn--outline"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(referralLink).catch(() => {});
+                      }}
+                    >
+                      Copier le lien
+                    </button>
+                    <a
+                      className="manga-page__btn manga-page__btn--outline"
+                      href={referralLink}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Ouvrir le lien
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: 10, opacity: 0.7 }}>Chargement du lien…</div>
+              )}
             </div>
           </div>
         ) : (

@@ -41,15 +41,18 @@ export function OverviewPage() {
   const [summary, setSummary] = useState(null);
   const [audits, setAudits] = useState([]);
   const [error, setError] = useState('');
+  const [flags, setFlags] = useState(null);
+  const [flagBusy, setFlagBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setError('');
-    Promise.all([adminApi.summary(), adminApi.audits()])
-      .then(([s, a]) => {
+    Promise.all([adminApi.summary(), adminApi.audits(), adminApi.featureFlags()])
+      .then(([s, a, f]) => {
         if (cancelled) return;
         setSummary(s);
         setAudits(Array.isArray(a) ? a.slice(0, 12) : []);
+        setFlags(f || null);
       })
       .catch((e) => {
         if (cancelled) return;
@@ -95,6 +98,46 @@ export function OverviewPage() {
           }
           hint="Drafts are visible only to admins."
         />
+      </div>
+
+      <div className="admin-surface">
+        <div className="admin-surface__inner">
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>Feature toggles</div>
+          {!flags ? (
+            <div className="admin-muted">Loading…</div>
+          ) : (
+            <div className="admin-grid-2" style={{ gap: 12 }}>
+              {[
+                { key: 'coins.rewards.enabled', label: 'Daily rewards (coins)' },
+                { key: 'coins.payments.enabled', label: 'Coin payments (future)' },
+              ].map((row) => (
+                <div key={row.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 850 }}>{row.label}</div>
+                    <div className="admin-muted" style={{ fontSize: 12, marginTop: 4 }}>
+                      {row.key}
+                    </div>
+                  </div>
+                  <button
+                    className={`admin-btn${flags[row.key] ? ' admin-btn--primary' : ''}`}
+                    type="button"
+                    disabled={flagBusy}
+                    onClick={() => {
+                      setFlagBusy(true);
+                      adminApi
+                        .updateFeatureFlag(row.key, !Boolean(flags[row.key]))
+                        .then((next) => setFlags(next || null))
+                        .catch((e) => setError(e?.message || 'Failed to update flag'))
+                        .finally(() => setFlagBusy(false));
+                    }}
+                  >
+                    {flags[row.key] ? 'Enabled' : 'Disabled'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="admin-surface">

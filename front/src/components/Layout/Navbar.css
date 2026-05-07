@@ -22,6 +22,19 @@
   display: flex;
   align-items: center;
   gap: 32px;
+  padding: 0 20px;
+}
+
+@media (max-width: 520px) {
+  .navbar__inner {
+    gap: 12px;
+  }
+  .navbar__nav {
+    padding-left: 62px;
+  }
+  .navbar__actions {
+    gap: 6px;
+  }
 }
 
 /* ─── Logo ─── */
@@ -34,6 +47,7 @@
   color: var(--nav-text);
   letter-spacing: -0.02em;
   flex-shrink: 0;
+  overflow: visible;
 }
 
 .navbar__logo svg {
@@ -44,12 +58,21 @@
   color: var(--primary);
 }
 
+.navbar__logo-img {
+  height: 34px;
+  width: auto;
+  display: block;
+  transform: translate(-20px, 6px) scale(3.5);
+  transform-origin: left center;
+}
+
 /* ─── Nav Links ─── */
 .navbar__nav {
   display: flex;
   align-items: center;
   gap: 4px;
   flex: 1;
+  padding-left: 78px; /* reserve space for scaled logo so it doesn't visually overlap */
 }
 
 .navbar__nav-item {
@@ -309,6 +332,29 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.navbar__coins-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  min-width: 74px;
+  border-radius: var(--radius-sm);
+  color: var(--nav-text);
+  background: color-mix(in srgb, var(--nav-hover-bg) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--panel-border) 85%, transparent);
+  font-weight: 900;
+  font-size: 0.85rem;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.navbar__coins-pill:hover {
+  background: color-mix(in srgb, var(--nav-hover-bg) 100%, var(--primary) 8%);
+  border-color: color-mix(in srgb, var(--panel-border) 70%, var(--primary) 30%);
 }
 
 .navbar__icon-btn {
@@ -758,6 +804,11 @@
 
 @media (max-width: 480px) {
   .navbar__login-btn {
+    display: none;
+  }
+
+  /* Avoid overflow in the fixed top bar; coins stay visible in the burger menu. */
+  .navbar__coins-pill {
     display: none;
   }
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 export type Locale = 'fr' | 'en' | 'ja';
 
-const STORAGE_KEY = 'mangaafrik_front_locale';
+const STORAGE_KEY = 'MangAfric_front_locale';
 const SUPPORTED: Locale[] = ['fr', 'en', 'ja'];
 
 function normalize(value: string | null): Locale {

@@ -54,6 +54,15 @@
   gap: 0;
   padding-right: 46px;
   line-height: 1;
+  overflow: visible;
+}
+
+.navbar__logo-img {
+  height: 34px;
+  width: auto;
+  display: block;
+  transform: translate(-20px, 6px) scale(3.5);
+  transform-origin: left center;
 }
 
 .navbar__badge {
@@ -215,11 +224,22 @@
 
 /* ─── Responsive ─── */
 @media (max-width: 900px) {
+  /* Match admin-panel mobile full-width navbar */
+  .navbar__inner.container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 14px !important;
+    padding-right: 10px !important;
+  }
+
   .navbar__nav {
     display: none;
   }
   .navbar__burger {
     display: flex;
+    margin-right: -6px; /* push closer to screen edge */
   }
   .navbar__mobile-menu {
     display: flex;
