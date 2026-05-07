@@ -23,7 +23,7 @@ public class EmailService {
 
 	private static final Pattern FROM_PATTERN = Pattern.compile("^\\s*(.*?)\\s*<\\s*([^>]+)\\s*>\\s*$");
 
-	@Value("${app.email.from:MangAfric <noreply@mangafric.com>}")
+	@Value("${app.email.from:MangAfric <team@mangafric.com>}")
 	private String fromEmail;
 
 	@Value("${app.email.subject.prefix:[MangAfric]}")
