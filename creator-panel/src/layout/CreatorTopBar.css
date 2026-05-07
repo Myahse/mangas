@@ -117,6 +117,12 @@
   transform: translateY(0);
 }
 
+.creator-topbar__user[data-open='true'] .creator-topbar__user-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
 .creator-topbar__user-item {
   display: block;
   padding: 10px 12px;
@@ -173,10 +179,19 @@
   gap: 0;
   padding-right: 44px; /* room for smaller badge */
   line-height: 1;
+  overflow: visible;
 }
 
 .creator-topbar__logo-accent {
   color: var(--primary);
+}
+
+.creator-topbar__logo-img {
+  height: 34px;
+  width: auto;
+  display: block;
+  transform: translate(-20px, 6px) scale(3.5);
+  transform-origin: left center;
 }
 
 .creator-topbar__badge {
@@ -218,6 +233,12 @@
 
 .creator-topbar__pill--lang {
   min-width: 96px;
+}
+
+.creator-topbar__pill--coins {
+  padding: 0 12px;
+  min-width: 74px;
+  gap: 6px;
 }
 
 @media (max-width: 520px) {

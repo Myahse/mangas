@@ -7,14 +7,17 @@ export default function AuthGate({ children }) {
   const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
-    const ok = isAuthenticated && String(user?.role || '') === 'admin';
+    const roleOk = String(user?.role || '') === 'admin';
+    const mustChangePassword = Boolean(user?.mustChangePassword);
+    const ok = isAuthenticated && roleOk && !mustChangePassword;
     setOpen(!ok);
-    if (isAuthenticated && String(user?.role || '') !== 'admin') logout();
+    if (isAuthenticated && !roleOk) logout();
   }, [isAuthenticated, user, logout]);
 
   const onClose = useMemo(() => {
-    // Panels require auth: ignore close when unauthenticated.
-    if (!(isAuthenticated && String(user?.role || '') === 'admin')) return () => {};
+    // Panels require auth: ignore close when unauthenticated or password change required.
+    if (!(isAuthenticated && String(user?.role || '') === 'admin') || Boolean(user?.mustChangePassword))
+      return () => {};
     return () => setOpen(false);
   }, [isAuthenticated, user]);
 

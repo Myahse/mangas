@@ -113,7 +113,7 @@ export function HeroAdsPage() {
 
               <label>
                 <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800 }}>
-                  Or pick a manga vertical thumbnail (creator submissions)
+                  Or pick a manga thumbnail (creator submissions)
                 </div>
                 <select
                   className="admin-select"
@@ -135,18 +135,48 @@ export function HeroAdsPage() {
                 </select>
               </label>
 
-              {form.imageUrl ? (
-                <div className="admin-surface" style={{ padding: 10, borderRadius: 12, border: '1px solid var(--border)' }}>
-                  <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
-                    Preview
-                  </div>
+              <div className="admin-surface" style={{ padding: 10, borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
+                  Preview (hero banner)
+                </div>
+                {form.imageUrl ? (
                   <img
                     src={form.imageUrl}
                     alt="Ad preview"
-                    style={{ width: 140, aspectRatio: '9 / 16', borderRadius: 12, objectFit: 'cover', border: '1px solid var(--border)' }}
+                    style={{
+                      width: '100%',
+                      aspectRatio: '16 / 9',
+                      borderRadius: 12,
+                      objectFit: 'cover',
+                      border: '1px solid var(--border)',
+                    }}
                   />
-                </div>
-              ) : null}
+                ) : (
+                  <div
+                    aria-label="Ad preview placeholder"
+                    style={{
+                      width: '100%',
+                      aspectRatio: '16 / 9',
+                      borderRadius: 12,
+                      border: '1px dashed var(--border)',
+                      background:
+                        'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      padding: 10,
+                      color: 'var(--text-muted)',
+                      fontWeight: 800,
+                      fontSize: 12,
+                    }}
+                  >
+                    Hero image
+                    <br />
+                    (16:9)
+                  </div>
+                )}
+              </div>
 
               <div className="admin-grid-2">
                 <label>

@@ -17,7 +17,41 @@ function requiredSessionStorageKey() {
 function apiBase() {
   return requiredApiBaseUrl().replace(/\/$/, '');
 }
+
+export function storageObjectUrl(key) {
+  const k = String(key || '').trim();
+  if (!k) return '';
+  const base = apiBase();
+  // Some envs set VITE_API_BASE_URL to host only (without /api/v1).
+  // Storage is served from /api/v1/storage/:key.
+  const v1 = base.includes('/api/v1') ? base.replace(/\/api\/v1\/?$/, '/api/v1') : `${base}/api/v1`;
+  return `${v1}/storage/${k}`;
+}
  
+async function postMultipart(path, formData) {
+  const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
+  let token = '';
+  try {
+    const key = requiredSessionStorageKey();
+    const raw = localStorage.getItem(key);
+    token = raw ? JSON.parse(raw)?.token || '' : '';
+  } catch {}
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : null),
+    },
+    body: formData,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || `Request failed (${res.status})`);
+  }
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) return res.json();
+  return res.text();
+}
+
 async function request(path, { method = 'GET', body, headers } = {}) {
   const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   let token = '';
@@ -75,11 +109,22 @@ export const supportApi = {
   listMessages(ticketId) {
     return request(`/support/tickets/${encodeURIComponent(ticketId)}/messages`);
   },
-  sendMessage(ticketId, from, text) {
+  sendMessage(ticketId, from, text, attachment) {
+    const body = { from, text: text ?? '' };
+    if (attachment?.key) {
+      body.attachmentKey = attachment.key;
+      body.attachmentName = attachment.name;
+      body.attachmentContentType = attachment.contentType;
+    }
     return request(`/support/tickets/${encodeURIComponent(ticketId)}/messages`, {
       method: 'POST',
-      body: { from, text },
+      body,
     });
+  },
+  uploadAttachment(ticketId, file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    return postMultipart(`/support/tickets/${encodeURIComponent(ticketId)}/attachments`, fd);
   },
 };
 

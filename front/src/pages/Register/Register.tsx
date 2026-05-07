@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -6,12 +6,6 @@ import { registerUser } from '@/services/api'
 import './Register.css'
 
 type Role = 'reader'
-
-type CreatorProfile = {
-  penName: string
-  genres: string
-  publishingGoal: 'web' | 'print' | 'both'
-}
 
 type ReaderProfile = {
   favoriteGenres: string
@@ -21,8 +15,8 @@ type ReaderProfile = {
 export default function Register() {
   const navigate = useNavigate()
   const { signInAfterRegister } = useAuth()
+  const [referralCode, setReferralCode] = useState<string>('')
 
-  // Super app: all registrations are readers.
   const role: Role = 'reader'
   const [step, setStep] = useState<2 | 3>(2)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -38,6 +32,15 @@ export default function Register() {
     favoriteGenres: '',
     readingFrequency: 'weekly',
   })
+
+  useEffect(() => {
+    // Capture referral code from URL (?ref=XXXX) and keep it for the register submission.
+    try {
+      const qs = new URLSearchParams(window.location.search)
+      const ref = String(qs.get('ref') || '').trim()
+      if (ref) setReferralCode(ref)
+    } catch {}
+  }, [])
 
   const title = useMemo(() => {
     if (step === 2) return 'Vos préférences de lecture'
@@ -75,6 +78,7 @@ export default function Register() {
         email: account.email.trim(),
         password: account.password,
         profile,
+        referralCode: referralCode || undefined,
       })
 
       signInAfterRegister({
@@ -86,7 +90,11 @@ export default function Register() {
       })
       navigate('/')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Inscription impossible'
+      const raw = err instanceof Error ? err.message : 'Inscription impossible'
+      const normalized = String(raw).toLowerCase()
+      const message = normalized.includes('email already exists')
+        ? 'This email is already in use'
+        : String(raw)
       setSubmitError(message)
     } finally {
       setIsSubmitting(false)
@@ -108,7 +116,7 @@ export default function Register() {
               <span className="register__nav-back-text">Retour</span>
             </button>
 
-            <div className="register__brand" aria-label="MangAfrik">
+            <div className="register__brand" aria-label="MangAfric">
               <span>Mang</span>
               <span className="register__brand-accent">Afrik</span>
             </div>
@@ -116,7 +124,7 @@ export default function Register() {
             <div className="register__topbar-spacer" aria-hidden="true" />
           </div>
 
-          <div className="register__brand register__brand--header" aria-label="MangAfrik">
+          <div className="register__brand register__brand--header" aria-label="MangAfric">
             <span>Mang</span>
             <span className="register__brand-accent">Afrik</span>
           </div>

@@ -56,7 +56,7 @@ export default function AuthModal({ isOpen, onClose }) {
       </button>
 
       <div className="auth-modal__center">
-        <div className="auth-modal__brand" aria-label="MangAfrik">
+        <div className="auth-modal__brand" aria-label="MangAfric">
           <span>Mang</span>
           <span className="auth-modal__brand-accent">Afrik</span>
         </div>
@@ -128,7 +128,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
       <div className="auth-modal__footer">
         <p>
-          MangAfrik © 2026 — <button type="button">Conditions d’utilisation</button> et{' '}
+          MangAfric © 2026 — <button type="button">Conditions d’utilisation</button> et{' '}
           <button type="button">Politique de confidentialité</button>.
         </p>
       </div>

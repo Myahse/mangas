@@ -45,6 +45,9 @@ lerna-debug.log*
 Thumbs.db
 .DS_Store
 
+# Temp / local tooling
+.tmp-neon-check/
+
 # Flutter / Dart (mobile)
 **/.dart_tool/
 **/.flutter-plugins

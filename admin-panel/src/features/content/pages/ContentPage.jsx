@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Archive, Ban, Trash2, UploadCloud } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
 import { notify } from '../../../services/notify.js';
 import { adminApi } from '../../../services/api.js';
 
-const STATUS_OPTIONS = ['draft', 'published', 'archived'];
+const STATUS_OPTIONS = ['published', 'suspended', 'blocked', 'archived'];
 
 export function ContentPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [query, setQuery] = useState('');
-  const [create, setCreate] = useState({ title: '', slug: '', status: 'draft' });
   const [allRows, setAllRows] = useState([]);
   const [error, setError] = useState('');
 
@@ -20,7 +19,9 @@ export function ContentPage() {
       .mangas()
       .then((rows) => {
         if (cancelled) return;
-        setAllRows(Array.isArray(rows) ? rows : []);
+        const safe = Array.isArray(rows) ? rows : [];
+        // Backward compatible: older backend data may still use "draft".
+        setAllRows(safe.map((m) => (m?.status === 'draft' ? { ...m, status: 'suspended' } : m)));
       })
       .catch((e) => {
         if (cancelled) return;
@@ -38,33 +39,12 @@ export function ContentPage() {
     return all.filter(
       (m) => m.title.toLowerCase().includes(q) || m.slug.toLowerCase().includes(q),
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, refreshKey]);
+  }, [allRows, query]);
 
   return (
     <AdminSectionPage
       title="Content"
-      description="Manage mangas (create, publish, edit, delete)."
-      right={
-        <button
-          className="admin-btn admin-btn--primary"
-          type="button"
-          onClick={() => {
-            adminApi
-              .createManga(create)
-              .then((created) => {
-                setCreate({ title: '', slug: '', status: 'draft' });
-                setRefreshKey((k) => k + 1);
-                notify.success(`Manga created: ${created.title}`);
-              })
-              .catch((err) => notify.error(err?.message || 'Create failed'));
-          }}
-          disabled={!create.title.trim()}
-        >
-          <Plus size={16} />
-          Create manga
-        </button>
-      }
+      description="Moderate mangas (publish, suspend, block, archive, delete)."
     >
       {error ? (
         <div className="admin-surface">
@@ -73,65 +53,6 @@ export function ContentPage() {
           </div>
         </div>
       ) : null}
-      <div className="admin-surface">
-        <div className="admin-surface__inner">
-          <div className="admin-grid-2">
-            <div>
-              <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800 }}>
-                Title
-              </div>
-              <div style={{ marginTop: 6 }}>
-                <input
-                  className="admin-input"
-                  value={create.title}
-                  onChange={(e) =>
-                    setCreate((c) => ({ ...c, title: e.target.value }))
-                  }
-                  placeholder="Manga title"
-                />
-              </div>
-            </div>
-            <div className="admin-grid-2" style={{ gap: 12 }}>
-              <div>
-                <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800 }}>
-                  Slug (optional)
-                </div>
-                <div style={{ marginTop: 6 }}>
-                  <input
-                    className="admin-input"
-                    value={create.slug}
-                    onChange={(e) =>
-                      setCreate((c) => ({ ...c, slug: e.target.value }))
-                    }
-                    placeholder="akwa-origins"
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800 }}>
-                  Status
-                </div>
-                <div style={{ marginTop: 6 }}>
-                  <select
-                    className="admin-select"
-                    value={create.status}
-                    onChange={(e) =>
-                      setCreate((c) => ({ ...c, status: e.target.value }))
-                    }
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="admin-surface">
         <div className="admin-surface__inner">
           <div className="admin-muted" style={{ fontSize: 12, fontWeight: 800 }}>
@@ -168,7 +89,12 @@ export function ContentPage() {
                     <td>
                       <div style={{ fontWeight: 760 }}>{m.title}</div>
                       <div className="admin-muted" style={{ fontSize: 12 }}>
-                        {m.id} • {new Date(m.createdAt).toLocaleString()}
+                        {m.slug ? (
+                          <>
+                            <code style={{ color: 'inherit' }}>{m.slug}</code> •{' '}
+                          </>
+                        ) : null}
+                        {new Date(m.createdAt).toLocaleString()}
                       </div>
                     </td>
                     <td className="admin-muted">
@@ -194,6 +120,54 @@ export function ContentPage() {
                     </td>
                     <td>
                       <div className="admin-row-actions">
+                        {m.status !== 'published' ? (
+                          <button
+                            className="admin-btn admin-btn--primary"
+                            type="button"
+                            onClick={() => {
+                              adminApi
+                                .updateManga(m.id, { status: 'published' })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Update failed'));
+                            }}
+                            title="Publish"
+                          >
+                            <UploadCloud size={16} />
+                            Publish
+                          </button>
+                        ) : null}
+                        {m.status !== 'suspended' ? (
+                          <button
+                            className="admin-btn"
+                            type="button"
+                            onClick={() => {
+                              adminApi
+                                .updateManga(m.id, { status: 'suspended' })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Update failed'));
+                            }}
+                            title="Suspend"
+                          >
+                            <Ban size={16} />
+                            Suspend
+                          </button>
+                        ) : null}
+                        {m.status !== 'archived' ? (
+                          <button
+                            className="admin-btn"
+                            type="button"
+                            onClick={() => {
+                              adminApi
+                                .updateManga(m.id, { status: 'archived' })
+                                .then(() => setRefreshKey((k) => k + 1))
+                                .catch((err) => notify.error(err?.message || 'Update failed'));
+                            }}
+                            title="Archive"
+                          >
+                            <Archive size={16} />
+                            Archive
+                          </button>
+                        ) : null}
                         <button
                           className="admin-btn admin-btn--danger"
                           type="button"

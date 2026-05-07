@@ -1,6 +1,4 @@
 /* Based on admin-panel global.css; brand swapped to purple/black */
-@import url('https://fonts.cdnfonts.com/css/lufga');
-
 :root {
   /* Brand palette (purple) */
   --primary: #7c3aed;
@@ -101,7 +99,15 @@ html {
 }
 
 body {
-  font-family: 'Lufga', 'Inter', 'Segoe UI', sans-serif;
+  font-family:
+    'Lufga',
+    Inter,
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    Roboto,
+    Arial,
+    sans-serif;
   background-color: var(--page-bg);
   color: var(--text);
   line-height: 1.6;

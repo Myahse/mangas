@@ -43,3 +43,23 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
 }
+
+/* Creator contract: render as a readable document even in dark mode */
+.contract-surface {
+  margin-top: 12px;
+  background: #ffffff;
+  color: #111111;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.contract-surface__inner {
+  padding: 24px 22px 28px;
+}
+
+.contract-surface__sign {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
