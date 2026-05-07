@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MangAfriq } from '@/constants/theme';
+import { MangAfric } from '@/constants/theme';
 import MangaCard from '@/src/components/MangaCard/MangaCard';
 import { useFetch } from '@/src/hooks/useFetch';
 import {
@@ -143,7 +143,7 @@ export default function HomeScreen() {
               </Text>
 
               <View style={styles.heroMeta}>
-                <Ionicons name="star" size={14} color={MangAfriq.rating} />
+                <Ionicons name="star" size={14} color={MangAfric.rating} />
                 <Text style={styles.heroMetaText}>{current.rating}</Text>
                 <Text style={styles.heroMetaText}>·</Text>
                 <Text style={styles.heroMetaText} numberOfLines={1}>
@@ -239,7 +239,7 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           {loadingLatest || !latest ? (
-            <Text style={{ color: MangAfriq.textMuted, fontSize: 14 }}>Chargement…</Text>
+            <Text style={{ color: MangAfric.textMuted, fontSize: 14 }}>Chargement…</Text>
           ) : (
             <View style={styles.gridRow}>
               {latest.map((m) => (
@@ -262,7 +262,7 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           {loadingPopular || !popular ? (
-            <Text style={{ color: MangAfriq.textMuted, fontSize: 14 }}>Chargement…</Text>
+            <Text style={{ color: MangAfric.textMuted, fontSize: 14 }}>Chargement…</Text>
           ) : (
             <View style={styles.gridRow}>
               {popular.map((m) => (
@@ -277,11 +277,11 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sidebarBlock}>
             <View style={styles.sidebarHeader}>
-              <Ionicons name="trending-up" size={18} color={MangAfriq.primary} />
+              <Ionicons name="trending-up" size={18} color={MangAfric.primary} />
               <Text style={styles.sidebarTitle}>Top Manga</Text>
             </View>
             {loadingTop || !topManga ? (
-              <Text style={{ color: MangAfriq.textMuted, fontSize: 14 }}>Chargement…</Text>
+              <Text style={{ color: MangAfric.textMuted, fontSize: 14 }}>Chargement…</Text>
             ) : (
               topManga.map((m, i) => {
                 const rank = i + 1;
@@ -298,7 +298,7 @@ export default function HomeScreen() {
                           {m.author}
                         </Text>
                         <View style={styles.rankedStats}>
-                          <Ionicons name="star" size={12} color={MangAfriq.rating} />
+                          <Ionicons name="star" size={12} color={MangAfric.rating} />
                           <Text style={styles.rankedMeta}>{m.rating}</Text>
                           <Text style={styles.rankedMeta}> · {m.views}</Text>
                         </View>
@@ -312,11 +312,11 @@ export default function HomeScreen() {
 
           <View style={styles.sidebarBlock}>
             <View style={styles.sidebarHeader}>
-              <Ionicons name="sparkles" size={18} color={MangAfriq.primary} />
+              <Ionicons name="sparkles" size={18} color={MangAfric.primary} />
               <Text style={styles.sidebarTitle}>Nouvelles séries</Text>
             </View>
             {loadingAll ? (
-              <Text style={{ color: MangAfriq.textMuted, fontSize: 14 }}>Chargement…</Text>
+              <Text style={{ color: MangAfric.textMuted, fontSize: 14 }}>Chargement…</Text>
             ) : (
               newSeries.map((m) => (
                 <Link key={m.id} href={`/manga/${m.slug}`} asChild>

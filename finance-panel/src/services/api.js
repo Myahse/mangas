@@ -11,7 +11,7 @@ function requiredSessionStorageKey() {
   const raw = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
   if (!raw || raw === 'undefined' || raw === 'null') {
     // Dev-safe fallback: avoid hard crash when .env is missing.
-    return 'MangAfriq_finance_session';
+    return 'MangAfric_finance_session';
   }
   return raw;
 }

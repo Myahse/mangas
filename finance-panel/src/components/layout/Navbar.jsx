@@ -36,7 +36,7 @@ export default function Navbar() {
       <div className="navbar__inner container">
         <Link to="/overview" className="navbar__logo">
           <span className="navbar__logo-mark">
-            <img className="navbar__logo-img" src="/finance-logo.png" alt="MangAfriq Finance" />
+            <img className="navbar__logo-img" src="/finance-logo.png" alt="MangAfric Finance" />
           </span>
         </Link>
 

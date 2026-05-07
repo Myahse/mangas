@@ -24,13 +24,13 @@ public class AdminBootstrapRunner implements ApplicationRunner {
 	@Value("${app.bootstrap.admin.enabled:true}")
 	private boolean enabled;
 
-	@Value("${app.bootstrap.admin.email:mangafriq@gmail.com}")
+	@Value("${app.bootstrap.admin.email:mangafric@gmail.com}")
 	private String adminEmail;
 
-	@Value("${app.bootstrap.admin.password:MangAfriq123}")
+	@Value("${app.bootstrap.admin.password:MangAfric123}")
 	private String adminPassword;
 
-	@Value("${app.bootstrap.admin.display-name:MangAfriq Admin}")
+	@Value("${app.bootstrap.admin.display-name:MangAfric Admin}")
 	private String adminDisplayName;
 
 	public AdminBootstrapRunner(NamedParameterJdbcTemplate jdbc, PasswordEncoder passwordEncoder) {

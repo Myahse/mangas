@@ -29,12 +29,12 @@ public final class CreatorCredentialsEmailTemplate {
 		String name = safe(displayName, "là");
 		return String.join("\n\n",
 				"Bonjour " + name + ",",
-				"Votre compte Créateur MangAfriq a été créé.",
+				"Votre compte Créateur MangAfric a été créé.",
 				"Email: " + (email == null ? "" : email),
 				"Mot de passe temporaire: " + (temporaryPassword == null ? "" : temporaryPassword),
 				"Connexion: " + (loginUrl == null ? "" : loginUrl),
 				"Important: vous devrez changer votre mot de passe lors de votre première connexion.",
-				"— L’équipe MangAfriq"
+				"— L’équipe MangAfric"
 		);
 	}
 

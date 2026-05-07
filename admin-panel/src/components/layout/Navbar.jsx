@@ -41,7 +41,7 @@ export default function Navbar() {
           <span className="navbar__logo-mark">
             <img
               src="/admin-logo.png"
-              alt="MangAfriq Admin"
+              alt="MangAfric Admin"
               className="navbar__logo-img"
             />
           </span>

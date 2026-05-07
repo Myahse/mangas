@@ -57,7 +57,7 @@ function storageKey(): string {
 }
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
-const AUTH_CONTEXT_GLOBAL_KEY = '__MangAfriq_auth_context__';
+const AUTH_CONTEXT_GLOBAL_KEY = '__MangAfric_auth_context__';
 
 // Roles that are allowed to use the main "front" app.
 export type AuthUserRole = 'reader' | 'support' | 'admin';

@@ -18,7 +18,7 @@ public final class PasswordResetEmailTemplate {
 				"Pour choisir un nouveau mot de passe, ouvrez ce lien :",
 				resetUrl,
 				"Si vous n’êtes pas à l’origine de cette demande, ignorez cet email.",
-				"— L’équipe MangAfriq"
+				"— L’équipe MangAfric"
 		);
 	}
 

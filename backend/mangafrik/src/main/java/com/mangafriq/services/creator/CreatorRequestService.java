@@ -253,7 +253,7 @@ public class CreatorRequestService {
 			Notre équipe va l’examiner et vous recevrez un email dès qu’une décision sera prise.
 
 			Merci,
-			MangAfriq
+			MangAfric
 			""".formatted(dto.displayName());
 		// Always confirm receipt on the reader email.
 		emailService.sendSimpleEmail(dto.email(), subject, text);
@@ -295,7 +295,7 @@ public class CreatorRequestService {
 			Message:
 			%s
 
-			MangAfriq
+			MangAfric
 			""".formatted(dto.displayName(), dto.status(), (dto.reason() == null ? "" : dto.reason()));
 		emailService.sendSimpleEmail(dto.email(), subject, text);
 		if (dto.creatorEmail() != null && !dto.creatorEmail().isBlank() && !dto.creatorEmail().equalsIgnoreCase(dto.email())) {

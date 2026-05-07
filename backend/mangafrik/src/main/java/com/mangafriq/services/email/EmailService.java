@@ -23,10 +23,10 @@ public class EmailService {
 
 	private static final Pattern FROM_PATTERN = Pattern.compile("^\\s*(.*?)\\s*<\\s*([^>]+)\\s*>\\s*$");
 
-	@Value("${app.email.from:MangAfriq <noreply@mangafriq.com>}")
+	@Value("${app.email.from:MangAfric <noreply@mangafric.com>}")
 	private String fromEmail;
 
-	@Value("${app.email.subject.prefix:[MangAfriq]}")
+	@Value("${app.email.subject.prefix:[MangAfric]}")
 	private String subjectPrefix;
 
 	@Value("${app.email.provider:smtp}")
@@ -94,7 +94,7 @@ public class EmailService {
 			String to = toEmail == null ? "" : toEmail.trim();
 			int at = to.indexOf("@");
 			if (at > 0) toName = to.substring(0, at);
-			if (toName.isBlank()) toName = "MangAfriq";
+			if (toName.isBlank()) toName = "MangAfric";
 			Map<String, Object> payload = BrevoEmailClient.buildSingleHtmlEmailPayload(
 				from.email(),
 				from.name(),
@@ -147,7 +147,7 @@ public class EmailService {
 				toName = to.substring(0, at);
 			}
 			if (toName.isBlank()) {
-				toName = "MangAfriq";
+				toName = "MangAfric";
 			}
 			Map<String, Object> payload = BrevoEmailClient.buildSingleHtmlEmailPayload(
 					from.email(),
@@ -193,7 +193,7 @@ public class EmailService {
 			String to = toEmail == null ? "" : toEmail.trim();
 			int at = to.indexOf("@");
 			if (at > 0) toName = to.substring(0, at);
-			if (toName.isBlank()) toName = "MangAfriq";
+			if (toName.isBlank()) toName = "MangAfric";
 			Map<String, Object> payload = BrevoEmailClient.buildSingleHtmlEmailPayload(
 					from.email(),
 					from.name(),
@@ -235,7 +235,7 @@ public class EmailService {
 			String to = toEmail == null ? "" : toEmail.trim();
 			int at = to.indexOf("@");
 			if (at > 0) toName = to.substring(0, at);
-			if (toName.isBlank()) toName = "MangAfriq";
+			if (toName.isBlank()) toName = "MangAfric";
 			String safeName = (fileName == null || fileName.isBlank()) ? "contrat-createur.pdf" : fileName;
 			String html = BrandedMessageEmailTemplate.html(subject, textContent, publicBaseUrl, resolveEmailLogoUrl());
 			String b64 = Base64.getEncoder().encodeToString(pdfBytes);
@@ -282,18 +282,18 @@ public class EmailService {
 
 	private static ParsedFrom parseFrom(String raw) {
 		String s = raw == null ? "" : raw.trim();
-		if (s.isEmpty()) return new ParsedFrom("MangAfriq", "noreply@mangafriq.com");
+		if (s.isEmpty()) return new ParsedFrom("MangAfric", "noreply@mangafric.com");
 
 		Matcher m = FROM_PATTERN.matcher(s);
 		if (m.matches()) {
 			String name = (m.group(1) == null ? "" : m.group(1)).trim();
 			String email = (m.group(2) == null ? "" : m.group(2)).trim();
-			if (name.isBlank()) name = "MangAfriq";
+			if (name.isBlank()) name = "MangAfric";
 			return new ParsedFrom(name, email);
 		}
 		// If just an email was provided.
-		if (s.contains("@")) return new ParsedFrom("MangAfriq", s);
-		return new ParsedFrom(s, "noreply@mangafriq.com");
+		if (s.contains("@")) return new ParsedFrom("MangAfric", s);
+		return new ParsedFrom(s, "noreply@mangafric.com");
 	}
 
 	private record ParsedFrom(String name, String email) {}

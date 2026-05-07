@@ -116,7 +116,7 @@ export default function Register() {
               <span className="register__nav-back-text">Retour</span>
             </button>
 
-            <div className="register__brand" aria-label="MangAfriq">
+            <div className="register__brand" aria-label="MangAfric">
               <span>Mang</span>
               <span className="register__brand-accent">Afrik</span>
             </div>
@@ -124,7 +124,7 @@ export default function Register() {
             <div className="register__topbar-spacer" aria-hidden="true" />
           </div>
 
-          <div className="register__brand register__brand--header" aria-label="MangAfriq">
+          <div className="register__brand register__brand--header" aria-label="MangAfric">
             <span>Mang</span>
             <span className="register__brand-accent">Afrik</span>
           </div>

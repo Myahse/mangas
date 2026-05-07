@@ -323,11 +323,11 @@ public class CreatorContractService {
 		String base = (publicBaseUrl == null ? "" : publicBaseUrl.trim());
 	
 		String chosen = !frontend.isEmpty() ? frontend : base;
-		if (chosen.toLowerCase().contains("mangafriq.com") && base.toLowerCase().contains("localhost")) {
+		if (chosen.toLowerCase().contains("mangafric.com") && base.toLowerCase().contains("localhost")) {
 			chosen = base;
 		}
 		// Hard safety: never generate GoDaddy/parked-domain links in local dev by accident.
-		if (chosen.toLowerCase().contains("mangafriq.com")) {
+		if (chosen.toLowerCase().contains("mangafric.com")) {
 			chosen = "http://localhost:5173";
 		}
 		chosen = chosen.replaceAll("/$", "");
@@ -342,7 +342,7 @@ public class CreatorContractService {
 			Lien de signature:
 			%s
 
-			MangAfriq
+			MangAfric
 			""".formatted(req.displayName(), link);
 
 		
@@ -411,7 +411,7 @@ public class CreatorContractService {
 			return new String(in.readAllBytes(), StandardCharsets.UTF_8);
 		} catch (Exception e) {
 			log.warn("Failed to load creator contract template; using fallback", e);
-			return "<div><h2>Contrat Créateur — MangAfriq</h2><p>{{DISPLAY_NAME}} — {{CREATOR_EMAIL}}</p></div>";
+			return "<div><h2>Contrat Créateur — MangAfric</h2><p>{{DISPLAY_NAME}} — {{CREATOR_EMAIL}}</p></div>";
 		}
 	}
 

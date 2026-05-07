@@ -6,7 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Wraps plain-text notification bodies in the shared MangAfriq HTML layout (logo, banner, footer).
+ * Wraps plain-text notification bodies in the shared MangAfric HTML layout (logo, banner, footer).
  */
 public final class BrandedMessageEmailTemplate {
 	private static final Pattern URL_PATTERN = Pattern.compile("https?://[\\w\\-./?#&=%~:+]+", Pattern.CASE_INSENSITIVE);
@@ -16,7 +16,7 @@ public final class BrandedMessageEmailTemplate {
 	public static String html(String subjectLine, String plainBody, String appPublicBaseUrl, String logoUrlAbsolute) {
 		String base = normalizeBase(appPublicBaseUrl);
 		String logo = (logoUrlAbsolute == null || logoUrlAbsolute.isBlank()) ? (base + "/magafrik-logo.png") : logoUrlAbsolute.trim();
-		String headline = escapeHtml(subjectLine == null || subjectLine.isBlank() ? "MangAfriq" : subjectLine.trim());
+		String headline = escapeHtml(subjectLine == null || subjectLine.isBlank() ? "MangAfric" : subjectLine.trim());
 		String bodyHtml = plainBodyToSafeHtml(plainBody);
 		String siteHref = escapeHtmlAttr(base);
 
@@ -84,7 +84,7 @@ public final class BrandedMessageEmailTemplate {
 		String body = escapeHtml(plainBody == null ? "" : plainBody).replace("\n", "<br>");
 		return "<html><body style=\"margin:0;padding:16px;font-family:Arial,sans-serif;background:#fff7ed\"><div style=\"max-width:600px;margin:0 auto;background:#fff;padding:24px;border-radius:12px\"><img src=\""
 				+ escapeHtmlAttr(logoUrl)
-				+ "\" alt=\"MangAfriq\" style=\"max-width:200px;height:auto\"><h1 style=\"color:#e63946\">"
+				+ "\" alt=\"MangAfric\" style=\"max-width:200px;height:auto\"><h1 style=\"color:#e63946\">"
 				+ h
 				+ "</h1><p style=\"color:#334155\">"
 				+ body

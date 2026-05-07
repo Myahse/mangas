@@ -36,7 +36,7 @@ export default function CreatorContractPage() {
   const draftKey = useMemo(() => {
     const t = String(token || '').trim();
     if (!t) return '';
-    return `MangAfriq:creator-contract:draft-signature:${t}`;
+    return `MangAfric:creator-contract:draft-signature:${t}`;
   }, [token]);
 
   useEffect(() => {

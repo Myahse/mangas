@@ -6,7 +6,7 @@ import { creatorApi } from '../../services/api';
 import { notify } from '../../services/notify';
 import { formatBytes, resizeForUpload } from './utils';
 
-const LS_SERIES_THUMBS = 'MangAfriq_creator_series_thumbs_v1';
+const LS_SERIES_THUMBS = 'MangAfric_creator_series_thumbs_v1';
 
 function normalizeSeriesTitle(t) {
   return (t || '').trim().toLowerCase();

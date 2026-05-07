@@ -23,10 +23,10 @@ public class OpenApiConfig {
 	public OpenAPI openAPI() {
 		return new OpenAPI()
 				.info(new Info()
-						.title("MangAfriq API")
+						.title("MangAfric API")
 						.version("1.0")
 						.description("""
-								Backend for MangAfriq (Webgas): manga catalog, chapters & pages, creator tooling, **coin store & wallet**, episode unlocks, referrals & rewards, **admin**, **ads**, **support**, contracts, and finance exports.
+								Backend for MangAfric (Webgas): manga catalog, chapters & pages, creator tooling, **coin store & wallet**, episode unlocks, referrals & rewards, **admin**, **ads**, **support**, contracts, and finance exports.
 
 								**Base path:** `%s`
 

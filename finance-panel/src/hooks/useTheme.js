@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = 'MangAfriq_finance_theme';
+const STORAGE_KEY = 'MangAfric_finance_theme';
 
 function getSystemPrefersDark() {
   return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false;

@@ -1,6 +1,6 @@
 const TARGET = typeof window !== 'undefined' ? window : null;
 
-export const WALLET_UPDATED_EVENT = 'MangAfriq:wallet-updated';
+export const WALLET_UPDATED_EVENT = 'MangAfric:wallet-updated';
 
 export function emitWalletUpdated(detail) {
   if (!TARGET) return;

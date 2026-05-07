@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
-import { MangAfriq, NavigationDarkTheme, NavigationLightTheme } from '@/constants/theme';
+import { MangAfric, NavigationDarkTheme, NavigationLightTheme } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -28,7 +28,7 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? NavigationDarkTheme : NavigationLightTheme}>
         <Stack
           screenOptions={{
-            contentStyle: { backgroundColor: MangAfriq.bgLight },
+            contentStyle: { backgroundColor: MangAfric.bgLight },
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -36,8 +36,8 @@ export default function RootLayout() {
             name="manga/[slug]"
             options={{
               headerShown: true,
-              headerTintColor: MangAfriq.primary,
-              headerStyle: { backgroundColor: MangAfriq.bgWhite },
+              headerTintColor: MangAfric.primary,
+              headerStyle: { backgroundColor: MangAfric.bgWhite },
             }}
           />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

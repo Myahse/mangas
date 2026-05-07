@@ -35,7 +35,7 @@ export default function Navbar() {
       <div className="navbar__inner container">
         <Link to="/inbox" className="navbar__logo">
           <span className="navbar__logo-mark">
-            <img className="navbar__logo-img" src="/support-logo.png" alt="MangAfriq Support" />
+            <img className="navbar__logo-img" src="/support-logo.png" alt="MangAfric Support" />
           </span>
         </Link>
 

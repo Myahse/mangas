@@ -7,7 +7,7 @@ public final class WelcomeEmailTemplate {
 	private WelcomeEmailTemplate() {}
 
 	public static String subject() {
-		return "Bienvenue sur MangAfriq";
+		return "Bienvenue sur MangAfric";
 	}
 
 	public static String text(String displayName, String appUrl) {
@@ -15,10 +15,10 @@ public final class WelcomeEmailTemplate {
 		String url = safe(appUrl, "http://localhost:5173");
 		return String.join("\n\n",
 				"Bonjour " + name + ",",
-				"Bienvenue sur MangAfriq !",
+				"Bienvenue sur MangAfric !",
 				"Découvre des mangas, suis tes créateurs préférés, et rejoins la communauté.",
 				"Commencer: " + url,
-				"— L’équipe MangAfriq"
+				"— L’équipe MangAfric"
 		);
 	}
 
