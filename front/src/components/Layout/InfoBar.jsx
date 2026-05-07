@@ -29,10 +29,10 @@ export default function InfoBar() {
 
     // Realtime: subscribe to active system notices.
     try {
-      const wsBase = String(API_BASE_URL || '').trim()
-        .replace(/^https?:\/\//, (m) => (m === 'https://' ? 'wss://' : 'ws://'))
-        .replace(/\/$/, '');
-      const brokerURL = `${wsBase}/ws`;
+      const api = new URL(String(API_BASE_URL || '').trim());
+      const wsProtocol = api.protocol === 'https:' ? 'wss:' : 'ws:';
+      // STOMP endpoint is exposed at /ws (NOT under /api/v1).
+      const brokerURL = `${wsProtocol}//${api.host}/ws`;
 
       stomp = new Client({
         brokerURL,
@@ -71,42 +71,6 @@ export default function InfoBar() {
 
       stomp.activate();
     } catch {}
-
-    fetch(`${API_BASE_URL}/ads/system-notices`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    })
-      .then(async (res) => {
-        const text = await res.text().catch(() => '');
-        if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
-        return text ? JSON.parse(text) : [];
-      })
-      .then((rows) => {
-        if (cancelled) return;
-        const list = Array.isArray(rows) ? rows : [];
-        const normalized = list
-          .filter((n) => (n?.status || '').toLowerCase() === 'active')
-          .map((n) => {
-            const severity = (n?.severity || '').toLowerCase();
-            const icon =
-              severity === 'maintenance'
-                ? 'maintenance'
-                : severity === 'info'
-                  ? 'info'
-                  : 'announce';
-            const title = n?.title ? String(n.title) : '';
-            const message = n?.message ? String(n.message) : '';
-            const text = title && message ? `${title} — ${message}` : (title || message);
-            return { icon, text };
-          })
-          .filter((m) => m.text);
-        setMessages(normalized);
-        setCurrent(0);
-      })
-      .catch(() => {
-        // If backend is unreachable, just hide the bar (no mock fallback).
-        if (cancelled) return;
-        setMessages([]);
-      });
 
     return () => {
       cancelled = true;

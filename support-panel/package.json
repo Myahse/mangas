@@ -1,5 +1,5 @@
 {
-  "name": "mangaafrik-support-panel",
+  "name": "mangafriq-support-panel",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,6 +13,7 @@
     "vite": "^8.0.8"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.3.0",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

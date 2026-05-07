@@ -59,6 +59,15 @@ export function AuthProvider({ children }) {
     }
   }, [key]);
 
+  useEffect(() => {
+    const token = String(user?.token || '').trim();
+    const role = String(user?.role || '').trim();
+    if (user && (!token || !role)) {
+      localStorage.removeItem(key);
+      setUser(null);
+    }
+  }, [user, key]);
+
   const persist = useCallback((next) => {
     setUser(next);
     if (next) localStorage.setItem(key, JSON.stringify(next));
@@ -67,29 +76,95 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => persist(null), [persist]);
 
+  const hydrateCreatorProfile = useCallback(async (token) => {
+    const t = String(token || '').trim();
+    if (!t) return null;
+    try {
+      const meReq = await request('/creator-requests/me', {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      // The backend returns a CreatorRequestDto. Store it under user.profile for UI convenience.
+      return {
+        penName: meReq?.penName ?? null,
+        genres: meReq?.genres ?? null,
+        message: meReq?.message ?? null,
+        creatorEmail: meReq?.creatorEmail ?? null,
+        creatorRequestStatus: meReq?.status ?? null,
+      };
+    } catch (e) {
+      // 401/403/404 are expected in some cases; keep profile null.
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = String(user?.token || '').trim();
+    if (!user || !token) return;
+    let cancelled = false;
+    hydrateCreatorProfile(token).then((profile) => {
+      if (cancelled) return;
+      if (!profile) return;
+      setUser((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, profile: { ...(prev.profile || {}), ...profile } };
+        localStorage.setItem(key, JSON.stringify(next));
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.token, hydrateCreatorProfile, key]);
+
   const login = useCallback(
     async ({ email, password }) => {
       const res = await request('/auth/login', { method: 'POST', body: { email, password } });
-      persist({
+      const token = String(res?.token || '').trim();
+      const role = String(res?.role || '').trim();
+      if (!token || !role) throw new Error("Compte invalide (token/role manquant).");
+      const mustChange =
+        Boolean(res?.mustChangePassword) ||
+        Boolean(res?.must_change_password);
+      const baseUser = {
         id: res.id,
         email: res.email,
         displayName: res.displayName,
         role: res.role,
-        mustChangePassword: Boolean(res.mustChangePassword),
-      });
+        token: token,
+        mustChangePassword: mustChange,
+      };
+      const profile = await hydrateCreatorProfile(token);
+      persist(profile ? { ...baseUser, profile } : baseUser);
       return res;
     },
-    [persist],
+    [persist, hydrateCreatorProfile],
+  );
+
+  const changePassword = useCallback(
+    async ({ email, oldPassword, newPassword }) => {
+      const e = String(email || '').trim();
+      const oldPw = String(oldPassword || '');
+      const newPw = String(newPassword || '');
+      if (!e) throw new Error('Email requis.');
+      if (!oldPw) throw new Error('Ancien mot de passe requis.');
+      if (newPw.trim().length < 6) throw new Error('Nouveau mot de passe (min. 6 caractères).');
+      return await request('/auth/change-password', {
+        method: 'POST',
+        body: { email: e, oldPassword: oldPw, newPassword: newPw },
+      });
+    },
+    [],
   );
 
   const value = useMemo(
     () => ({
       user,
-      isAuthenticated: Boolean(user),
+      isAuthenticated: Boolean(user && String(user?.token || '').trim() && String(user?.role || '').trim()),
       logout,
       login,
+      changePassword,
     }),
-    [user, logout, login],
+    [user, logout, login, changePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

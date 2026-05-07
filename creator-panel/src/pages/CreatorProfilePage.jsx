@@ -1,34 +1,20 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './CreatorSectionPage.css';
 
-const PREFIX =
-  import.meta.env.VITE_CREATOR_STORAGE_PREFIX;
-
-const CREATOR_GOAL = {
-  web: 'Web',
-  print: 'Impression',
-  both: 'Les deux',
-};
-
 export default function CreatorProfilePage() {
-  let session = null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    session = raw ? JSON.parse(raw) : null;
-  } catch {
-    session = null;
-  }
-
-  const isCreator = session?.role === 'creator';
+  const { user, isAuthenticated } = useAuth();
+  const isCreator = isAuthenticated && String(user?.role || '').toLowerCase() === 'creator';
 
   const rows = isCreator
     ? [
-        { label: 'Nom', value: session.displayName ?? '—' },
-        { label: 'Email', value: session.email ?? '—' },
+        { label: 'Nom', value: user?.displayName ?? '—' },
+        { label: 'Email', value: user?.email ?? '—' },
         { label: 'Rôle', value: 'Créateur' },
-        { label: 'Nom de plume', value: session.profile?.penName ?? '—' },
-        { label: 'Genres que vous créez', value: session.profile?.genres ?? '—' },
-        { label: 'Objectif de publication', value: CREATOR_GOAL[session.profile?.publishingGoal] ?? '—' },
+        { label: 'Email créateur', value: user?.profile?.creatorEmail ?? '—' },
+        { label: 'Nom de plume', value: user?.profile?.penName ?? '—' },
+        { label: 'Genres que vous créez', value: user?.profile?.genres ?? '—' },
+        { label: 'Message / objectif', value: user?.profile?.message ?? '—' },
       ]
     : [];
 
@@ -42,7 +28,7 @@ export default function CreatorProfilePage() {
       <h1 className="account-section__title">Mon profil</h1>
       {!isCreator ? (
         <p className="account-section__lead">
-          Aucune session créateur trouvée. Connectez-vous en tant que créateur sur le site lecteur puis revenez ici.
+          Vous n’êtes pas connecté en tant que créateur. Utilisez le modal de connexion du panneau créateur (en haut) puis revenez sur cette page.
         </p>
       ) : (
         <>

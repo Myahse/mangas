@@ -51,6 +51,9 @@ export default function Footer() {
             <h4 className="footer__col-title">Project</h4>
             <ul className="footer__links">
               <li>
+                <Link to="/contact">Nous contacter</Link>
+              </li>
+              <li>
                 <a href="#" onClick={(e) => e.preventDefault()}>
                   Backend (planned)
                 </a>
