@@ -209,7 +209,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/" className="navbar__logo">
-          <img className="navbar__logo-img" src="/magafrik-logo.png" alt="MangAfriq" />
+          <img className="navbar__logo-img" src="/magafrik-logo.png" alt="MangAfric" />
         </Link>
 
         {/* Desktop Nav */}

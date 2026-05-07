@@ -45,7 +45,7 @@ async function request(path, { method = 'GET', body, headers } = {}) {
 }
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
-const AUTH_CONTEXT_GLOBAL_KEY = '__MangAfriq_auth_context__';
+const AUTH_CONTEXT_GLOBAL_KEY = '__MangAfric_auth_context__';
 
 function getAuthContext() {
   const g = globalThis;

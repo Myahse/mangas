@@ -77,9 +77,9 @@ export default function CreatorTopBar() {
     <>
       <header className="creator-topbar">
         <div className="creator-topbar__inner container">
-          <Link to="/" className="creator-topbar__logo" aria-label="MangAfriq Creator">
+          <Link to="/" className="creator-topbar__logo" aria-label="MangAfric Creator">
             <span className="creator-topbar__logo-mark">
-              <img className="creator-topbar__logo-img" src="/creator-panel.png" alt="MangAfriq Creator" />
+              <img className="creator-topbar__logo-img" src="/creator-panel.png" alt="MangAfric Creator" />
             </span>
           </Link>
           <nav className="creator-topbar__nav" aria-label="Navigation créateur">

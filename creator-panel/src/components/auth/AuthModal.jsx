@@ -97,7 +97,7 @@ export default function AuthModal({ isOpen, onClose, canClose = false }) {
       ) : null}
 
       <div className="auth-modal__center">
-        <div className="auth-modal__brand" aria-label="MangAfriq">
+        <div className="auth-modal__brand" aria-label="MangAfric">
           <span>Mang</span>
           <span className="auth-modal__brand-accent">Afrik</span>
         </div>
@@ -175,7 +175,7 @@ export default function AuthModal({ isOpen, onClose, canClose = false }) {
         </div>
 
         <div className="auth-modal__footer">
-          <p>MangAfriq © 2026</p>
+          <p>MangAfric © 2026</p>
         </div>
       </div>
     </Modal>

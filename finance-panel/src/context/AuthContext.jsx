@@ -13,7 +13,7 @@ function requiredSessionStorageKey() {
   const raw = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
   if (!raw || raw === 'undefined' || raw === 'null') {
     // Dev-safe fallback: avoid hard crash when .env is missing.
-    return 'MangAfriq_finance_session';
+    return 'MangAfric_finance_session';
   }
   return raw;
 }
@@ -47,7 +47,7 @@ async function request(path, { method = 'GET', body, headers } = {}) {
 }
 
 /** Stable across Vite HMR so Provider and consumers keep the same context identity. */
-const AUTH_CONTEXT_GLOBAL_KEY = '__MangAfriq_finance_auth_context__';
+const AUTH_CONTEXT_GLOBAL_KEY = '__MangAfric_finance_auth_context__';
 
 function getAuthContext() {
   const g = globalThis;

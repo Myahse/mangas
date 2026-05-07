@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MangAfriq } from '@/constants/theme';
+import { MangAfric } from '@/constants/theme';
 import MangaCard from '@/src/components/MangaCard/MangaCard';
 import { useFetch } from '@/src/hooks/useFetch';
 import { fetchAllManga, fetchGenres } from '@/src/services/api';
@@ -141,7 +141,7 @@ export default function ExploreScreen() {
           <Ionicons
             name="options-outline"
             size={16}
-            color={showFilters ? MangAfriq.primary : MangAfriq.textSecondary}
+            color={showFilters ? MangAfric.primary : MangAfric.textSecondary}
           />
           <Text style={[styles.filterToggleText, showFilters && styles.filterToggleTextActive]}>
             Filtres
@@ -150,17 +150,17 @@ export default function ExploreScreen() {
       </View>
 
       <View style={styles.searchWrap}>
-        <Ionicons name="search" size={16} color={MangAfriq.textMuted} style={styles.searchIcon} />
+        <Ionicons name="search" size={16} color={MangAfric.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Rechercher un manga, un auteur…"
-          placeholderTextColor={MangAfriq.textMuted}
+          placeholderTextColor={MangAfric.textMuted}
           value={query}
           onChangeText={setQuery}
         />
         {query.length > 0 && (
           <Pressable onPress={() => setQuery('')} style={styles.searchClear} hitSlop={8}>
-            <Ionicons name="close-circle" size={20} color={MangAfriq.textMuted} />
+            <Ionicons name="close-circle" size={20} color={MangAfric.textMuted} />
           </Pressable>
         )}
       </View>
@@ -232,7 +232,7 @@ export default function ExploreScreen() {
           {selectedGenres.map((g) => (
             <Pressable key={g} onPress={() => toggleGenre(g)} style={styles.activeChip}>
               <Text style={styles.activeChipText}>{g}</Text>
-              <Ionicons name="close" size={14} color={MangAfriq.primary} />
+              <Ionicons name="close" size={14} color={MangAfric.primary} />
             </Pressable>
           ))}
         </View>
@@ -242,7 +242,7 @@ export default function ExploreScreen() {
 
   const ListEmpty = (
     <View style={styles.empty}>
-      <Ionicons name="book-outline" size={56} color={MangAfriq.textMuted} />
+      <Ionicons name="book-outline" size={56} color={MangAfric.textMuted} />
       <Text style={styles.emptyTitle}>Aucun manga trouvé</Text>
       <Text style={styles.emptySub}>Essayez d’autres mots-clés ou filtres</Text>
       <Pressable onPress={resetFilters} style={styles.emptyBtn}>

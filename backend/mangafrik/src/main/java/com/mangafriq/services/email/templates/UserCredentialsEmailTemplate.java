@@ -37,13 +37,13 @@ public final class UserCredentialsEmailTemplate {
 		String name = safe(displayName, "là");
 		return String.join("\n\n",
 				"Bonjour " + name + ",",
-				"Votre compte MangAfriq a été créé / mis à jour.",
+				"Votre compte MangAfric a été créé / mis à jour.",
 				"Rôle: " + safe(role, ""),
 				"Email: " + safe(email, ""),
 				"Mot de passe temporaire: " + safe(temporaryPassword, ""),
 				"Connexion: " + safe(loginUrl, ""),
 				"Important: vous devrez changer votre mot de passe lors de votre première connexion.",
-				"— L’équipe MangAfriq"
+				"— L’équipe MangAfric"
 		);
 	}
 

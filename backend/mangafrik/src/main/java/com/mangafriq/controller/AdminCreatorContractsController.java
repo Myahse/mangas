@@ -106,7 +106,7 @@ public class AdminCreatorContractsController {
 
 			Veuillez trouver en pièce jointe votre contrat créateur signé (PDF).
 
-			MangAfriq
+			MangAfric
 			""".formatted(reqForPdf.displayName());
 
 		Set<String> to = new LinkedHashSet<>();

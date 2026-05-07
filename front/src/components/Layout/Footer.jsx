@@ -67,7 +67,7 @@ export default function Footer() {
             © {year} MangaAfrik. Fait avec passion pour les fans de manga.
           </p>
           <p className="footer__disclaimer">
-            MangAfriq ne revendique pas la propriété des œuvres présentées. Ce site est à but éducatif uniquement.
+            MangAfric ne revendique pas la propriété des œuvres présentées. Ce site est à but éducatif uniquement.
           </p>
         </div>
       </div>

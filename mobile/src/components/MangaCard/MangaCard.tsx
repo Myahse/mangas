@@ -3,17 +3,17 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-import { MangAfriq } from '@/constants/theme';
+import { MangAfric } from '@/constants/theme';
 import { Manga } from '@/src/types/manga';
 
 import { styles } from './MangaCard.styles';
 
 function statusColors(status: string) {
   const s = status.toLowerCase();
-  if (s === 'ongoing') return { bg: MangAfriq.ongoingBg, fg: MangAfriq.ongoingText };
-  if (s === 'completed') return { bg: MangAfriq.completedBg, fg: MangAfriq.completedText };
-  if (s === 'hiatus') return { bg: MangAfriq.hiatusBg, fg: MangAfriq.hiatusText };
-  return { bg: MangAfriq.bgLight, fg: MangAfriq.textSecondary };
+  if (s === 'ongoing') return { bg: MangAfric.ongoingBg, fg: MangAfric.ongoingText };
+  if (s === 'completed') return { bg: MangAfric.completedBg, fg: MangAfric.completedText };
+  if (s === 'hiatus') return { bg: MangAfric.hiatusBg, fg: MangAfric.hiatusText };
+  return { bg: MangAfric.bgLight, fg: MangAfric.textSecondary };
 }
 
 type Props = {
@@ -30,7 +30,7 @@ export default function MangaCard({ manga }: Props) {
         <View style={styles.thumbWrap}>
           <Image source={{ uri: manga.cover }} style={styles.thumb} contentFit="cover" transition={200} />
           <View style={styles.ratingBadge}>
-            <Ionicons name="star" size={11} color={MangAfriq.rating} />
+            <Ionicons name="star" size={11} color={MangAfric.rating} />
             <Text style={styles.ratingText}>{manga.rating}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: bg }]}>
@@ -49,7 +49,7 @@ export default function MangaCard({ manga }: Props) {
             ))}
           </View>
           <View style={styles.latestRow}>
-            <Ionicons name="time-outline" size={12} color={MangAfriq.textMuted} />
+            <Ionicons name="time-outline" size={12} color={MangAfric.textMuted} />
             <Text style={styles.latestText} numberOfLines={1}>
               Ch. {manga.latestChapter.number} · {manga.latestChapter.date}
             </Text>

@@ -26,16 +26,16 @@ public class CreatorPublishNotificationService {
 			return;
 		}
 		String title = mangaTitle == null || mangaTitle.isBlank() ? "votre série" : mangaTitle.trim();
-		String subject = "Votre série est en cours de modération — MangAfriq";
+		String subject = "Votre série est en cours de modération — MangAfric";
 		StringBuilder body = new StringBuilder();
 		body.append("Bonjour,\n\n");
 		body.append("Nous avons bien reçu votre série « ").append(title).append(" ».\n\n");
 		body.append("Notre équipe de modération l’examine actuellement. Dans la plupart des cas, ");
 		body.append("vous recevez une décision sous 24 heures. Une fois validée, ");
-		body.append("elle sera publiée automatiquement sur MangAfriq.\n\n");
+		body.append("elle sera publiée automatiquement sur MangAfric.\n\n");
 		body.append("Vous pourrez suivre son statut depuis votre tableau de bord créateur");
 		appendCreatorDashboardLink(body);
-		body.append("\n\n— L'équipe MangAfriq");
+		body.append("\n\n— L'équipe MangAfric");
 		emailService.sendSimpleEmail(creatorEmail.trim(), subject, body.toString());
 	}
 
@@ -45,16 +45,16 @@ public class CreatorPublishNotificationService {
 		}
 		String title = mangaTitle == null || mangaTitle.isBlank() ? "votre série" : mangaTitle.trim();
 		String r = reason == null ? "" : reason.trim();
-		String subject = "Décision de modération : série non retenue — MangAfriq";
+		String subject = "Décision de modération : série non retenue — MangAfric";
 		StringBuilder body = new StringBuilder();
 		body.append("Bonjour,\n\n");
-		body.append("Après examen, votre série « ").append(title).append(" » n’a pas été retenue pour publication sur MangAfriq.\n\n");
+		body.append("Après examen, votre série « ").append(title).append(" » n’a pas été retenue pour publication sur MangAfric.\n\n");
 		if (!r.isBlank()) {
 			body.append("Motif communiqué par l’équipe :\n").append(r).append("\n\n");
 		}
 		body.append("Vous pouvez consulter le détail et l’historique depuis votre tableau de bord créateur");
 		appendCreatorDashboardLink(body);
-		body.append("\n\n— L'équipe MangAfriq");
+		body.append("\n\n— L'équipe MangAfric");
 		emailService.sendSimpleEmail(creatorEmail.trim(), subject, body.toString());
 	}
 
@@ -64,7 +64,7 @@ public class CreatorPublishNotificationService {
 		}
 		String title = mangaTitle == null || mangaTitle.isBlank() ? "votre série" : mangaTitle.trim();
 		String r = reason == null ? "" : reason.trim();
-		String subject = "Modération : corrections demandées — MangAfriq";
+		String subject = "Modération : corrections demandées — MangAfric";
 		StringBuilder body = new StringBuilder();
 		body.append("Bonjour,\n\n");
 		body.append("Concernant votre série « ").append(title).append(" », l’équipe de modération souhaite des ajustements avant publication.\n\n");
@@ -73,7 +73,7 @@ public class CreatorPublishNotificationService {
 		}
 		body.append("Merci de mettre à jour votre proposition puis de la renvoyer depuis l’onglet Publications / séries de votre tableau de bord créateur");
 		appendCreatorDashboardLink(body);
-		body.append("\n\n— L'équipe MangAfriq");
+		body.append("\n\n— L'équipe MangAfric");
 		emailService.sendSimpleEmail(creatorEmail.trim(), subject, body.toString());
 	}
 
@@ -92,11 +92,11 @@ public class CreatorPublishNotificationService {
 		String body = String.join(
 				"\n\n",
 				"Bonjour,",
-				"Votre série « " + title + " » est maintenant publiée sur MangAfriq.",
+				"Votre série « " + title + " » est maintenant publiée sur MangAfric.",
 				"Lecture publique : " + mangaUrl,
 				dashLine,
-				"— L'équipe MangAfriq");
-		emailService.sendSimpleEmail(creatorEmail.trim(), "Votre série est publiée — MangAfriq", body);
+				"— L'équipe MangAfric");
+		emailService.sendSimpleEmail(creatorEmail.trim(), "Votre série est publiée — MangAfric", body);
 	}
 
 	public void notifyEpisodePublished(String creatorEmail, String seriesTitle, String episodeTitle) {
@@ -109,8 +109,8 @@ public class CreatorPublishNotificationService {
 				"\n\n",
 				"Bonjour,",
 				"Votre épisode « " + et + " » (« " + st + " ») a bien été publié.",
-				"Les lecteurs peuvent le découvrir sur MangAfriq selon les réglages d’accès du catalogue.",
-				"— L'équipe MangAfriq");
+				"Les lecteurs peuvent le découvrir sur MangAfric selon les réglages d’accès du catalogue.",
+				"— L'équipe MangAfric");
 		emailService.sendSimpleEmail(creatorEmail.trim(), "Épisode publié", body);
 	}
 
