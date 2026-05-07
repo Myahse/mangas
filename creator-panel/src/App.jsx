@@ -6,6 +6,7 @@ import EpisodesPage from './pages/EpisodesPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
 import PublicationsPage from './features/publications/PublicationsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ContactPage from './pages/ContactPage.jsx';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/episodes" element={<EpisodesPage />} />
         <Route path="/publications" element={<PublicationsPage />} />
         <Route path="/profil" element={<CreatorProfilePage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </CreatorLayout>

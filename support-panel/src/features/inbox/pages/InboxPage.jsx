@@ -54,8 +54,7 @@ export function InboxPage() {
         (t.user?.name || '').toLowerCase().includes(q)
       );
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, type, status, refreshKey]);
+  }, [allTickets, query, type, status]);
 
   return (
     <SupportSectionPage

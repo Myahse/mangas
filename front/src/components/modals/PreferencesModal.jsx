@@ -30,7 +30,7 @@ export default function PreferencesModal({ isOpen, onClose }) {
         </button>
 
         <div className="prefs-modal__center">
-          <div className="prefs-modal__brand" aria-label="MangAfrik">
+          <div className="prefs-modal__brand" aria-label="MangAfric">
             <span>Mang</span>
             <span className="prefs-modal__brand-accent">Afrik</span>
           </div>

@@ -6,7 +6,7 @@ import { adminApi } from '../../../services/api.js';
 
 export function MangaSubmissionsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [status, setStatus] = useState('pending');
+  const [status, setStatus] = useState('all');
   const [query, setQuery] = useState('');
   const [reasonById, setReasonById] = useState({});
   const [allRows, setAllRows] = useState([]);
@@ -40,8 +40,7 @@ export function MangaSubmissionsPage() {
       const creator = `${s.creator?.displayName || ''} ${s.creator?.email || ''}`.toLowerCase();
       return title.includes(q) || creator.includes(q);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, query, refreshKey]);
+  }, [allRows, status, query]);
 
   return (
     <AdminSectionPage

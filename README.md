@@ -1,6 +1,6 @@
-# Mangafrik - Plateforme de Mangas Africains
+# MangAfric - Plateforme de Mangas Africains
 
-Mangafrik est une plateforme communautaire dédiée aux mangas et webtoons africains. Elle permet aux créateurs de publier leurs œuvres et aux lecteurs de découvrir de nouvelles histoires.
+MangAfric est une plateforme communautaire dédiée aux mangas et webtoons africains. Elle permet aux créateurs de publier leurs œuvres et aux lecteurs de découvrir de nouvelles histoires.
 
 > **Présentation grand public (sans jargon)** : voir **[OVERVIEW.md](./OVERVIEW.md)** pour une explication complète en langage simple.
 > **Documentation technique** : voir **[PROJECT.md](./PROJECT.md)** pour l'architecture détaillée, les routes, l'API prévue, l'état du projet et les prochaines étapes.
@@ -25,7 +25,7 @@ Créer une vraie communauté de mangakas africains et **devenir le Webtoon ivoir
 ## Architecture du Projet
 
 ```
-Mangafrik/
+MangAfric/
 ├── front/       # Frontend Web — React + TypeScript + Vite + Tailwind
 ├── backend/     # Backend API  — Spring Boot + Java + PostgreSQL
 └── mobile/      # Application Mobile — Expo + React Native
@@ -90,7 +90,7 @@ Le frontend web et l'application mobile communiquent avec le backend Spring Boot
 
 ## Licence
 
-Tous droits réservés © 2025 Mangafrik
+Tous droits réservés © 2025 MangAfric
 
 ## Contribution
 

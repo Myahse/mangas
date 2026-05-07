@@ -55,7 +55,7 @@ export default function Footer() {
             <ul className="footer__links">
               <li><a href="#">À propos</a></li>
               <li><a href="#">FAQ</a></li>
-              <li><a href="#">Contact</a></li>
+              <li><Link to="/contact">Nous contacter</Link></li>
               <li><a href="#">Politique de confidentialité</a></li>
               <li><a href="#">Conditions d&apos;utilisation</a></li>
             </ul>
@@ -67,7 +67,7 @@ export default function Footer() {
             © {year} MangaAfrik. Fait avec passion pour les fans de manga.
           </p>
           <p className="footer__disclaimer">
-            MangAfrik ne revendique pas la propriété des œuvres présentées. Ce site est à but éducatif uniquement.
+            MangAfric ne revendique pas la propriété des œuvres présentées. Ce site est à but éducatif uniquement.
           </p>
         </div>
       </div>

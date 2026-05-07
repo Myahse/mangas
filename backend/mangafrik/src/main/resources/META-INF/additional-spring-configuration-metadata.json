@@ -1,0 +1,11 @@
+{
+  "properties": [
+    {
+      "name": "app.creator.logo.path",
+      "type": "java.lang.String",
+      "description": "Absolute path to the creator panel logo PNG served by PublicAssetsController at /api/v1/assets/creator-panel-logo.png (used in creator contracts).",
+      "defaultValue": "../../creator-panel/public/creator-panel.png"
+    }
+  ]
+}
+

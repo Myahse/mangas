@@ -59,6 +59,15 @@ export function AuthProvider({ children }) {
     }
   }, [key]);
 
+  useEffect(() => {
+    const token = String(user?.token || '').trim();
+    const role = String(user?.role || '').trim();
+    if (user && (!token || !role)) {
+      localStorage.removeItem(key);
+      setUser(null);
+    }
+  }, [user, key]);
+
   const persist = useCallback((next) => {
     setUser(next);
     if (next) localStorage.setItem(key, JSON.stringify(next));
@@ -70,12 +79,15 @@ export function AuthProvider({ children }) {
   const login = useCallback(
     async ({ email, password }) => {
       const res = await request('/auth/login', { method: 'POST', body: { email, password } });
+      const token = String(res?.token || '').trim();
+      const role = String(res?.role || '').trim();
+      if (!token || !role) throw new Error("Compte invalide (token/role manquant).");
       persist({
         id: res.id,
         email: res.email,
         displayName: res.displayName,
         role: res.role,
-        token: res.token,
+        token: token,
         mustChangePassword: Boolean(res.mustChangePassword),
       });
       return res;
@@ -86,7 +98,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       user,
-      isAuthenticated: Boolean(user),
+      isAuthenticated: Boolean(user && String(user?.token || '').trim() && String(user?.role || '').trim()),
       logout,
       login,
     }),
