@@ -1,15 +1,48 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const STORAGE_KEY = 'MangAfric_creator_locale';
+// Shared across all MangAfric apps (front/admin/creator/support/ads/finance)
+const STORAGE_KEY = 'MangAfric_locale';
+const LEGACY_KEYS = ['MangAfric_creator_locale'];
 const SUPPORTED = ['fr', 'en', 'ja'];
 
-function normalize(value) {
-  if (SUPPORTED.includes(value)) return value;
+function defaultLocale() {
+  const lang = String(navigator.language || '').toLowerCase();
+  if (lang.startsWith('fr')) return 'fr';
+  if (lang.startsWith('ja')) return 'ja';
   return 'en';
 }
 
+function normalize(value) {
+  if (SUPPORTED.includes(value)) return value;
+  return defaultLocale();
+}
+
+function readStored() {
+  const primary = window.localStorage.getItem(STORAGE_KEY);
+  if (primary) return normalize(primary);
+  for (const k of LEGACY_KEYS) {
+    const v = window.localStorage.getItem(k);
+    if (v) return normalize(v);
+  }
+  return defaultLocale();
+}
+
 export function useLocale() {
-  const [locale, setLocale] = useState(() => normalize(window.localStorage.getItem(STORAGE_KEY)));
+  const [locale, setLocale] = useState(() => readStored());
+
+  useEffect(() => {
+    // One-time migration from legacy key(s)
+    const existing = window.localStorage.getItem(STORAGE_KEY);
+    if (!existing) {
+      for (const k of LEGACY_KEYS) {
+        const v = window.localStorage.getItem(k);
+        if (v) {
+          window.localStorage.setItem(STORAGE_KEY, normalize(v));
+          break;
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, locale);
@@ -19,6 +52,16 @@ export function useLocale() {
   useEffect(() => {
     // Keep the fixed topbar consistent with current language (e.g. Japanese).
     document.documentElement.dir = 'ltr';
+  }, []);
+
+  useEffect(() => {
+    // Keep in sync across tabs/apps on the same origin.
+    const onStorage = (e) => {
+      if (e.key !== STORAGE_KEY) return;
+      setLocale(normalize(e.newValue));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const label = useMemo(() => {

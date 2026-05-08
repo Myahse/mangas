@@ -9,7 +9,8 @@
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--nav-border);
-  height: var(--navbar-height);
+  height: calc(var(--navbar-height) + var(--safe-top));
+  padding-top: var(--safe-top);
   transition: box-shadow 0.3s ease;
 }
 
@@ -64,6 +65,14 @@
   display: block;
   transform: translate(-20px, 6px) scale(3.5);
   transform-origin: left center;
+}
+
+@media (max-width: 520px) {
+  /* iPhone widths: keep the logo from blowing up the header */
+  .navbar__logo-img {
+    transform: none;
+    height: 30px;
+  }
 }
 
 /* ─── Nav Links ─── */
@@ -823,7 +832,8 @@
   }
 
   .navbar__search-box {
-    width: calc(100vw - 32px);
-    right: -60px;
+    width: auto;
+    left: 16px;
+    right: 16px;
   }
 }
