@@ -11,14 +11,14 @@ import { NotFoundPage } from './pages/NotFoundPage.jsx';
 export default function App() {
   return (
     <Routes>
-      <Route element={<AdminLayout />}>
-        <Route index element={<Navigate to="/overview" replace />} />
-        <Route path="/overview" element={<OverviewPage />} />
-        <Route path="/requests" element={<MangaRequestsPage />} />
-        <Route path="/creators" element={<CreatorRequestsPage />} />
-        <Route path="/submissions" element={<MangaSubmissionsPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/content" element={<ContentPage />} />
+      <Route path="/" element={<AdminLayout />}>
+        <Route index element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<OverviewPage />} />
+        <Route path="requests" element={<MangaRequestsPage />} />
+        <Route path="creators" element={<CreatorRequestsPage />} />
+        <Route path="submissions" element={<MangaSubmissionsPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="content" element={<ContentPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
