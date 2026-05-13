@@ -8,11 +8,11 @@ import { NotFoundPage } from './pages/NotFoundPage.jsx';
 export default function App() {
   return (
     <Routes>
-      <Route element={<FinanceLayout />}>
-        <Route index element={<Navigate to="/overview" replace />} />
-        <Route path="/overview" element={<OverviewPage />} />
-        <Route path="/transactions" element={<TransactionsPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/" element={<FinanceLayout />}>
+        <Route index element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<OverviewPage />} />
+        <Route path="transactions" element={<TransactionsPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
