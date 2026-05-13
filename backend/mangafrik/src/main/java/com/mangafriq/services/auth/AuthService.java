@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -113,7 +114,12 @@ public class AuthService {
 						values (cast(:id as uuid), :email, :display_name, :role, cast(:roles as text[]), :password_hash, cast(:profile as jsonb), :updated_at, :referred_by_user_id, :referred_at)
 						returning id, email, display_name, role, roles, profile
 						""", params);
+		} catch (DuplicateKeyException e) {
+			throw new IllegalArgumentException("email already exists");
 		} catch (Exception e) {
+			if (isDuplicateUserKey(e)) {
+				throw new IllegalArgumentException("email already exists");
+			}
 			// Legacy DB schema: id is bigint and referred_by_user_id is bigint.
 			Long referrerLegacy = null;
 			try {
@@ -131,11 +137,20 @@ public class AuthService {
 					.addValue("referred_by_user_id", referrerLegacy)
 					.addValue("referred_at", referrerLegacy == null ? null : Timestamp.from(now));
 
-			row = jdbc.queryForMap("""
-						insert into app_users (email, display_name, role, roles, password_hash, profile, updated_at, referred_by_user_id, referred_at)
-						values (:email, :display_name, :role, cast(:roles as text[]), :password_hash, cast(:profile as jsonb), :updated_at, :referred_by_user_id, :referred_at)
-						returning id, email, display_name, role, roles, profile
-						""", params2);
+			try {
+				row = jdbc.queryForMap("""
+							insert into app_users (email, display_name, role, roles, password_hash, profile, updated_at, referred_by_user_id, referred_at)
+							values (:email, :display_name, :role, cast(:roles as text[]), :password_hash, cast(:profile as jsonb), :updated_at, :referred_by_user_id, :referred_at)
+							returning id, email, display_name, role, roles, profile
+							""", params2);
+			} catch (DuplicateKeyException e2) {
+				throw new IllegalArgumentException("email already exists");
+			} catch (Exception e2) {
+				if (isDuplicateUserKey(e2)) {
+					throw new IllegalArgumentException("email already exists");
+				}
+				throw e2;
+			}
 		}
 
 		RegisterResponse res = new RegisterResponse(
@@ -156,6 +171,23 @@ public class AuthService {
 			}
 		} catch (Exception ignored) {}
 		return res;
+	}
+
+	/** Email unique violations (modern + legacy JDBC wrappers). */
+	private static boolean isDuplicateUserKey(Throwable e) {
+		for (Throwable t = e; t != null; t = t.getCause()) {
+			if (t instanceof DuplicateKeyException) {
+				return true;
+			}
+		}
+		String m = e.getMessage();
+		if (m == null) {
+			return false;
+		}
+		String u = m.toLowerCase();
+		return u.contains("duplicate key")
+				|| u.contains("unique constraint")
+				|| u.contains("unique violation");
 	}
 
 	private String toJson(Object value) {
