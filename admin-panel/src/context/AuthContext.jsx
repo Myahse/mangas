@@ -10,9 +10,9 @@ function requiredApiBaseUrl() {
 
 function requiredSessionStorageKey() {
   const raw = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
-  if (!raw || raw === 'undefined' || raw === 'null') {
-    throw new Error('Missing VITE_SESSION_STORAGE_KEY in admin-panel/.env');
-  }
+  // Fail-open in production deployments: use a stable default to avoid a hard crash
+  // if the env var wasn't configured in Vercel.
+  if (!raw || raw === 'undefined' || raw === 'null') return 'MangAfric_session';
   return raw;
 }
 

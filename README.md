@@ -14,7 +14,7 @@ MangAfric est une plateforme communautaire dédiée aux mangas et webtoons afric
 | **Frontend** | React, TypeScript, Vite, Tailwind CSS |
 | **Backend** | Spring Boot, Java |
 | **Base de données** | PostgreSQL |
-| **Mobile** | Expo, React Native, TypeScript |
+| **Mobile** | Flutter (Dart) — lecteur + studio créateur |
 
 ---
 
@@ -28,7 +28,8 @@ Créer une vraie communauté de mangakas africains et **devenir le Webtoon ivoir
 MangAfric/
 ├── front/       # Frontend Web — React + TypeScript + Vite + Tailwind
 ├── backend/     # Backend API  — Spring Boot + Java + PostgreSQL
-└── mobile/      # Application Mobile — Expo + React Native
+├── mobile/          # App lecteur — Flutter
+└── mobile-creator/  # App studio créateur — Flutter
 ```
 
 ## Installation
@@ -56,12 +57,22 @@ cd backend
 
 > Le backend se connecte à une base **PostgreSQL**. Configurez les informations de connexion dans `application.properties` ou `application.yml`.
 
-### Mobile
+### Mobile (Flutter)
+
+Lecteur :
 
 ```bash
 cd mobile
-npm install
-npx expo start
+flutter pub get
+flutter run
+```
+
+Studio créateur :
+
+```bash
+cd mobile-creator
+flutter pub get
+flutter run
 ```
 
 ## Fonctionnalités

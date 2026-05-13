@@ -34,14 +34,16 @@ Plateforme communautaire dédiée aux mangas et webtoons africains. Elle permet 
 ```
 webgas/
 ├── front/          # Frontend Web (Vite + React + TypeScript + Tailwind)
-├── mobile/         # Application mobile (Expo + React Native + TypeScript)
+├── mobile/          # App lecteur (Flutter)
+├── mobile-creator/  # App studio créateur (Flutter)
 ├── backend/        # Backend API (Spring Boot — à développer)
 ├── README.md       # Présentation rapide
 └── PROJECT.md      # Ce document (documentation complète)
 ```
 
 - **front** : SPA React pour navigateur.
-- **mobile** : App Expo (React Native) pour Android / iOS / web.
+- **mobile** : App lecteur Flutter (Android / iOS).
+- **mobile-creator** : App studio créateur Flutter (Android / iOS).
 - **backend** : API REST prévue en Spring Boot ; pour l’instant seul le README et la structure cible sont décrits.
 
 ---
@@ -58,14 +60,14 @@ webgas/
 | **Tailwind CSS** | Styles utilitaires        |
 | **React Router v6** | Navigation (routes SPA) |
 
-### Mobile (`mobile/`)
+### Mobile (`mobile/`, `mobile-creator/`)
 
 | Technologie        | Rôle                          |
 |--------------------|--------------------------------|
-| **Expo ~54**       | Framework et tooling          |
-| **React Native**   | UI native                     |
-| **Expo Router**    | Routing (file-based)          |
-| **TypeScript**     | Typage                        |
+| **Flutter**        | UI native (Dart)              |
+| **go_router**      | Navigation (app lecteur)      |
+| **shared_preferences** | Onboarding (lecteur)    |
+| **cached_network_image** | Images réseau (lecteur) |
 
 ### Backend (`backend/`)
 
@@ -79,7 +81,7 @@ webgas/
 ### Prérequis
 
 - **Frontend** : Node.js (LTS recommandé), npm
-- **Mobile** : Node.js, npm, Expo CLI (ou `npx expo`), appareil ou émulateur
+- **Mobile** : [Flutter SDK](https://docs.flutter.dev/get-started/install), appareil ou émulateur
 - **Backend** (futur) : JDK 17+, Maven/Gradle, PostgreSQL
 
 ### Frontend Web
@@ -95,16 +97,23 @@ npm run dev
 - Preview build : `npm run preview`
 - Lint : `npm run lint`
 
-### Mobile (Expo)
+### Mobile (Flutter)
+
+Lecteur :
 
 ```bash
 cd mobile
-npm install
-npx expo start
+flutter pub get
+flutter run
 ```
 
-- Puis : Android, iOS ou Web depuis le menu Expo.
-- Scripts : `npm run android`, `npm run ios`, `npm run web`.
+Studio créateur :
+
+```bash
+cd mobile-creator
+flutter pub get
+flutter run
+```
 
 ### Backend
 
@@ -141,26 +150,19 @@ front/
         └── CreateManga.tsx
 ```
 
-### Mobile (`mobile/`)
+### Mobile (`mobile/`, `mobile-creator/`)
 
 ```
-mobile/
-├── app/                   # Expo Router (file-based)
-│   ├── _layout.tsx
-│   ├── (tabs)/
-│   │   ├── _layout.tsx
-│   │   ├── index.tsx
-│   │   └── explore.tsx
-│   └── modal.tsx
-├── src/
-│   ├── components/        # ex. MangaCard.tsx
-│   └── screens/           # ex. HomeScreen.tsx
-├── components/            # Composants partagés
-├── constants/
-├── hooks/
-├── package.json
-├── app.json
-└── README.md
+mobile/                    # Lecteur Flutter
+├── lib/
+│   ├── main.dart
+│   └── src/               # thème, router, données, écrans
+├── assets/db.json         # Catalogue mock (remplacer par API)
+└── pubspec.yaml
+
+mobile-creator/            # Studio créateur Flutter
+├── lib/main.dart
+└── pubspec.yaml
 ```
 
 ### Backend (`backend/`)
@@ -195,7 +197,7 @@ mobile/
 ### Implémentation actuelle
 
 - **Frontend** : UI complète avec données en dur (mock). Pas encore d’appels API.
-- **Mobile** : Structure Expo + écrans de base (à brancher sur l’API).
+- **Mobile** : Apps Flutter (lecteur + studio) avec données mock ; à brancher sur l’API.
 - **Backend** : Non implémenté ; API décrite dans `backend/README.md`.
 
 ---
@@ -213,10 +215,10 @@ mobile/
 | `/manga/:id`| MangaDetail  | Détail d’un manga              |
 | `/create`   | CreateManga  | Création / publication d’un manga |
 
-### Mobile (Expo Router)
+### Mobile (Flutter / go_router)
 
-- Onglets et modales définis sous `app/` (ex. `(tabs)/index`, `(tabs)/explore`, `modal`).
-- Détail des écrans dans `mobile/README.md` ou à compléter selon l’avancement.
+- **Lecteur** : splash → onboarding (première ouverture) → onglets Accueil / Explorer ; routes `/manga/:slug` et `/manga/:slug/chapter/:n`.
+- **Studio** : onglets Séries / Épisodes / Profil (UI placeholder).
 
 ---
 
@@ -271,7 +273,7 @@ Sécurité prévue : JWT, Spring Security, CORS pour front et mobile.
 ### Fait
 
 - Frontend web : pages, layout, navigation, composants (données mock).
-- Mobile : structure Expo + React Native, routing de base.
+- Mobile : apps Flutter (lecteur + studio), navigation de base.
 - Documentation : README racine, README par sous-projet, ce PROJECT.md.
 
 ### À faire

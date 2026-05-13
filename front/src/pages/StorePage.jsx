@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import { createCoinPurchaseIntent, fetchCoinPacks, fetchWallet, useFetch } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { onWalletUpdated } from '../realtime/walletEvents';
+import { useLocale } from '../hooks/useLocale';
+import { formatMoney } from '../utils/money';
 
 export default function StorePage() {
   const { isAuthenticated } = useAuth();
+  const { locale } = useLocale();
   const [walletKey, setWalletKey] = useState(0);
   const [packsKey, setPacksKey] = useState(0);
   const { data: wallet } = useFetch(fetchWallet, walletKey);
@@ -67,7 +70,7 @@ export default function StorePage() {
               <div style={{ fontWeight: 950 }}>{p.title}</div>
               <div style={{ marginTop: 6, fontWeight: 900 }}>{p.coins} coins</div>
               <div style={{ marginTop: 6, color: 'var(--text-muted)', fontWeight: 800 }}>
-                {p.amount} {p.currency}
+                {formatMoney(p.amount, { currency: p.currency, locale })}
               </div>
               <div style={{ marginTop: 12 }}>
                 <button

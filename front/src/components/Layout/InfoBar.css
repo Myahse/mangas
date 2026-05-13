@@ -1,7 +1,7 @@
 /* ─── Info Bar ─── */
 .infobar {
   position: fixed;
-  top: var(--navbar-height);
+  top: calc(var(--navbar-height) + var(--safe-top));
   left: 0;
   right: 0;
   z-index: 999;
