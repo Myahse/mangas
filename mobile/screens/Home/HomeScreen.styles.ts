@@ -325,7 +325,7 @@ export const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: MangAfric.primary,
-    backgroundColor: 'rgba(230, 57, 70, 0.08)',
+    backgroundColor: 'rgba(255, 106, 0, 0.1)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 3,
