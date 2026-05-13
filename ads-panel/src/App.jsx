@@ -9,12 +9,12 @@ import { NotFoundPage } from './pages/NotFoundPage.jsx';
 export default function App() {
   return (
     <Routes>
-      <Route element={<AdminLayout />}>
-        <Route index element={<Navigate to="/overview" replace />} />
-        <Route path="/overview" element={<OverviewPage />} />
-        <Route path="/hero-ads" element={<HeroAdsPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/system-notices" element={<SystemNoticesPage />} />
+      <Route path="/" element={<AdminLayout />}>
+        <Route index element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<OverviewPage />} />
+        <Route path="hero-ads" element={<HeroAdsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="system-notices" element={<SystemNoticesPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
