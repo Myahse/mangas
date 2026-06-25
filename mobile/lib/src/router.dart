@@ -6,6 +6,7 @@ import 'screens/account_stub_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/manga_detail_screen.dart';
+import 'screens/notifications_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/reader_screen.dart';
 import 'screens/register_screen.dart';
@@ -64,6 +65,11 @@ GoRouter createRouter(StartupController startup) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
