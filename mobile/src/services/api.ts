@@ -1,4 +1,4 @@
-import { Manga } from '@/src/types/manga';
+import { ChapterSummary, Manga } from '@/src/types/manga';
 import dbData from '@/assets/db.json';
 
 const FAKE_DELAY = 300;
@@ -46,4 +46,24 @@ export async function fetchLatestUpdated(count = 12): Promise<Manga[]> {
   return [...db.manga]
     .sort((a, b) => b.latestChapter.number - a.latestChapter.number)
     .slice(0, count);
+}
+
+export async function fetchChapters(slug: string): Promise<ChapterSummary[]> {
+  const manga = await fetchMangaBySlug(slug);
+  const max = Math.min(manga.totalChapters, 48);
+  return Array.from({ length: max }, (_, i) => {
+    const number = i + 1;
+    const title =
+      number === manga.latestChapter.number ? manga.latestChapter.title : `Chapitre ${number}`;
+    return { number, title };
+  });
+}
+
+export async function fetchPages(slug: string, chapter: number): Promise<{ url: string }[]> {
+  const manga = await fetchMangaBySlug(slug);
+  const fromLocal = manga.localChapters?.[String(chapter)];
+  const pageCount = typeof fromLocal === 'number' ? fromLocal : 8;
+  return Array.from({ length: pageCount }, (_, i) => ({
+    url: `https://picsum.photos/seed/${encodeURIComponent(slug)}-ch${chapter}-p${i + 1}/800/1200`,
+  }));
 }
