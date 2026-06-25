@@ -1,0 +1,4 @@
+{
+  "MANGAFRIC_API_BASE_URL": "https://your-api-host.example/api/v1",
+  "MANGAFRIC_SESSION_KEY": "MangAfric_session"
+}
