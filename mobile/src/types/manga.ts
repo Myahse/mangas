@@ -31,3 +31,8 @@ export interface MangaDB {
   manga: Manga[];
   genres: string[];
 }
+
+export interface ChapterSummary {
+  number: number;
+  title: string;
+}
