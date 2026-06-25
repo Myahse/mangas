@@ -4,48 +4,63 @@ node_modules/
 
 # Build outputs
 dist/
+dist-ssr/
 build/
 **/dist/
 **/build/
+*.local
 
-# Flutter
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+*.sw?
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.production.local
+.env.staging
+.env.staging.local
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temp / local tooling
+.tmp-neon-check/
+
+# Flutter / Dart (mobile)
 **/.dart_tool/
 **/.flutter-plugins
 **/.flutter-plugins-dependencies
 **/.packages
 **/.pub-cache/
 **/.pub/
-**/build/
 **/ios/Pods/
-**/ios/.symlinks/
+**/.symlinks/
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Logs
-*.log
-logs/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# OS
-Thumbs.db
-.DS_Store
 
 # Java / Spring Boot
 **/target/

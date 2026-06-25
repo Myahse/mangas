@@ -1,0 +1,62 @@
+/* Same layout as admin-panel InfoBar, purple/black palette */
+.infobar {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  right: 0;
+  z-index: 999;
+  height: var(--infobar-height);
+  background: linear-gradient(90deg, #0b0616 0%, #140a24 50%, #0b0616 100%);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.25);
+  overflow: hidden;
+}
+
+.infobar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(124, 58, 237, 0.08) 50%,
+    transparent 100%
+  );
+  animation: infobar-glow 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes infobar-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.infobar__inner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.infobar__icon {
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.infobar__text {
+  flex: 1;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+

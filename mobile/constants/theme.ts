@@ -1,41 +1,88 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * MangAfric — aligned with front/src/styles/global.css
  */
-
+import { DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native';
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+export const MangAfric = {
+  primary: '#e63946',
+  primaryDark: '#c1121f',
+  primaryLight: '#ff6b6b',
+  bgLight: '#f4f4f6',
+  bgWhite: '#ffffff',
+  textDark: '#111111',
+  textMuted: '#888888',
+  textSecondary: '#555555',
+  border: '#e0e0e0',
+  cardShadow: 'rgba(0,0,0,0.08)',
+  rating: '#f5a623',
+  ongoingBg: '#e8f5e9',
+  ongoingText: '#2e7d32',
+  completedBg: '#e3f2fd',
+  completedText: '#1565c0',
+  hiatusBg: '#fff3e0',
+  hiatusText: '#e65100',
+  accentOrange: '#f97316',
+  accentPink: '#ec4899',
+  accentPurple: '#a855f7',
+} as const;
+
+// Back-compat alias (avoid touching every import at once)
+export const MangAfriq = MangAfric;
+
+const tintLight = MangAfric.primary;
+const tintDark = '#ff6b6b';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: MangAfric.textDark,
+    background: MangAfric.bgLight,
+    tint: tintLight,
+    icon: MangAfric.textMuted,
+    tabIconDefault: MangAfric.textMuted,
+    tabIconSelected: tintLight,
   },
   dark: {
     text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
+    background: '#0d0d0d',
+    tint: tintDark,
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    tabIconSelected: tintDark,
+  },
+};
+
+export const NavigationLightTheme: Theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: MangAfric.primary,
+    background: MangAfric.bgLight,
+    card: MangAfric.bgWhite,
+    text: MangAfric.textDark,
+    border: MangAfric.border,
+    notification: MangAfric.primary,
+  },
+};
+
+export const NavigationDarkTheme: Theme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: MangAfric.primaryLight,
+    background: '#0d0d0d',
+    card: '#1a1a1a',
+    text: '#f4f4f6',
+    border: '#2e2e2e',
+    notification: MangAfric.primary,
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {

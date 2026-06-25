@@ -1,0 +1,25 @@
+name: mangafriq_reader
+description: MangAfric reader app (Flutter) — connects to the same API as the web front.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  go_router: ^14.6.2
+  shared_preferences: ^2.3.5
+  cached_network_image: ^3.4.1
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

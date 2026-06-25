@@ -1,0 +1,51 @@
+/* Même base que front/src/pages/Account/AccountSectionPage.css */
+.account-section {
+  padding: calc(var(--navbar-height, 64px) + 48px) 0 80px;
+  max-width: 720px;
+}
+
+.account-section__crumb {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.account-section__crumb a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.account-section__crumb a:hover {
+  text-decoration: underline;
+}
+
+.account-section__title {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--text-dark);
+  letter-spacing: -0.02em;
+}
+
+.dark .account-section__title {
+  color: var(--text-white);
+}
+
+.account-section__lead {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.account-section__inline-link {
+  display: inline-block;
+  margin-top: 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.account-section__inline-link:hover {
+  text-decoration: underline;
+}

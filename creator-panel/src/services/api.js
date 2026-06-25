@@ -1,0 +1,120 @@
+function requiredApiBaseUrl() {
+  const raw = String(import.meta.env.VITE_API_BASE_URL ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_API_BASE_URL in creator-panel/.env');
+  }
+  return raw;
+}
+
+function requiredSessionStorageKey() {
+  const raw = String(import.meta.env.VITE_SESSION_STORAGE_KEY ?? '').trim();
+  if (!raw || raw === 'undefined' || raw === 'null') {
+    throw new Error('Missing VITE_SESSION_STORAGE_KEY in creator-panel/.env');
+  }
+  return raw;
+}
+
+function apiBase() {
+  return requiredApiBaseUrl().replace(/\/$/, '');
+}
+
+async function request(path, { method = 'GET', body, headers } = {}) {
+  const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
+  let token = '';
+  try {
+    const key = requiredSessionStorageKey();
+    const raw = localStorage.getItem(key);
+    token = raw ? JSON.parse(raw)?.token || '' : '';
+  } catch {}
+  const res = await fetch(url, {
+    method,
+    headers: {
+      ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : null),
+      ...(token ? { Authorization: `Bearer ${token}` } : null),
+      ...(headers || null),
+    },
+    body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || `Request failed (${res.status})`);
+  }
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) return res.json();
+  return res.text();
+}
+
+function readSession() {
+  try {
+    const key = requiredSessionStorageKey();
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export const creatorApi = {
+  // Storage (R2 via backend)
+  async uploadFile({ file, prefix }) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const qs = prefix ? `?prefix=${encodeURIComponent(prefix)}` : '';
+    return request(`/storage/upload${qs}`, { method: 'POST', body: fd });
+  },
+
+  // Series submissions
+  async createSubmission(payload) {
+    const session = readSession();
+    return request('/creator/submissions', {
+      method: 'POST',
+      body: {
+        creatorEmail: session?.email || 'unknown',
+        creatorDisplayName: session?.displayName || 'Unknown creator',
+        payload,
+      },
+    });
+  },
+  async listMySubmissions() {
+    const session = readSession();
+    const email = encodeURIComponent(session?.email || '');
+    const qs = email ? `?email=${email}` : '';
+    return request(`/creator/submissions${qs}`);
+  },
+
+  // Episodes
+  async listDrafts() {
+    return request('/creator/episodes/drafts');
+  },
+  async createDraft(draft) {
+    return request('/creator/episodes/drafts', { method: 'POST', body: draft });
+  },
+  async listPublished() {
+    return request('/creator/episodes/published');
+  },
+  async createPublished(entry) {
+    return request('/creator/episodes/published', { method: 'POST', body: entry });
+  },
+  async addView(id) {
+    return request(`/creator/episodes/published/${encodeURIComponent(id)}/view`, { method: 'POST' });
+  },
+  async addLike(id) {
+    return request(`/creator/episodes/published/${encodeURIComponent(id)}/like`, { method: 'POST' });
+  },
+  async addComment(id, comment) {
+    return request(`/creator/episodes/published/${encodeURIComponent(id)}/comments`, {
+      method: 'POST',
+      body: comment,
+    });
+  },
+
+  async createSupportTicket(payload) {
+    return request('/support/public/tickets', { method: 'POST', body: payload });
+  },
+
+  // Coins / wallet
+  async wallet() {
+    return request('/wallet');
+  },
+};
+

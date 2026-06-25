@@ -2,12 +2,25 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/magafrik-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebGas - Plateforme de Mangas Africains</title>
+    <meta name="description" content="MangaVerse — Lisez vos mangas préférés gratuitement en ligne" />
+    <title>MangaVerse — Lecture de Manga en ligne</title>
+    <script>
+    
+      (function () {
+        try {
+          var mode = localStorage.getItem('theme') || 'system';
+          var prefersDark =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = mode === 'dark' || (mode === 'system' && prefersDark);
+          document.documentElement.classList.toggle('dark', !!isDark);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

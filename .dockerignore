@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/dist-ssr
+**/.vite
+**/build
+**/target
+.git
+.github
+*.log
+.env
+.env.*
+

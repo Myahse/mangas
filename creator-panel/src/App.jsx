@@ -1,0 +1,25 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import CreatorLayout from './layout/CreatorLayout';
+import CreatorSectionPage from './pages/CreatorSectionPage';
+import SeriesPage from './pages/SeriesPage';
+import EpisodesPage from './pages/EpisodesPage';
+import CreatorProfilePage from './pages/CreatorProfilePage';
+import PublicationsPage from './features/publications/PublicationsPage';
+import NotFoundPage from './pages/NotFoundPage';
+import ContactPage from './pages/ContactPage.jsx';
+
+export default function App() {
+  return (
+    <CreatorLayout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/series" replace />} />
+        <Route path="/series" element={<SeriesPage />} />
+        <Route path="/episodes" element={<EpisodesPage />} />
+        <Route path="/publications" element={<PublicationsPage />} />
+        <Route path="/profil" element={<CreatorProfilePage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </CreatorLayout>
+  );
+}

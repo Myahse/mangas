@@ -1,0 +1,113 @@
+/* ─── Info Bar ─── */
+.infobar {
+  position: fixed;
+  top: calc(var(--navbar-height) + var(--safe-top));
+  left: 0;
+  right: 0;
+  z-index: 999;
+  height: var(--infobar-height);
+  background: linear-gradient(90deg, #180609 0%, #250b0f 50%, #180609 100%);
+  border-bottom: 1px solid rgba(230, 57, 70, 0.2);
+  overflow: hidden;
+}
+
+/* subtle pulse glow */
+.infobar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(230, 57, 70, 0.05) 50%,
+    transparent 100%
+  );
+  animation: infobar-glow 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes infobar-glow {
+  0%, 100% { opacity: 0; }
+  50%       { opacity: 1; }
+}
+
+/* ─── Inner ─── */
+.infobar__inner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ─── Icon ─── */
+.infobar__icon {
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* ─── Text ─── */
+.infobar__text {
+  flex: 1;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.infobar__text--fade {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ─── Dots ─── */
+.infobar__dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.infobar__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.25s ease;
+}
+
+.infobar__dot--active {
+  background: var(--primary);
+  width: 14px;
+  border-radius: 3px;
+}
+
+/* ─── Close ─── */
+.infobar__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.infobar__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 640px) {
+  .infobar__dots {
+    display: none;
+  }
+}
