@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../auth/auth_controller.dart';
 import '../data/catalog_service.dart';
 import '../data/models.dart';
+import '../notifications/notification_controller.dart';
 import '../theme.dart';
 import '../config/api_endpoint_sheet.dart';
 import '../widgets/reader_auth_sheet.dart';
@@ -24,12 +25,14 @@ class _ReaderShellScreenState extends State<ReaderShellScreen> {
   void initState() {
     super.initState();
     authController.addListener(_onAuthChanged);
+    notificationController.startPolling();
     _refreshWallet();
   }
 
   @override
   void dispose() {
     authController.removeListener(_onAuthChanged);
+    notificationController.disposePolling();
     super.dispose();
   }
 
@@ -81,6 +84,22 @@ class _ReaderShellScreenState extends State<ReaderShellScreen> {
             ),
             actions: [
               IconButton(icon: const Icon(Icons.search), tooltip: 'Rechercher', onPressed: _openSearch),
+              if (authed)
+                ListenableBuilder(
+                  listenable: notificationController,
+                  builder: (context, _) {
+                    final unread = notificationController.unreadCount;
+                    return IconButton(
+                      tooltip: 'Notifications',
+                      onPressed: () => context.push('/notifications'),
+                      icon: Badge(
+                        isLabelVisible: unread > 0,
+                        label: Text(unread > 99 ? '99+' : '$unread'),
+                        child: const Icon(Icons.notifications_outlined),
+                      ),
+                    );
+                  },
+                ),
               if (authed && _walletBalance != null)
                 Padding(
                   padding: const EdgeInsets.only(right: 4),
