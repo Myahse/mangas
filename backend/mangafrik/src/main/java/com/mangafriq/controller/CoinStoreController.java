@@ -28,8 +28,8 @@ public class CoinStoreController {
 
 	@PostMapping("/coin-purchase-intents")
 	public PurchaseIntentDto createIntent(@RequestBody CreatePurchaseIntentRequest req) {
-		var uid = SecurityUtils.getCurrentUserId().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
-		return store.createIntent(uid.toString(), req);
+		var uid = SecurityUtils.getCurrentUserIdString().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
+		return store.createIntent(uid, req);
 	}
 }
 

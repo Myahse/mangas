@@ -10,6 +10,7 @@ import com.mangafriq.dto.wallet.WalletDtos.UnlockResponse;
 import com.mangafriq.dto.wallet.WalletDtos.WalletDto;
 import com.mangafriq.dto.wallet.WalletDtos.ClaimReferralRewardResponse;
 import com.mangafriq.dto.wallet.WalletDtos.WalletUpdateEvent;
+import com.mangafriq.jdbc.UserIdJdbc;
 import com.mangafriq.exception.NotFoundException;
 import com.mangafriq.realtime.WalletRealtime;
 import java.sql.Date;
@@ -36,6 +37,7 @@ public class WalletService {
 	private final FeatureFlagService featureFlags;
 	private final WalletRealtime walletRealtime;
 	private volatile Boolean coinLedgerHasBucketCache = null;
+	private volatile Boolean dailyClaimsHasLastClaimAtCache = null;
 
 	@Value("${app.coins.rewards.enabled:true}")
 	private boolean rewardsEnabled;
@@ -78,7 +80,7 @@ public class WalletService {
 					order by created_at desc
 					limit 30
 					""",
-				Map.of("user_id", UUID.fromString(userId)),
+				Map.of("user_id", UserIdJdbc.param(userId)),
 				(rs, i) -> new LedgerRowDto(
 					rs.getString("id"),
 					rs.getString("type"),
@@ -108,7 +110,7 @@ public class WalletService {
 					select coalesce(sum(amount), 0)
 					from coin_ledger
 					where user_id = :user_id
-					""", Map.of("user_id", UUID.fromString(userId)), Integer.class);
+					""", Map.of("user_id", UserIdJdbc.param(userId)), Integer.class);
 			return v == null ? 0 : v;
 		} catch (BadSqlGrammarException e) {
 			return 0;
@@ -122,7 +124,7 @@ public class WalletService {
 					from coin_ledger
 					where user_id = :user_id
 					  and upper(bucket) = 'PAID'
-					""", Map.of("user_id", UUID.fromString(userId)), Integer.class);
+					""", Map.of("user_id", UserIdJdbc.param(userId)), Integer.class);
 			return v == null ? 0 : v;
 		} catch (BadSqlGrammarException e) {
 			return 0;
@@ -136,7 +138,7 @@ public class WalletService {
 					from coin_ledger
 					where user_id = :user_id
 					  and upper(bucket) = 'REWARD'
-					""", Map.of("user_id", UUID.fromString(userId)), Integer.class);
+					""", Map.of("user_id", UserIdJdbc.param(userId)), Integer.class);
 			return v == null ? 0 : v;
 		} catch (BadSqlGrammarException e) {
 			return 0;
@@ -152,7 +154,7 @@ public class WalletService {
 					from app_users
 					where id = :id
 					limit 1
-					""", Map.of("id", UUID.fromString(userId)));
+					""", Map.of("id", UserIdJdbc.param(userId)));
 			String existing = rows.isEmpty() ? "" : String.valueOf(rows.get(0).getOrDefault("referral_code", "")).trim();
 			if (!existing.isBlank() && !"null".equalsIgnoreCase(existing)) return existing;
 		} catch (BadSqlGrammarException e) {
@@ -168,7 +170,7 @@ public class WalletService {
 					where id = :id
 					  and (referral_code is null or trim(referral_code) = '')
 					""", new MapSqlParameterSource()
-				.addValue("id", UUID.fromString(userId))
+				.addValue("id", UserIdJdbc.param(userId))
 				.addValue("code", code));
 			if (updated == 1) return code;
 		}
@@ -178,7 +180,7 @@ public class WalletService {
 				from app_users
 				where id = :id
 				limit 1
-				""", Map.of("id", UUID.fromString(userId)));
+				""", Map.of("id", UserIdJdbc.param(userId)));
 		return rows.isEmpty() ? "" : String.valueOf(rows.get(0).getOrDefault("referral_code", "")).trim();
 	}
 
@@ -191,7 +193,7 @@ public class WalletService {
 					from app_users
 					where id = :id
 					limit 1
-					""", Map.of("id", UUID.fromString(referredUserId)));
+					""", Map.of("id", UserIdJdbc.param(referredUserId)));
 			if (rows.isEmpty()) return false;
 			Map<String, Object> row = rows.get(0);
 			Object refByObj = row.get("referred_by_user_id");
@@ -214,7 +216,7 @@ public class WalletService {
 					select count(*)
 					from referral_rewards
 					where referred_user_id = :referred
-					""", Map.of("referred", UUID.fromString(referredUserId)), Integer.class);
+					""", Map.of("referred", UserIdJdbc.param(referredUserId)), Integer.class);
 			if (existing != null && existing > 0) {
 				return false;
 			}
@@ -227,8 +229,8 @@ public class WalletService {
 					values (:id, :referrer, :referred, :amount, 'pending', :created_at)
 					""", new MapSqlParameterSource()
 				.addValue("id", UUID.randomUUID())
-				.addValue("referrer", UUID.fromString(referrerId))
-				.addValue("referred", UUID.fromString(referredUserId))
+				.addValue("referrer", UserIdJdbc.param(referrerId))
+				.addValue("referred", UserIdJdbc.param(referredUserId))
 				.addValue("amount", amt)
 				.addValue("created_at", Timestamp.from(now)));
 
@@ -236,7 +238,7 @@ public class WalletService {
 					update app_users
 					set referral_rewarded = true
 					where id = :id
-					""", Map.of("id", UUID.fromString(referredUserId)));
+					""", Map.of("id", UserIdJdbc.param(referredUserId)));
 			return true;
 		} catch (BadSqlGrammarException e) {
 			return false;
@@ -254,7 +256,7 @@ public class WalletService {
 					order by rr.created_at desc
 					limit 20
 					""",
-				Map.of("uid", UUID.fromString(referrerUserId)),
+				Map.of("uid", UserIdJdbc.param(referrerUserId)),
 				(rs, i) -> new PendingReferralRewardDto(
 					rs.getString("id"),
 					rs.getInt("amount"),
@@ -283,7 +285,7 @@ public class WalletService {
 					where id = :id
 					  and referrer_user_id = :uid
 					limit 1
-					""", Map.of("id", rewardId, "uid", UUID.fromString(referrerUserId)));
+					""", Map.of("id", rewardId, "uid", UserIdJdbc.param(referrerUserId)));
 			if (rows.isEmpty()) throw new NotFoundException("Reward not found");
 			Map<String, Object> row = rows.get(0);
 			String status = String.valueOf(row.get("status"));
@@ -301,7 +303,7 @@ public class WalletService {
 					  and status = 'pending'
 					""", new MapSqlParameterSource()
 				.addValue("id", rewardId)
-				.addValue("uid", UUID.fromString(referrerUserId))
+				.addValue("uid", UserIdJdbc.param(referrerUserId))
 				.addValue("at", Timestamp.from(now)));
 
 			credit(referrerUserId, "REFERRAL_BONUS", Math.max(0, amt), "referral_reward", rewardId.toString());
@@ -345,8 +347,8 @@ public class WalletService {
 					where id = :id
 					  and referred_by_user_id is null
 					""", new MapSqlParameterSource()
-				.addValue("id", UUID.fromString(userId))
-				.addValue("referrer_id", UUID.fromString(referrerId))
+				.addValue("id", UserIdJdbc.param(userId))
+				.addValue("referrer_id", UserIdJdbc.param(referrerId))
 				.addValue("referred_at", Timestamp.from(now)));
 		} catch (BadSqlGrammarException ignored) {}
 	}
@@ -383,12 +385,7 @@ public class WalletService {
 
 		List<Map<String, Object>> rows;
 		try {
-			rows = jdbc.queryForList("""
-					select last_claim_at, last_claim_date
-					from daily_coin_claims
-					where user_id = :user_id
-					limit 1
-					""", Map.of("user_id", UUID.fromString(userId)));
+			rows = loadDailyClaimRows(userId);
 		} catch (BadSqlGrammarException e) {
 			// Migrations not applied yet (daily_coin_claims missing). Avoid crashing the app.
 			int bal = balance(userId);
@@ -413,27 +410,9 @@ public class WalletService {
 					return new DailyClaimResponse(false, 0, bal, null);
 				}
 			}
-			LocalDate today = LocalDate.now(ZoneOffset.UTC);
-			Date todaySql = Date.valueOf(today);
-			jdbc.update("""
-					update daily_coin_claims
-					set last_claim_date = :d,
-					    last_claim_at = :at
-					where user_id = :user_id
-					""", new MapSqlParameterSource()
-				.addValue("d", todaySql)
-				.addValue("at", Timestamp.from(now))
-				.addValue("user_id", UUID.fromString(userId)));
+			upsertDailyClaim(userId, Date.valueOf(LocalDate.now(ZoneOffset.UTC)), now, false);
 		} else {
-			LocalDate today = LocalDate.now(ZoneOffset.UTC);
-			Date todaySql = Date.valueOf(today);
-			jdbc.update("""
-					insert into daily_coin_claims (user_id, last_claim_date, last_claim_at)
-					values (:user_id, :d, :at)
-					""", new MapSqlParameterSource()
-				.addValue("user_id", UUID.fromString(userId))
-				.addValue("d", todaySql)
-				.addValue("at", Timestamp.from(now)));
+			upsertDailyClaim(userId, Date.valueOf(LocalDate.now(ZoneOffset.UTC)), now, true);
 		}
 
 		int credited = Math.max(0, dailyClaimAmount);
@@ -459,12 +438,7 @@ public class WalletService {
 		}
 		Instant now = Instant.now();
 		try {
-			List<Map<String, Object>> rows = jdbc.queryForList("""
-					select last_claim_at, last_claim_date
-					from daily_coin_claims
-					where user_id = :user_id
-					limit 1
-					""", Map.of("user_id", UUID.fromString(userId)));
+			List<Map<String, Object>> rows = loadDailyClaimRows(userId);
 			if (rows.isEmpty()) {
 				return new com.mangafriq.dto.wallet.WalletDtos.DailyClaimStatusResponse(true, true, amount, null, now);
 			}
@@ -496,6 +470,97 @@ public class WalletService {
 			return Instant.parse(s);
 		} catch (Exception ignored) {
 			return null;
+		}
+	}
+
+	private List<Map<String, Object>> loadDailyClaimRows(String userId) {
+		Object uid = UserIdJdbc.param(userId);
+		if (dailyClaimsHasLastClaimAt()) {
+			try {
+				return jdbc.queryForList("""
+						select last_claim_at, last_claim_date
+						from daily_coin_claims
+						where user_id = :user_id
+						limit 1
+						""", Map.of("user_id", uid));
+			} catch (BadSqlGrammarException e) {
+				dailyClaimsHasLastClaimAtCache = false;
+			}
+		}
+		return jdbc.queryForList("""
+				select last_claim_date
+				from daily_coin_claims
+				where user_id = :user_id
+				limit 1
+				""", Map.of("user_id", uid));
+	}
+
+	private void upsertDailyClaim(String userId, Date todaySql, Instant now, boolean insert) {
+		Object uid = UserIdJdbc.param(userId);
+		if (dailyClaimsHasLastClaimAt()) {
+			try {
+				if (insert) {
+					jdbc.update("""
+							insert into daily_coin_claims (user_id, last_claim_date, last_claim_at)
+							values (:user_id, :d, :at)
+							""", new MapSqlParameterSource()
+						.addValue("user_id", uid)
+						.addValue("d", todaySql)
+						.addValue("at", Timestamp.from(now)));
+				} else {
+					jdbc.update("""
+							update daily_coin_claims
+							set last_claim_date = :d,
+							    last_claim_at = :at
+							where user_id = :user_id
+							""", new MapSqlParameterSource()
+						.addValue("d", todaySql)
+						.addValue("at", Timestamp.from(now))
+						.addValue("user_id", uid));
+				}
+				return;
+			} catch (BadSqlGrammarException e) {
+				dailyClaimsHasLastClaimAtCache = false;
+			}
+		}
+		if (insert) {
+			jdbc.update("""
+					insert into daily_coin_claims (user_id, last_claim_date)
+					values (:user_id, :d)
+					""", new MapSqlParameterSource()
+				.addValue("user_id", uid)
+				.addValue("d", todaySql));
+		} else {
+			jdbc.update("""
+					update daily_coin_claims
+					set last_claim_date = :d
+					where user_id = :user_id
+					""", new MapSqlParameterSource()
+				.addValue("d", todaySql)
+				.addValue("user_id", uid));
+		}
+	}
+
+	private boolean dailyClaimsHasLastClaimAt() {
+		Boolean cached = dailyClaimsHasLastClaimAtCache;
+		if (cached != null) return cached;
+		synchronized (this) {
+			Boolean cached2 = dailyClaimsHasLastClaimAtCache;
+			if (cached2 != null) return cached2;
+			try {
+				Integer n = jdbc.queryForObject("""
+						select count(*)
+						from information_schema.columns
+						where table_name = 'daily_coin_claims'
+						  and column_name = 'last_claim_at'
+						""", Map.of(), Integer.class);
+				boolean ok = n != null && n > 0;
+				dailyClaimsHasLastClaimAtCache = ok;
+				return ok;
+			} catch (Exception e) {
+				dailyClaimsHasLastClaimAtCache = false;
+				return false;
+			}
 		}
 	}
 
@@ -544,9 +609,8 @@ public class WalletService {
 		String userId = null;
 		String userIdRaw = req.userId() == null ? "" : req.userId().trim();
 		if (!userIdRaw.isBlank()) {
-			try {
-				userId = UUID.fromString(userIdRaw).toString();
-			} catch (Exception ignored) {}
+			UserIdJdbc.param(userIdRaw);
+			userId = userIdRaw;
 		}
 		if (userId == null) {
 			String email = (req.email() == null ? "" : req.email().trim()).toLowerCase();
@@ -571,7 +635,7 @@ public class WalletService {
 				  and upper(scope) = 'MANGA'
 				  and manga_slug = :slug
 				  and chapter_number = -1
-				""", Map.of("user_id", UUID.fromString(userId), "slug", slug), Integer.class);
+				""", Map.of("user_id", UserIdJdbc.param(userId), "slug", slug), Integer.class);
 		return c != null && c > 0;
 	}
 
@@ -585,7 +649,7 @@ public class WalletService {
 				    or
 				    (upper(scope) = 'CHAPTER' and manga_slug = :slug and chapter_number = :chapter_number)
 				  )
-				""", Map.of("user_id", UUID.fromString(userId), "slug", slug, "chapter_number", chapterNumber), Integer.class);
+				""", Map.of("user_id", UserIdJdbc.param(userId), "slug", slug, "chapter_number", chapterNumber), Integer.class);
 		return c != null && c > 0;
 	}
 
@@ -597,7 +661,7 @@ public class WalletService {
 				on conflict (user_id, scope, manga_slug, chapter_number) do nothing
 				""", new MapSqlParameterSource()
 			.addValue("id", UUID.randomUUID())
-			.addValue("user_id", UUID.fromString(userId))
+			.addValue("user_id", UserIdJdbc.param(userId))
 			.addValue("scope", scope)
 			.addValue("slug", slug)
 			.addValue("chapter_number", chapterNumber)
@@ -620,7 +684,7 @@ public class WalletService {
 					values (:id, :user_id, :type, :amount, :ref_type, :ref_id, :created_at, :bucket)
 					""", new MapSqlParameterSource()
 				.addValue("id", UUID.randomUUID())
-				.addValue("user_id", UUID.fromString(userId))
+				.addValue("user_id", UserIdJdbc.param(userId))
 				.addValue("type", type)
 				.addValue("amount", amount)
 				.addValue("ref_type", refType)
@@ -633,7 +697,7 @@ public class WalletService {
 					values (:id, :user_id, :type, :amount, :ref_type, :ref_id, :created_at)
 					""", new MapSqlParameterSource()
 				.addValue("id", UUID.randomUUID())
-				.addValue("user_id", UUID.fromString(userId))
+				.addValue("user_id", UserIdJdbc.param(userId))
 				.addValue("type", type)
 				.addValue("amount", amount)
 				.addValue("ref_type", refType)
@@ -676,7 +740,7 @@ public class WalletService {
 		Integer ok = jdbc.getJdbcTemplate().queryForObject(
 			"select 1 from app_users where id = ? for update",
 			Integer.class,
-			UUID.fromString(userId)
+			UserIdJdbc.param(userId)
 		);
 		if (ok == null) throw new NotFoundException("User not found");
 	}
@@ -698,7 +762,7 @@ public class WalletService {
 				from app_users
 				where id = :id
 				limit 1
-				""", Map.of("id", UUID.fromString(userId)));
+				""", Map.of("id", UserIdJdbc.param(userId)));
 		if (rows.isEmpty()) return "";
 		return String.valueOf(rows.get(0).getOrDefault("email", "")).trim().toLowerCase();
 	}

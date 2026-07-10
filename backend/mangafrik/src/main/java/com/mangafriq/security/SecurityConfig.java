@@ -50,6 +50,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, AppConstants.API_V1 + "/creator-requests").permitAll()
 						.requestMatchers(AppConstants.API_V1 + "/creator-contracts/**").permitAll()
 						.requestMatchers(HttpMethod.GET, AppConstants.API_V1 + "/ads/system-notices").permitAll()
+						.requestMatchers(HttpMethod.GET, AppConstants.API_V1 + "/store/coin-packs").permitAll()
 						.requestMatchers(AppConstants.API_V1 + "/storage/upload").authenticated()
 						.requestMatchers(AppConstants.API_V1 + "/store/**").authenticated()
 						.requestMatchers(AppConstants.API_V1 + "/creator/**").hasAnyRole("ADMIN", "SUPPORT", "CREATOR")

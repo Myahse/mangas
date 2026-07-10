@@ -1,26 +1,77 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import '../auth/auth_exceptions.dart';
-import '../config/api_config.dart';
-import '../config/api_endpoint_sheet.dart';
 import '../theme.dart';
 
-Future<void> showReaderAuthSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+/// Web-style auth modal (front/src/components/auth/AuthModal.jsx).
+Future<void> showReaderAuthDialog(BuildContext context) {
+  return showGeneralDialog<void>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: AppColors.bgWhite,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-      child: const _ReaderAuthSheetBody(),
-    ),
+    barrierDismissible: true,
+    barrierLabel: 'Connexion',
+    barrierColor: Colors.black.withValues(alpha: 0.45),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (ctx, anim1, anim2) {
+      return const Center(
+        child: _AuthModalPanel(),
+      );
+    },
+    transitionBuilder: (context, anim, _, child) {
+      final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+      return BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10 * anim.value, sigmaY: 10 * anim.value),
+        child: FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+            child: child,
+          ),
+        ),
+      );
+    },
   );
+}
+
+Future<void> showReaderAuthSheet(BuildContext context) => showReaderAuthDialog(context);
+
+class _AuthModalPanel extends StatelessWidget {
+  const _AuthModalPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final maxH = MediaQuery.sizeOf(context).height -
+        MediaQuery.paddingOf(context).top -
+        MediaQuery.paddingOf(context).bottom -
+        24;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: 520,
+          constraints: BoxConstraints(maxWidth: 520, maxHeight: maxH),
+          decoration: BoxDecoration(
+            color: AppColors.bgWhite,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 40,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: const _ReaderAuthSheetBody(),
+        ),
+      ),
+    );
+  }
 }
 
 class _ReaderAuthSheetBody extends StatefulWidget {
@@ -30,35 +81,61 @@ class _ReaderAuthSheetBody extends StatefulWidget {
   State<_ReaderAuthSheetBody> createState() => _ReaderAuthSheetBodyState();
 }
 
-class _ReaderAuthSheetBodyState extends State<_ReaderAuthSheetBody> {
-  bool _showForm = false;
+class _ReaderAuthSheetBodyState extends State<_ReaderAuthSheetBody> with SingleTickerProviderStateMixin {
+  bool _showLoginForm = false;
   bool _busy = false;
   bool _showPassword = false;
   bool _forcePw = false;
   String _error = '';
   bool _forgotSent = false;
-  String _apiBase = ApiConfig.base();
+
+  late final AnimationController _formAnimController;
+  late final Animation<double> _formFade;
+  late final Animation<Offset> _formSlide;
 
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _newPassword = TextEditingController();
 
+  static const _fieldMaxWidth = 300.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _formAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _formFade = CurvedAnimation(parent: _formAnimController, curve: Curves.easeOut);
+    _formSlide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(_formFade);
+  }
+
   @override
   void dispose() {
+    _formAnimController.dispose();
     _email.dispose();
     _password.dispose();
     _newPassword.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  void _openLoginForm() {
+    setState(() {
+      _showLoginForm = true;
+      _error = '';
+      _forgotSent = false;
+    });
+    _formAnimController.forward(from: 0);
+  }
+
+  Future<void> _primaryAction() async {
     setState(() {
       _error = '';
       _forgotSent = false;
     });
 
-    if (!_showForm) {
-      setState(() => _showForm = true);
+    if (!_showLoginForm) {
+      _openLoginForm();
       return;
     }
 
@@ -129,177 +206,440 @@ class _ReaderAuthSheetBodyState extends State<_ReaderAuthSheetBody> {
     }
   }
 
+  void _goRegister() {
+    Navigator.of(context).pop();
+    context.push('/register');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 62, 16, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Spacer(),
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close),
-                tooltip: 'Fermer',
+              _AuthBrand(),
+              const SizedBox(height: 14),
+              const Text(
+                'Connectez-vous pour reprendre votre lecture.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  height: 1.35,
+                ),
               ),
-            ],
-          ),
-          Center(
-            child: RichText(
-              text: const TextSpan(
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textDark),
-                children: [
-                  TextSpan(text: 'Mang'),
-                  TextSpan(text: 'Afrik', style: TextStyle(color: AppColors.primary)),
-                ],
+              const SizedBox(height: 14),
+              if (!_showLoginForm) ...[
+                _AuthPrimaryButton(
+                  label: 'Se connecter avec Email',
+                  enabled: !_busy,
+                  compact: true,
+                  onPressed: _primaryAction,
+                ),
+                const SizedBox(height: 4),
+              ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.ease,
+                alignment: Alignment.topCenter,
+                clipBehavior: Clip.hardEdge,
+                child: _showLoginForm
+                    ? FadeTransition(
+                        opacity: _formFade,
+                        child: SlideTransition(
+                          position: _formSlide,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: _fieldMaxWidth),
+                                child: _buildLoginForm(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox(width: double.infinity),
               ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Connectez-vous pour reprendre votre lecture.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.bgLight,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE7E7E7)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.cloud_outlined, size: 18, color: AppColors.textMuted),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Serveur', style: TextStyle(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 4),
-                      Text(
-                        _apiBase,
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Source: ${ApiConfig.sourceLabel()}',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                      ),
-                    ],
+              if (_showLoginForm) ...[
+                const SizedBox(height: 14),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _fieldMaxWidth),
+                    child: _AuthPrimaryButton(
+                      label: _busy ? 'Connexion…' : 'Se connecter',
+                      enabled: !_busy,
+                      onPressed: _primaryAction,
+                    ),
                   ),
                 ),
-                TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () async {
-                          final ok = await showApiEndpointEditor(context);
-                          if (!context.mounted) return;
-                          if (ok) {
-                            setState(() => _apiBase = ApiConfig.base());
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('URL du serveur mise à jour.')),
-                            );
-                          }
-                        },
-                  child: const Text('Modifier'),
-                ),
               ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (!_showForm)
-            FilledButton(
-              onPressed: _busy ? null : _submit,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 14)),
-              child: const Text('Se connecter avec Email'),
-            ),
-          if (_showForm) ...[
-            TextField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-                hintText: 'Entrez votre email',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _password,
-              obscureText: !_showPassword,
-              decoration: InputDecoration(
-                labelText: _forcePw ? 'Ancien mot de passe' : 'Mot de passe',
-                border: const OutlineInputBorder(),
-                hintText: _forcePw ? 'Entrez votre ancien mot de passe' : 'Entrez votre mot de passe',
-                suffixIcon: IconButton(
-                  onPressed: () => setState(() => _showPassword = !_showPassword),
-                  icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
-                ),
-              ),
-            ),
-            if (_forcePw) ...[
               const SizedBox(height: 12),
-              TextField(
-                controller: _newPassword,
-                obscureText: !_showPassword,
-                decoration: const InputDecoration(
-                  labelText: 'Nouveau mot de passe',
-                  border: OutlineInputBorder(),
-                  hintText: 'Minimum 6 caractères',
+              Center(
+                child: Container(
+                  width: _fieldMaxWidth,
+                  height: 1,
+                  color: AppColors.textDark.withValues(alpha: 0.16),
                 ),
               ),
-            ],
-            if (_error.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text(_error, style: const TextStyle(color: Colors.red, fontSize: 13)),
-            ],
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: _busy ? null : _forgot,
-                child: const Text('Mot de passe oublié ?'),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Pas encore de compte ?',
+                    style: TextStyle(
+                      color: AppColors.textDark.withValues(alpha: 0.75),
+                      fontSize: 15,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _busy ? null : _goRegister,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primaryDark,
+                      textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    child: const Text('Créer un compte'),
+                  ),
+                ],
               ),
-            ),
-            if (_forgotSent)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'Si ce compte existe, un lien de réinitialisation a été envoyé à votre email.',
-                  style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+              const SizedBox(height: 18),
+              Text(
+                'MangAfric © ${DateTime.now().year} — Conditions d’utilisation et Politique de confidentialité.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.35,
+                  color: AppColors.textDark.withValues(alpha: 0.45),
                 ),
               ),
-            FilledButton(
-              onPressed: _busy ? null : _submit,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 14)),
-              child: Text(_busy ? 'Connexion…' : 'Se connecter'),
-            ),
-          ],
-          const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Pas encore de compte ? ', style: TextStyle(color: AppColors.textMuted)),
-              TextButton(
-                onPressed: _busy
-                    ? null
-                    : () {
-                        Navigator.of(context).pop();
-                        context.push('/register');
-                      },
-                child: const Text('Créer un compte'),
-              ),
             ],
+          ),
+        ),
+        Positioned(
+          top: 12,
+          right: 12,
+          child: _AuthCloseButton(onPressed: () => Navigator.of(context).pop()),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoginForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _AuthField(
+          label: 'Email',
+          child: TextField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            style: _inputStyle,
+            textInputAction: TextInputAction.next,
+            decoration: _inputDecoration('Entrez votre email'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _AuthField(
+          label: _forcePw ? 'Ancien mot de passe' : 'Mot de passe',
+          child: _AuthPasswordField(
+            controller: _password,
+            hint: _forcePw ? 'Entrez votre ancien mot de passe' : 'Entrez votre mot de passe',
+            showPassword: _showPassword,
+            onToggle: () => setState(() => _showPassword = !_showPassword),
+          ),
+        ),
+        if (_forcePw) ...[
+          const SizedBox(height: 12),
+          _AuthField(
+            label: 'Nouveau mot de passe',
+            child: _AuthPasswordField(
+              controller: _newPassword,
+              hint: 'Minimum 6 caractères',
+              showPassword: _showPassword,
+              onToggle: () => setState(() => _showPassword = !_showPassword),
+            ),
           ),
         ],
+        if (_error.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _AuthError(message: _error),
+        ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _busy ? null : _forgot,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 0),
+            ),
+            child: const Text('Mot de passe oublié ?'),
+          ),
+        ),
+        if (_forgotSent)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Si ce compte existe, un lien de réinitialisation a été envoyé à votre email.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: AppColors.textMuted, height: 1.35),
+            ),
+          ),
+      ],
+    );
+  }
+
+  static const _inputStyle = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textDark,
+  );
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: AppColors.bgWhite,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      ),
+    );
+  }
+}
+
+class _AuthBrand extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/magafrik-logo.png',
+      height: 64,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => RichText(
+        text: const TextSpan(
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.02),
+          children: [
+            TextSpan(text: 'Mang', style: TextStyle(color: AppColors.textDark)),
+            TextSpan(text: 'Afrik', style: TextStyle(color: AppColors.primary)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthCloseButton extends StatefulWidget {
+  const _AuthCloseButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  State<_AuthCloseButton> createState() => _AuthCloseButtonState();
+}
+
+class _AuthCloseButtonState extends State<_AuthCloseButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onPressed,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: _hover ? AppColors.textDark.withValues(alpha: 0.06) : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.close, size: 22, color: AppColors.textDark.withValues(alpha: 0.45)),
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthField extends StatelessWidget {
+  const _AuthField({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark.withValues(alpha: 0.75),
+          ),
+        ),
+        const SizedBox(height: 6),
+        child,
+      ],
+    );
+  }
+}
+
+class _AuthPasswordField extends StatelessWidget {
+  const _AuthPasswordField({
+    required this.controller,
+    required this.hint,
+    required this.showPassword,
+    required this.onToggle,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final bool showPassword;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: !showPassword,
+      style: _ReaderAuthSheetBodyState._inputStyle,
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: AppColors.bgWhite,
+        contentPadding: const EdgeInsets.fromLTRB(12, 11, 44, 11),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        suffixIcon: IconButton(
+          onPressed: onToggle,
+          icon: Icon(showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
+          color: AppColors.textDark.withValues(alpha: 0.55),
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthError extends StatelessWidget {
+  const _AuthError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Color(0xFF991B1B),
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthPrimaryButton extends StatefulWidget {
+  const _AuthPrimaryButton({
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+    this.compact = false,
+  });
+
+  final String label;
+  final bool enabled;
+  final VoidCallback onPressed;
+  final bool compact;
+
+  @override
+  State<_AuthPrimaryButton> createState() => _AuthPrimaryButtonState();
+}
+
+class _AuthPrimaryButtonState extends State<_AuthPrimaryButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.enabled;
+    final height = widget.compact ? 42.0 : 48.0;
+    final radius = widget.compact ? 10.0 : 12.0;
+
+    return GestureDetector(
+      onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: enabled ? widget.onPressed : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.ease,
+        width: widget.compact ? null : double.infinity,
+        height: height,
+        padding: widget.compact ? const EdgeInsets.symmetric(horizontal: 18) : null,
+        transform: Matrix4.translationValues(0, enabled && _pressed ? -1 : 0, 0),
+        decoration: BoxDecoration(
+          color: enabled
+              ? (_pressed ? AppColors.primaryDark : AppColors.primary)
+              : AppColors.primary.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(radius),
+          boxShadow: widget.compact
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.14),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                  ),
+                ]
+              : null,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          widget.label,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: widget.compact ? FontWeight.w700 : FontWeight.w800,
+            fontSize: widget.compact ? 14 : 15,
+          ),
+        ),
       ),
     );
   }

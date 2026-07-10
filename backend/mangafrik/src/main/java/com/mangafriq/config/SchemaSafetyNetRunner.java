@@ -32,6 +32,8 @@ public class SchemaSafetyNetRunner implements ApplicationRunner {
 		ensureCoinsWalletSchema();
 		ensureFeatureFlagsTable();
 		ensureCoinPurchaseIntentsTable();
+		ensureAdsPanelSchema();
+		ensureAdminMangaRequestsTable();
 	}
 
 	private void ensureAppUsersAuthColumns() {
@@ -427,6 +429,10 @@ public class SchemaSafetyNetRunner implements ApplicationRunner {
 			create index if not exists coin_ledger_user_ref_idx
 			  on coin_ledger (user_id, ref_type, ref_id);
 			""");
+		jdbc.execute("""
+			alter table if exists coin_ledger
+			  add column if not exists bucket text not null default 'REWARD';
+			""");
 
 		jdbc.execute("""
 			create table if not exists content_entitlements (
@@ -460,8 +466,13 @@ public class SchemaSafetyNetRunner implements ApplicationRunner {
 		jdbc.execute("""
 			create table if not exists daily_coin_claims (
 			  user_id bigint primary key references app_users(id) on delete cascade,
-			  last_claim_date date not null
+			  last_claim_date date not null,
+			  last_claim_at timestamptz
 			);
+			""");
+		jdbc.execute("""
+			alter table if exists daily_coin_claims
+			  add column if not exists last_claim_at timestamptz;
 			""");
 	}
 
@@ -506,6 +517,99 @@ public class SchemaSafetyNetRunner implements ApplicationRunner {
 			create index if not exists coin_purchase_intents_status_idx
 			  on coin_purchase_intents (status);
 			""");
+	}
+
+	private void ensureAdsPanelSchema() {
+		try {
+			jdbc.execute("create extension if not exists pgcrypto");
+			jdbc.execute("""
+					create table if not exists ads_hero_ads (
+					  id uuid primary key,
+					  title text not null,
+					  subtitle text not null default '',
+					  image_url text not null default '',
+					  cta_label text not null default 'Learn more',
+					  cta_url text not null default '/',
+					  status text not null default 'paused',
+					  starts_at text not null default '',
+					  ends_at text not null default '',
+					  created_at timestamptz not null default now(),
+					  updated_at timestamptz not null default now()
+					);
+					""");
+			jdbc.execute("""
+					create table if not exists ads_notifications (
+					  id uuid primary key,
+					  channel text not null default 'push',
+					  title text not null,
+					  body text not null default '',
+					  target text not null default 'all',
+					  segment text not null default '',
+					  user_id text not null default '',
+					  deep_link text not null default '',
+					  status text not null default 'draft',
+					  scheduled_at text not null default '',
+					  created_at timestamptz not null default now(),
+					  updated_at timestamptz not null default now()
+					);
+					""");
+			jdbc.execute("""
+					create table if not exists ads_system_notices (
+					  id uuid primary key,
+					  severity text not null default 'info',
+					  title text not null,
+					  message text not null default '',
+					  status text not null default 'scheduled',
+					  starts_at text not null default '',
+					  ends_at text not null default '',
+					  created_at timestamptz not null default now(),
+					  updated_at timestamptz not null default now()
+					);
+					""");
+			jdbc.execute("""
+					create table if not exists ads_audits (
+					  id uuid primary key,
+					  at timestamptz not null default now(),
+					  action text not null,
+					  payload jsonb not null default '{}'::jsonb
+					);
+					""");
+			jdbc.execute("""
+					create index if not exists idx_ads_system_notices_updated_at on ads_system_notices(updated_at desc);
+					""");
+			jdbc.execute("""
+					insert into ads_system_notices (id, severity, title, message, status, starts_at, ends_at)
+					values ('33333333-3333-3333-3333-333333333333', 'info', 'Maintenance window', 'Scheduled maintenance tonight at 02:00 UTC.', 'scheduled', now()::text, '')
+					on conflict (id) do nothing;
+					""");
+		} catch (Exception e) {
+			log.warn("ensureAdsPanelSchema skipped: {}", e.getMessage());
+		}
+	}
+
+	private void ensureAdminMangaRequestsTable() {
+		try {
+			jdbc.execute("""
+					create table if not exists admin_manga_requests (
+					  id uuid primary key,
+					  requested_title text not null,
+					  requested_by text not null,
+					  notes text not null default '',
+					  status text not null default 'new',
+					  created_at timestamptz not null default now()
+					);
+					""");
+			jdbc.execute("""
+					create index if not exists idx_admin_manga_requests_created_at on admin_manga_requests(created_at desc);
+					""");
+			jdbc.execute("""
+					insert into admin_manga_requests (id, requested_title, requested_by, notes, status)
+					values ('44444444-4444-4444-4444-444444444444', 'Nouchi Legends', 'reader1@example.com', 'Could you add this manga? I heard it is great.', 'new')
+					on conflict (id) do nothing;
+					""");
+		} catch (Exception e) {
+			log.warn("ensureAdminMangaRequestsTable skipped: {}", e.getMessage());
+		}
 	}
 }
 

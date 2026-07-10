@@ -21,6 +21,11 @@ public final class SecurityUtils {
 	}
 
 	public static Optional<UUID> getCurrentUserId() {
+		return getCurrentUserIdString().flatMap(SecurityUtils::parseUuid);
+	}
+
+	/** Raw app_users.id from JWT/session — may be numeric legacy id or UUID string. */
+	public static Optional<String> getCurrentUserIdString() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth == null || !auth.isAuthenticated()) return Optional.empty();
 
@@ -31,19 +36,24 @@ public final class SecurityUtils {
 				uid = jwtAuth.getTokenAttributes().get("uid");
 			}
 			if (uid != null) {
-				try {
-					return Optional.of(UUID.fromString(String.valueOf(uid)));
-				} catch (Exception ignored) {}
+				String raw = String.valueOf(uid).trim();
+				if (!raw.isBlank()) return Optional.of(raw);
 			}
 		}
 
-		// Session cookie auth: Bearer token is an app_sessions UUID; SessionAuthFilter sets SessionPrincipal.
 		if (auth instanceof UsernamePasswordAuthenticationToken up && up.getPrincipal() instanceof SessionPrincipal sp) {
-			try {
-				return Optional.of(UUID.fromString(sp.id()));
-			} catch (Exception ignored) {}
+			String id = sp.id();
+			if (id != null && !id.isBlank()) return Optional.of(id.trim());
 		}
 		return Optional.empty();
+	}
+
+	private static Optional<UUID> parseUuid(String raw) {
+		try {
+			return Optional.of(UUID.fromString(raw));
+		} catch (Exception ignored) {
+			return Optional.empty();
+		}
 	}
 
 	/** Email claim / JWT subject / session principal — for notifying the logged-in creator. */

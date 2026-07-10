@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../data/catalog_service.dart';
 import '../data/models.dart';
 import '../theme.dart';
+import '../widgets/manga_card.dart';
+import '../widgets/section_header.dart';
 
 class MangaDetailScreen extends StatefulWidget {
   const MangaDetailScreen({super.key, required this.slug});
@@ -17,6 +19,7 @@ class MangaDetailScreen extends StatefulWidget {
 
 class _MangaDetailScreenState extends State<MangaDetailScreen> {
   late Future<_DetailBundle> _future;
+  final _chapterSearch = TextEditingController();
 
   @override
   void initState() {
@@ -24,10 +27,31 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
     _future = _load();
   }
 
+  @override
+  void dispose() {
+    _chapterSearch.dispose();
+    super.dispose();
+  }
+
   Future<_DetailBundle> _load() async {
     final m = await catalogService.fetchMangaBySlug(widget.slug);
     final ch = await catalogService.fetchChapters(widget.slug);
-    return _DetailBundle(m, ch);
+    List<Manga> related = [];
+    try {
+      related = (await catalogService.fetchPopularManga(count: 6))
+          .where((x) => x.slug != widget.slug)
+          .take(6)
+          .toList();
+    } catch (_) {}
+    return _DetailBundle(m, ch, related);
+  }
+
+  List<ChapterItem> _filterChapters(List<ChapterItem> chapters) {
+    final q = _chapterSearch.text.trim().toLowerCase();
+    if (q.isEmpty) return chapters;
+    return chapters
+        .where((c) => '${c.number}'.contains(q) || c.title.toLowerCase().contains(q))
+        .toList();
   }
 
   @override
@@ -36,7 +60,7 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
         }
         if (snap.hasError) {
           return Scaffold(
@@ -62,126 +86,295 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
         final bundle = snap.data!;
         final m = bundle.manga;
         final chapters = bundle.chapters;
+        final related = bundle.related;
+        final filtered = _filterChapters(chapters);
         final firstCh = chapters.isEmpty ? 1 : chapters.map((c) => c.number).reduce((a, b) => a < b ? a : b);
+        final lastCh = chapters.isEmpty ? 1 : chapters.map((c) => c.number).reduce((a, b) => a > b ? a : b);
 
         return Scaffold(
           backgroundColor: AppColors.bgLight,
-          appBar: AppBar(
-            title: Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
           body: CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(
-                child: CachedNetworkImage(
-                  imageUrl: m.banner,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (_, url) => const ColoredBox(color: Colors.black12),
+              SliverAppBar(
+                pinned: true,
+                backgroundColor: AppColors.navBg.withValues(alpha: 0.92),
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => context.pop(),
                 ),
+                title: Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: CachedNetworkImage(imageUrl: m.cover, width: 110, height: 165, fit: BoxFit.cover),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    SizedBox(
+                      height: 220,
+                      width: double.infinity,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CachedNetworkImage(imageUrl: m.banner, fit: BoxFit.cover),
+                          Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [AppColors.bgLight, Color(0x80F4F4F6), Colors.transparent],
+                                stops: [0.0, 0.6, 1.0],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(m.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 6),
-                            Text(m.author, style: const TextStyle(color: AppColors.textSecondary)),
-                            const SizedBox(height: 8),
-                            Row(
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 120, 20, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(AppRadii.md),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.25),
+                                      blurRadius: 40,
+                                      offset: const Offset(0, 12),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(AppRadii.md),
+                                  child: CachedNetworkImage(imageUrl: m.cover, width: 130, height: 182, fit: BoxFit.cover),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Accueil / ${m.title}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        m.title,
+                                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, height: 1.1),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      _infoRow(Icons.person_outline, m.author),
+                                      _infoRow(Icons.menu_book_outlined, '${m.totalChapters} chapitres'),
+                                      _infoRow(Icons.visibility_outlined, m.views),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: m.genres.map((g) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.bgWhite,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.border, width: 1.5),
+                                ),
+                                child: Text(g, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.bgWhite,
+                              borderRadius: BorderRadius.circular(AppRadii.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                const Icon(Icons.star, color: AppColors.rating, size: 18),
-                                const SizedBox(width: 4),
-                                Text('${m.rating}', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.rating)),
-                                Text(' · ${m.status}', style: const TextStyle(color: AppColors.textMuted)),
+                                _stat('Note', '${m.rating}', icon: Icons.star, color: AppColors.rating),
+                                _divider(),
+                                _stat('Chapitres', '${m.totalChapters}'),
+                                _divider(),
+                                _stat('Statut', m.status),
+                                _divider(),
+                                _stat('Année', '${m.year}'),
                               ],
                             ),
-                            Text('${m.totalChapters} chapitres', style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(m.synopsis, style: const TextStyle(fontSize: 15, height: 1.5, color: AppColors.textSecondary)),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: chapters.isEmpty ? null : () => context.push('/manga/${widget.slug}/chapter/$firstCh'),
+                                  icon: const Icon(Icons.play_arrow),
+                                  label: Text(chapters.isEmpty ? 'Aucun chapitre' : 'Lire le Ch. $firstCh'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: chapters.isEmpty ? null : () => context.push('/manga/${widget.slug}/chapter/$lastCh'),
+                                  child: Text('Dernier ch. $lastCh'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: FilledButton.icon(
-                    onPressed: chapters.isEmpty
-                        ? null
-                        : () => context.push('/manga/${widget.slug}/chapter/$firstCh'),
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.primary, minimumSize: const Size(double.infinity, 48)),
-                    icon: const Icon(Icons.menu_book),
-                    label: Text(
-                      chapters.isEmpty ? 'Aucun chapitre' : 'Lire depuis le ch. $firstCh',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.bgWhite,
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: AppShadows.card,
+                    ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: TextField(
+                            controller: _chapterSearch,
+                            decoration: const InputDecoration(
+                              hintText: 'Rechercher un chapitre…',
+                              prefixIcon: Icon(Icons.search),
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                        if (filtered.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text('Aucun chapitre trouvé'),
+                          )
+                        else
+                          ...List.generate(filtered.length, (i) {
+                            final ch = filtered[i];
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => context.push('/manga/${widget.slug}/chapter/${ch.number}'),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    border: i < filtered.length - 1
+                                        ? const Border(bottom: BorderSide(color: AppColors.border))
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'Ch. ${ch.number}',
+                                        style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 14),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(ch.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      ),
+                                      const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                      ],
                     ),
                   ),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                  child: Text(m.synopsis, style: const TextStyle(fontSize: 15, height: 1.45)),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  child: Row(
-                    children: [
-                      Container(width: 4, height: 18, decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
-                      const SizedBox(width: 8),
-                      const Text('Chapitres', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                    ],
+              if (related.isNotEmpty) ...[
+                SliverToBoxAdapter(child: SectionHeader(title: 'Vous pourriez aussi aimer')),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 32),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.44,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) => MangaCard(manga: related[i]),
+                      childCount: related.length,
+                    ),
                   ),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: Card(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < chapters.length; i++) ...[
-                        ListTile(
-                          title: Text('Ch. ${chapters[i].number}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                          subtitle: Text(chapters[i].title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/manga/${widget.slug}/chapter/${chapters[i].number}'),
-                        ),
-                        if (i < chapters.length - 1) const Divider(height: 1),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+              ] else
+                const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),
         );
       },
     );
   }
+
+  Widget _infoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500))),
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(String label, String value, {IconData? icon, Color? color}) {
+    return Column(
+      children: [
+        if (icon != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color ?? AppColors.primary),
+              const SizedBox(width: 4),
+              Text(value, style: TextStyle(fontWeight: FontWeight.w800, color: color ?? AppColors.textDark)),
+            ],
+          )
+        else
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  Widget _divider() => Container(width: 1, height: 32, color: AppColors.border);
 }
 
 class _DetailBundle {
-  _DetailBundle(this.manga, this.chapters);
+  _DetailBundle(this.manga, this.chapters, this.related);
   final Manga manga;
   final List<ChapterItem> chapters;
+  final List<Manga> related;
 }

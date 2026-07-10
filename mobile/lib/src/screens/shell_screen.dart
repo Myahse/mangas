@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../api/auth_errors.dart';
 import '../auth/auth_controller.dart';
 import '../data/catalog_service.dart';
-import '../data/models.dart';
 import '../notifications/notification_controller.dart';
+import '../data/models.dart';
+import '../widgets/app_bottom_nav.dart';
+import '../widgets/app_navbar.dart';
+import '../widgets/info_bar.dart';
 import '../theme.dart';
-import '../config/api_endpoint_sheet.dart';
-import '../widgets/reader_auth_sheet.dart';
 
 class ReaderShellScreen extends StatefulWidget {
   const ReaderShellScreen({super.key, required this.navigationShell});
@@ -36,9 +38,7 @@ class _ReaderShellScreenState extends State<ReaderShellScreen> {
     super.dispose();
   }
 
-  void _onAuthChanged() {
-    _refreshWallet();
-  }
+  void _onAuthChanged() => _refreshWallet();
 
   Future<void> _refreshWallet() async {
     if (!authController.isAuthenticated) {
@@ -49,7 +49,8 @@ class _ReaderShellScreenState extends State<ReaderShellScreen> {
       final w = await catalogService.fetchWallet();
       final b = (w['balance'] as num?)?.toInt();
       if (mounted) setState(() => _walletBalance = b);
-    } catch (_) {
+    } catch (e) {
+      if (isAuthError(e)) await handleApiAuthError(e);
       if (mounted) setState(() => _walletBalance = null);
     }
   }
@@ -63,161 +64,84 @@ class _ReaderShellScreenState extends State<ReaderShellScreen> {
     context.push('/manga/$slug');
   }
 
+  void _goHome() {
+    widget.navigationShell.goBranch(0, initialLocation: true);
+    context.go('/home');
+  }
+
+  void _onBottomNavTap(int index) {
+    widget.navigationShell.goBranch(index, initialLocation: index == widget.navigationShell.currentIndex);
+    switch (index) {
+      case 0:
+        context.go('/home');
+      case 1:
+        context.go('/explore');
+      case 2:
+        context.go('/compte');
+      case 3:
+        context.go('/store');
+      case 4:
+        context.go('/contact');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: authController,
       builder: (context, _) {
-        final user = authController.user;
         final authed = authController.isAuthenticated;
+        final tab = widget.navigationShell.currentIndex;
 
         return Scaffold(
-          appBar: AppBar(
-            title: RichText(
-              text: const TextSpan(
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                children: [
-                  TextSpan(text: 'Mang', style: TextStyle(color: AppColors.textDark)),
-                  TextSpan(text: 'Afrik', style: TextStyle(color: AppColors.primary)),
-                ],
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Column(
+            children: [
+              AppNavbar(
+                onSearch: _openSearch,
+                onHome: _goHome,
               ),
-            ),
-            actions: [
-              IconButton(icon: const Icon(Icons.search), tooltip: 'Rechercher', onPressed: _openSearch),
-              if (authed)
-                ListenableBuilder(
-                  listenable: notificationController,
-                  builder: (context, _) {
-                    final unread = notificationController.unreadCount;
-                    return IconButton(
-                      tooltip: 'Notifications',
-                      onPressed: () => context.push('/notifications'),
-                      icon: Badge(
-                        isLabelVisible: unread > 0,
-                        label: Text(unread > 99 ? '99+' : '$unread'),
-                        child: const Icon(Icons.notifications_outlined),
-                      ),
-                    );
-                  },
-                ),
-              if (authed && _walletBalance != null)
-                Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.monetization_on_outlined, size: 18, color: AppColors.primary),
-                        const SizedBox(width: 2),
-                        Text(
-                          '$_walletBalance',
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              if (!authed)
-                TextButton(
-                  onPressed: () => showReaderAuthSheet(context),
-                  child: const Text('Connexion'),
-                )
-              else
-                PopupMenuButton<String>(
-                  tooltip: 'Menu compte',
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.person_outline, size: 22),
-                        const SizedBox(width: 4),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 120),
-                          child: Text(
-                            user?.displayName ?? '',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              if (authed && _walletBalance != null && tab != 3)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  color: AppColors.bgWhite,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      InkWell(
+                        onTap: () => _onBottomNavTap(3),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.monetization_on, size: 15, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$_walletBalance coins',
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppColors.primary),
+                              ),
+                            ],
                           ),
                         ),
-                        const Icon(Icons.arrow_drop_down, size: 20),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  onSelected: (value) async {
-                    switch (value) {
-                      case 'logout':
-                        await authController.logout();
-                        break;
-                      case 'compte':
-                        if (context.mounted) context.push('/compte');
-                        break;
-                      case 'profil':
-                        if (context.mounted) context.push('/compte/profil');
-                        break;
-                      case 'store':
-                        if (context.mounted) context.push('/store');
-                        break;
-                      case 'abos':
-                        if (context.mounted) context.push('/compte/abonnements');
-                        break;
-                      case 'fav':
-                        if (context.mounted) context.push('/compte/favoris');
-                        break;
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'compte', child: Text('Mon espace')),
-                    const PopupMenuItem(value: 'profil', child: Text('Mon profil')),
-                    const PopupMenuItem(value: 'store', child: Text('Boutique (coins)')),
-                    const PopupMenuItem(value: 'abos', child: Text('Mes abonnements')),
-                    const PopupMenuItem(value: 'fav', child: Text('Favoris')),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(value: 'logout', child: Text('Déconnexion')),
-                  ],
                 ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                tooltip: 'Plus',
-                onSelected: (value) async {
-                  if (value == 'api') {
-                    final ok = await showApiEndpointEditor(context);
-                    if (ok && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('URL du serveur mise à jour. Sur l’accueil, touchez Réessayer si la liste ne charge pas.'),
-                        ),
-                      );
-                    }
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'api', child: Text('URL du serveur…')),
-                ],
-              ),
+              if (tab <= 1) const InfoBar(),
+              Expanded(child: widget.navigationShell),
             ],
           ),
-          body: widget.navigationShell,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: widget.navigationShell.currentIndex,
-            onDestinationSelected: (i) {
-              widget.navigationShell.goBranch(
-                i,
-                initialLocation: i == widget.navigationShell.currentIndex,
-              );
-            },
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Accueil',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.search_outlined),
-                selectedIcon: Icon(Icons.search),
-                label: 'Explorer',
-              ),
-            ],
+          bottomNavigationBar: AppBottomNav(
+            currentIndex: tab,
+            onTap: _onBottomNavTap,
           ),
         );
       },
@@ -232,6 +156,14 @@ class _MangaSearchDelegate extends SearchDelegate<String> {
 
   @override
   String get searchFieldLabel => 'Rechercher…';
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.copyWith(
+      appBarTheme: theme.appBarTheme.copyWith(backgroundColor: AppColors.bgWhite),
+    );
+  }
 
   @override
   List<Widget>? buildActions(BuildContext context) {
@@ -268,9 +200,7 @@ class _MangaSearchDelegate extends SearchDelegate<String> {
         }
         final q = query.toLowerCase().trim();
         final list = snap.data!
-            .where((m) {
-              return m.title.toLowerCase().contains(q) || m.author.toLowerCase().contains(q);
-            })
+            .where((m) => m.title.toLowerCase().contains(q) || m.author.toLowerCase().contains(q))
             .take(12)
             .toList();
         if (list.isEmpty) {
@@ -281,7 +211,7 @@ class _MangaSearchDelegate extends SearchDelegate<String> {
           itemBuilder: (context, i) {
             final m = list[i];
             return ListTile(
-              title: Text(m.title),
+              title: Text(m.title, style: const TextStyle(fontWeight: FontWeight.w700)),
               subtitle: Text(m.author),
               onTap: () => close(context, m.slug),
             );

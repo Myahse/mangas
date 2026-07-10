@@ -3,8 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import '../auth/auth_exceptions.dart';
-import '../config/api_config.dart';
-import '../config/api_endpoint_sheet.dart';
 import '../theme.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -19,7 +17,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _busy = false;
   String? _submitError;
   String _referralCode = '';
-  String _apiBase = ApiConfig.base();
 
   final _favoriteGenres = TextEditingController();
   String _readingFrequency = 'weekly';
@@ -29,6 +26,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password = TextEditingController();
 
   bool _readRef = false;
+
+  static const _stepAnimDuration = Duration(milliseconds: 220);
+  static const _fieldMaxWidth = 320.0;
 
   @override
   void didChangeDependencies() {
@@ -61,6 +61,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String get _title => _step == 2 ? 'Vos préférences de lecture' : 'Informations du compte';
 
+  String get _subtitle => _step == 2
+      ? 'Quelques questions rapides pour personnaliser votre expérience.'
+      : 'Dernière étape : vos identifiants de connexion.';
+
+  void _goBack() {
+    if (_step == 2) {
+      context.pop();
+    } else {
+      setState(() {
+        _step = 2;
+        _submitError = null;
+      });
+    }
+  }
+
+  void _goNext() {
+    if (!_canContinueStep2) return;
+    setState(() {
+      _step = 3;
+      _submitError = null;
+    });
+  }
+
   Future<void> _finish() async {
     if (!_canFinish || _busy) return;
     setState(() {
@@ -92,191 +115,447 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-              child: Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: () {
-                      if (_step == 2) {
-                        context.pop();
-                      } else {
-                        setState(() => _step = 2);
-                      }
-                    },
-                    icon: const Icon(Icons.chevron_left),
-                    label: const Text('Retour'),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () async {
-                            final ok = await showApiEndpointEditor(context);
-                            if (!mounted) return;
-                            if (ok) setState(() => _apiBase = ApiConfig.base());
-                          },
-                    child: const Text('Serveur'),
-                  ),
-                  RichText(
-                    text: const TextSpan(
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark),
-                      children: [
-                        TextSpan(text: 'Mang'),
-                        TextSpan(text: 'Afrik', style: TextStyle(color: AppColors.primary)),
-                      ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Column(
+            children: [
+              _RegisterTopBar(onBack: _goBack),
+              const SizedBox(height: 12),
+              _AnimatedStepHeader(
+                step: _step,
+                title: _title,
+                subtitle: _subtitle,
+              ),
+              const SizedBox(height: 22),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: _fieldMaxWidth),
+                      child: AnimatedSwitcher(
+                        duration: _stepAnimDuration,
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) {
+                          final slide = Tween<Offset>(
+                            begin: const Offset(0.04, 0),
+                            end: Offset.zero,
+                          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(position: slide, child: child),
+                          );
+                        },
+                        child: _step == 2 ? _buildStep2Fields() : _buildStep3Fields(),
+                      ),
                     ),
                   ),
-                  const Spacer(flex: 2),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'API: $_apiBase',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 8),
-                    Center(
-                      child: RichText(
-                        text: const TextSpan(
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textDark),
-                          children: [
-                            TextSpan(text: 'Mang'),
-                            TextSpan(text: 'Afrik', style: TextStyle(color: AppColors.primary)),
-                          ],
+              const SizedBox(height: 10),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _fieldMaxWidth),
+                  child: _step < 3
+                      ? _RegisterPrimaryButton(
+                          label: 'Continuer',
+                          enabled: _canContinueStep2,
+                          onPressed: _goNext,
+                        )
+                      : _RegisterPrimaryButton(
+                          label: _busy ? 'Création…' : 'Créer mon compte',
+                          enabled: _canFinish && !_busy,
+                          onPressed: _finish,
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(_title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 8),
-                    Text(
-                      _step == 2
-                          ? 'Quelques questions rapides pour personnaliser votre expérience.'
-                          : 'Dernière étape : vos identifiants de connexion.',
-                      style: TextStyle(color: AppColors.textSecondary, height: 1.35),
-                    ),
-                    const SizedBox(height: 24),
-                    if (_submitError != null) ...[
-                      Text(_submitError!, style: const TextStyle(color: Colors.red)),
-                      const SizedBox(height: 12),
-                    ],
-                    if (_step == 2) ...[
-                      TextField(
-                        controller: _favoriteGenres,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          labelText: 'Genres préférés',
-                          border: OutlineInputBorder(),
-                          hintText: 'Ex: Shonen, Romance, Aventure',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        initialValue: _readingFrequency,
-                        decoration: const InputDecoration(
-                          labelText: 'Fréquence de lecture',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'daily', child: Text('Tous les jours')),
-                          DropdownMenuItem(value: 'weekly', child: Text('Chaque semaine')),
-                          DropdownMenuItem(value: 'sometimes', child: Text('De temps en temps')),
-                        ],
-                        onChanged: (v) => setState(() => _readingFrequency = v ?? 'weekly'),
-                      ),
-                    ] else ...[
-                      TextField(
-                        controller: _name,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          labelText: 'Nom',
-                          border: OutlineInputBorder(),
-                          hintText: 'Votre nom',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _email,
-                        onChanged: (_) => setState(() {}),
-                        keyboardType: TextInputType.emailAddress,
-                        autocorrect: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                          hintText: 'vous@exemple.com',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _password,
-                        onChanged: (_) => setState(() {}),
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Mot de passe',
-                          border: OutlineInputBorder(),
-                          hintText: 'Minimum 6 caractères',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Vous pourrez personnaliser ces choix plus tard.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textMuted),
-                      ),
-                    ],
-                    const SizedBox(height: 32),
-                  ],
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-              child: Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: () {
-                      if (_step == 2) {
-                        context.pop();
-                      } else {
-                        setState(() => _step = 2);
-                      }
-                    },
-                    icon: const Icon(Icons.chevron_left),
-                    label: const Text('Retour'),
-                  ),
-                  const Spacer(),
-                  if (_step < 3)
-                    FilledButton(
-                      onPressed: !_canContinueStep2 ? null : () => setState(() => _step = 3),
-                      style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-                      child: const Text('Continuer'),
-                    )
-                  else
-                    FilledButton(
-                      onPressed: (!_canFinish || _busy) ? null : _finish,
-                      style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-                      child: Text(_busy ? 'Création…' : 'Créer mon compte'),
-                    ),
-                ],
-              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep2Fields() {
+    return Column(
+      key: const ValueKey('step2'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_submitError != null) ...[
+          _RegisterHint(message: _submitError!, isError: true),
+          const SizedBox(height: 14),
+        ],
+        _RegisterField(
+          label: 'Genres préférés',
+          child: TextField(
+            controller: _favoriteGenres,
+            onChanged: (_) => setState(() {}),
+            style: _fieldTextStyle,
+            decoration: _fieldDecoration('Ex: Shonen, Romance, Aventure'),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _RegisterField(
+          label: 'Fréquence de lecture',
+          child: DropdownButtonFormField<String>(
+            initialValue: _readingFrequency,
+            style: _fieldTextStyle,
+            decoration: _fieldDecoration(null),
+            borderRadius: BorderRadius.circular(12),
+            items: const [
+              DropdownMenuItem(value: 'daily', child: Text('Tous les jours')),
+              DropdownMenuItem(value: 'weekly', child: Text('Chaque semaine')),
+              DropdownMenuItem(value: 'sometimes', child: Text('De temps en temps')),
+            ],
+            onChanged: (v) => setState(() => _readingFrequency = v ?? 'weekly'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep3Fields() {
+    return Column(
+      key: const ValueKey('step3'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_submitError != null) ...[
+          _RegisterHint(message: _submitError!, isError: true),
+          const SizedBox(height: 14),
+        ],
+        _RegisterField(
+          label: 'Nom',
+          child: TextField(
+            controller: _name,
+            onChanged: (_) => setState(() {}),
+            style: _fieldTextStyle,
+            textInputAction: TextInputAction.next,
+            decoration: _fieldDecoration('Votre nom'),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _RegisterField(
+          label: 'Email',
+          child: TextField(
+            controller: _email,
+            onChanged: (_) => setState(() {}),
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            style: _fieldTextStyle,
+            textInputAction: TextInputAction.next,
+            decoration: _fieldDecoration('vous@exemple.com'),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _RegisterField(
+          label: 'Mot de passe',
+          child: TextField(
+            controller: _password,
+            onChanged: (_) => setState(() {}),
+            obscureText: true,
+            style: _fieldTextStyle,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _finish(),
+            decoration: _fieldDecoration('Minimum 6 caractères'),
+          ),
+        ),
+        const SizedBox(height: 14),
+        const _RegisterHint(
+          message: 'Vous pourrez personnaliser ces choix plus tard.',
+        ),
+      ],
+    );
+  }
+
+  static const _fieldTextStyle = TextStyle(
+    fontWeight: FontWeight.w600,
+    fontSize: 15,
+    color: AppColors.textDark,
+  );
+
+  InputDecoration _fieldDecoration(String? hint) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: AppColors.bgWhite,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.border, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.border, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.primaryDark, width: 1.5),
+      ),
+    );
+  }
+}
+
+class _RegisterTopBar extends StatelessWidget {
+  const _RegisterTopBar({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _RegisterGhostIconButton(onPressed: onBack),
+        const Expanded(child: Center(child: _RegisterBrand(compact: true))),
+        const SizedBox(width: 42, height: 42),
+      ],
+    );
+  }
+}
+
+class _RegisterGhostIconButton extends StatefulWidget {
+  const _RegisterGhostIconButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  State<_RegisterGhostIconButton> createState() => _RegisterGhostIconButtonState();
+}
+
+class _RegisterGhostIconButtonState extends State<_RegisterGhostIconButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onPressed,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.ease,
+        width: 42,
+        height: 42,
+        transform: Matrix4.translationValues(0, _pressed ? -1 : 0, 0),
+        decoration: BoxDecoration(
+          color: AppColors.bgWhite.withValues(alpha: 0.92),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.black.withValues(alpha: 0.10)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
             ),
           ],
+        ),
+        child: const Icon(Icons.chevron_left, size: 22, color: AppColors.textDark),
+      ),
+    );
+  }
+}
+
+class _RegisterBrand extends StatelessWidget {
+  const _RegisterBrand({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final logoHeight = compact ? 44.0 : 52.0;
+    return Image.asset(
+      'assets/images/magafrik-logo.png',
+      height: logoHeight,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => RichText(
+        text: TextSpan(
+          style: TextStyle(
+            fontSize: compact ? 30 : 34,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.02,
+            color: AppColors.textDark,
+          ),
+          children: const [
+            TextSpan(text: 'Mang'),
+            TextSpan(text: 'Afrik', style: TextStyle(color: AppColors.primary)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedStepHeader extends StatelessWidget {
+  const _AnimatedStepHeader({
+    required this.step,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final int step;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: Column(
+        key: ValueKey(step),
+        children: [
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textDark,
+              letterSpacing: -0.02,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RegisterField extends StatelessWidget {
+  const _RegisterField({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textDark,
+          ),
+        ),
+        const SizedBox(height: 6),
+        child,
+      ],
+    );
+  }
+}
+
+class _RegisterHint extends StatelessWidget {
+  const _RegisterHint({required this.message, this.isError = false});
+
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: 1,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isError
+              ? AppColors.primaryDark.withValues(alpha: 0.08)
+              : AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isError
+                ? AppColors.primaryDark.withValues(alpha: 0.25)
+                : AppColors.primary.withValues(alpha: 0.18),
+          ),
+        ),
+        child: Text(
+          message,
+          style: TextStyle(
+            color: isError ? AppColors.primaryDark : AppColors.textSecondary,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            height: 1.35,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterPrimaryButton extends StatefulWidget {
+  const _RegisterPrimaryButton({
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  State<_RegisterPrimaryButton> createState() => _RegisterPrimaryButtonState();
+}
+
+class _RegisterPrimaryButtonState extends State<_RegisterPrimaryButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.enabled;
+    return GestureDetector(
+      onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: enabled ? widget.onPressed : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.ease,
+        width: double.infinity,
+        height: 44,
+        transform: Matrix4.translationValues(0, enabled && _pressed ? -1 : 0, 0),
+        decoration: BoxDecoration(
+          color: enabled
+              ? (_pressed ? AppColors.primaryDark : AppColors.primary)
+              : AppColors.primary.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          widget.label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 15,
+          ),
         ),
       ),
     );

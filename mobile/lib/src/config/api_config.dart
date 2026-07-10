@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'api_discovery.dart';
 
 abstract final class ApiConfig {
   static const String _prefKey = 'mangafriq_reader_api_base_v1';
@@ -10,14 +13,23 @@ abstract final class ApiConfig {
     defaultValue: '',
   );
 
+  /// Wi‑Fi IP or hostname of the dev machine (physical Android / iOS device on same LAN).
+  /// Example: flutter run --dart-define=MANGAFRIC_LAN_HOST=192.168.1.42
+  static const String _lanHost = String.fromEnvironment(
+    'MANGAFRIC_LAN_HOST',
+    defaultValue: '',
+  );
+
   static const String sessionStorageKey = String.fromEnvironment(
     'MANGAFRIC_SESSION_KEY',
     defaultValue: 'MangAfric_session',
   );
 
   static String? _savedOverride;
+  static String? _resolvedBase;
 
-  /// Call from [StartupController.init] before any HTTP request.
+  static String lanHostFromEnvironment() => _lanHost.trim();
+
   static Future<void> loadSavedBaseUrl() async {
     final sp = await SharedPreferences.getInstance();
     final raw = sp.getString(_prefKey)?.trim();
@@ -25,11 +37,58 @@ abstract final class ApiConfig {
       _savedOverride = null;
       return;
     }
-    final normalized = normalizeToApiV1Root(raw);
+    var normalized = normalizeToApiV1Root(raw);
+
+    // Saved localhost/LAN URLs break the Android emulator — drop them.
+    if (Platform.isAndroid && !await ApiDiscovery.isAndroidPhysicalDevice) {
+      final host = Uri.tryParse(normalized)?.host.toLowerCase() ?? '';
+      if (host == 'localhost' || host == '127.0.0.1' || host.startsWith('192.168.')) {
+        await sp.remove(_prefKey);
+        _savedOverride = null;
+        if (kDebugMode) {
+          debugPrint('MangAfric API: cleared saved URL unsuitable for emulator ($normalized)');
+        }
+        return;
+      }
+    }
+
     _savedOverride = normalized;
     if (normalized != raw) {
       await sp.setString(_prefKey, normalized);
     }
+  }
+
+  /// Tries known API roots (emulator, LAN, saved URL) and locks the first reachable.
+  static Future<bool> discoverReachableBaseUrl({bool force = false}) async {
+    if (!force && _resolvedBase != null) {
+      if (await ApiDiscovery.pingHealth(_resolvedBase!)) return true;
+      _resolvedBase = null;
+    }
+
+    final candidates = await ApiDiscovery.candidateRoots(
+      savedOverride: _savedOverride,
+      fromEnvironment: _fromEnvironment,
+      lanHost: _lanHost,
+    );
+
+    final found = await ApiDiscovery.findReachableRoot(candidates);
+    if (found != null) {
+      _resolvedBase = found;
+      if (kDebugMode) {
+        debugPrint('MangAfric API → $found (${sourceLabel()})');
+      }
+      return true;
+    }
+
+    _resolvedBase = candidates.isNotEmpty ? candidates.first : platformDefaultRoot();
+    // Emulator fallback: never stay on a dead localhost/LAN URL.
+    if (Platform.isAndroid && !await ApiDiscovery.isAndroidPhysicalDevice) {
+      _resolvedBase = platformDefaultRoot();
+    }
+    if (kDebugMode) {
+      debugPrint('MangAfric API unreachable; using ${base()}');
+    }
+    return false;
   }
 
   static Future<void> saveBaseUrlOverride(String userInput) async {
@@ -37,15 +96,23 @@ abstract final class ApiConfig {
     final sp = await SharedPreferences.getInstance();
     await sp.setString(_prefKey, normalized);
     _savedOverride = normalized;
+    _resolvedBase = normalized;
   }
 
   static Future<void> clearSavedBaseUrlOverride() async {
     _savedOverride = null;
+    _resolvedBase = null;
     final sp = await SharedPreferences.getInstance();
     await sp.remove(_prefKey);
+    await discoverReachableBaseUrl(force: true);
   }
 
-  /// Returns an error message, or null if the input is acceptable.
+  /// Resets to emulator/localhost defaults (debug: long-press logo if connection fails).
+  static Future<void> resetToPlatformDefault() async {
+    await clearSavedBaseUrlOverride();
+    _resolvedBase = platformDefaultRoot();
+  }
+
   static String? validateApiRootInput(String input) {
     final n = normalizeToApiV1Root(input);
     if (n.isEmpty) return 'Saisissez une URL.';
@@ -57,7 +124,6 @@ abstract final class ApiConfig {
     return null;
   }
 
-  /// Ensures the root ends with `/api/v1` (no trailing slash).
   static String normalizeToApiV1Root(String input) {
     var s = input.trim();
     if (s.isEmpty) return '';
@@ -67,7 +133,7 @@ abstract final class ApiConfig {
     return '$s/api/v1';
   }
 
-  static String _defaultBaseForPlatform() {
+  static String platformDefaultRoot() {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return 'http://10.0.2.2:8088/api/v1';
@@ -79,34 +145,36 @@ abstract final class ApiConfig {
     }
   }
 
-  /// Resolved API root including `/api/v1`, no trailing slash.
   static String base() {
+    if (_resolvedBase != null && _resolvedBase!.isNotEmpty) {
+      return _resolvedBase!.replaceAll(RegExp(r'/+$'), '');
+    }
     if (_savedOverride != null && _savedOverride!.isNotEmpty) {
-      return _savedOverride!;
+      return _savedOverride!.replaceAll(RegExp(r'/+$'), '');
     }
     final fromDefine = _fromEnvironment.trim();
     if (fromDefine.isNotEmpty) {
-      return fromDefine.replaceAll(RegExp(r'/+$'), '');
+      return normalizeToApiV1Root(fromDefine);
     }
-    return _defaultBaseForPlatform().replaceAll(RegExp(r'/+$'), '');
+    final lan = _lanHost.trim();
+    if (lan.isNotEmpty) {
+      if (lan.startsWith('http://') || lan.startsWith('https://')) {
+        return normalizeToApiV1Root(lan);
+      }
+      return 'http://$lan:8088/api/v1';
+    }
+    return platformDefaultRoot().replaceAll(RegExp(r'/+$'), '');
   }
 
-  /// Short label for debug logs / UI.
   static String sourceLabel() {
+    if (_resolvedBase != null) return 'détectée';
     if (_savedOverride != null && _savedOverride!.isNotEmpty) return 'enregistrée';
     if (_fromEnvironment.trim().isNotEmpty) return 'dart-define';
+    if (_lanHost.trim().isNotEmpty) return 'LAN';
     return 'défaut plateforme';
   }
 
   static String connectionFailedMessage([String? technical]) {
-    final url = base();
-    final extra = technical == null || technical.isEmpty ? '' : '\nDétail: $technical';
-    return 'Impossible de joindre l’API à\n$url$extra\n\n'
-        '• Vérifiez que le backend tourne (port 8088, server.address=0.0.0.0).\n'
-        '• Émulateur Android : l’hôte est 10.0.2.2 (défaut).\n'
-        '• Téléphone sur le Wi‑Fi : 10.0.2.2 ne fonctionne pas — utilisez l’IP du PC, '
-        'ex. http://192.168.1.10:8088 (l’app ajoute /api/v1). Menu ⋮ puis URL du serveur.\n'
-        '• Pare-feu Windows : autorisez le port 8088 en entrée.\n'
-        '• Production : URL HTTPS complète avec /api/v1.';
+    return 'Impossible de joindre le serveur MangAfric. Vérifiez que le backend est démarré et que l’appareil est sur le même réseau.';
   }
 }

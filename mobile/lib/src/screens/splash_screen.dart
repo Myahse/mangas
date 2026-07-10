@@ -21,20 +21,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.bgLight,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.menu_book_rounded, size: 72, color: AppColors.primary),
-            SizedBox(height: 16),
-            Text(
-              'MangAfric',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.textDark),
+            Image.asset(
+              'assets/images/magafrik-logo.png',
+              height: 96,
+              errorBuilder: (_, __, ___) => const Icon(Icons.menu_book_rounded, size: 72, color: AppColors.primary),
             ),
-            SizedBox(height: 24),
-            SizedBox(
+            const SizedBox(height: 24),
+            const SizedBox(
               width: 28,
               height: 28,
               child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),

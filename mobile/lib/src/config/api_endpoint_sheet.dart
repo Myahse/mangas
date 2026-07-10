@@ -1,11 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/catalog_service.dart';
 import '../theme.dart';
 import 'api_config.dart';
 
-/// Returns `true` if the user saved a new URL (caller may reload data).
+/// Dev-only API URL editor. Hidden in release builds.
 Future<bool> showApiEndpointEditor(BuildContext context) async {
+  if (!kDebugMode) return false;
+
   final initial = ApiConfig.base();
   final controller = TextEditingController(text: initial);
   var preview = ApiConfig.normalizeToApiV1Root(controller.text);
@@ -33,7 +36,7 @@ Future<bool> showApiEndpointEditor(BuildContext context) async {
                     children: [
                       const Expanded(
                         child: Text(
-                          'URL du serveur',
+                          'URL du serveur (debug)',
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                         ),
                       ),
@@ -43,24 +46,15 @@ Future<bool> showApiEndpointEditor(BuildContext context) async {
                       ),
                     ],
                   ),
-                  Text(
-                    'Racine de l’API (sans ou avec /api/v1). Ex. http://192.168.1.10:8088',
-                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 12),
                   TextField(
                     controller: controller,
                     keyboardType: TextInputType.url,
                     autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'URL',
-                      border: OutlineInputBorder(),
-                      hintText: 'http://192.168.1.10:8088',
-                    ),
+                    decoration: const InputDecoration(labelText: 'URL', border: OutlineInputBorder()),
                     onChanged: (v) => setModal(() => preview = ApiConfig.normalizeToApiV1Root(v)),
                   ),
                   const SizedBox(height: 8),
-                  Text('Aperçu : $preview', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  Text('Aperçu : $preview', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
                   const SizedBox(height: 16),
                   OutlinedButton(
                     onPressed: () async {
@@ -71,6 +65,7 @@ Future<bool> showApiEndpointEditor(BuildContext context) async {
                       }
                       try {
                         await ApiConfig.saveBaseUrlOverride(controller.text);
+                        await ApiConfig.discoverReachableBaseUrl(force: true);
                         await catalogService.pingHealth();
                         if (ctx.mounted) Navigator.pop(ctx, true);
                       } catch (e) {
@@ -81,14 +76,6 @@ Future<bool> showApiEndpointEditor(BuildContext context) async {
                       }
                     },
                     child: const Text('Enregistrer et tester'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () async {
-                      await ApiConfig.clearSavedBaseUrlOverride();
-                      if (ctx.mounted) Navigator.pop(ctx, true);
-                    },
-                    child: const Text('Réinitialiser (défaut plateforme / dart-define)'),
                   ),
                 ],
               ),

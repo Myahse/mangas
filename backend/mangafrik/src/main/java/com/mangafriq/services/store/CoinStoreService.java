@@ -3,6 +3,7 @@ package com.mangafriq.services.store;
 import com.mangafriq.dto.store.StoreDtos.CoinPackDto;
 import com.mangafriq.dto.store.StoreDtos.CreatePurchaseIntentRequest;
 import com.mangafriq.dto.store.StoreDtos.PurchaseIntentDto;
+import com.mangafriq.jdbc.UserIdJdbc;
 import com.mangafriq.exception.NotFoundException;
 import com.mangafriq.services.config.FeatureFlagService;
 import com.mangafriq.services.wallet.WalletService;
@@ -61,7 +62,7 @@ public class CoinStoreService {
 				""",
 			new MapSqlParameterSource()
 				.addValue("id", id)
-				.addValue("user_id", java.util.UUID.fromString(userId))
+				.addValue("user_id", UserIdJdbc.param(userId))
 				.addValue("pack_id", pack.id())
 				.addValue("coins", pack.coins())
 				.addValue("currency", pack.currency())

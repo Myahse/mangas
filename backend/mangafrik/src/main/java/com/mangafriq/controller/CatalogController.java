@@ -64,9 +64,9 @@ public class CatalogController {
 
 	@GetMapping("/manga/{slug}/chapters/{chapterNumber}/pages")
 	public List<PageDto> pages(@PathVariable String slug, @PathVariable int chapterNumber) {
-		var uid = SecurityUtils.getCurrentUserId()
+		var uid = SecurityUtils.getCurrentUserIdString()
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "unauthorized"));
-		boolean ok = walletService.hasChapterEntitlement(uid.toString(), slug, chapterNumber);
+		boolean ok = walletService.hasChapterEntitlement(uid, slug, chapterNumber);
 		if (!ok) {
 			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Locked: unlock chapter");
 		}

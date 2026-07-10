@@ -20,9 +20,10 @@ class StartupController extends ChangeNotifier {
   Future<void> init() async {
     if (_ready) return;
     await ApiConfig.loadSavedBaseUrl();
+    await ApiConfig.discoverReachableBaseUrl();
     await authController.load();
     final sp = await SharedPreferences.getInstance();
-    _onboardingDone = sp.getBool(kOnboardingDoneKey) ?? false;
+    _onboardingDone = sp.getBool(kOnboardingDoneKey) ?? true;
     _ready = true;
     notifyListeners();
   }

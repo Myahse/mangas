@@ -10,7 +10,6 @@ import com.mangafriq.dto.wallet.WalletDtos.ClaimReferralRewardResponse;
 import com.mangafriq.security.utils.SecurityUtils;
 import com.mangafriq.services.wallet.WalletService;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,44 +29,44 @@ public class WalletController {
 
 	@GetMapping
 	public WalletDto wallet() {
-		UUID uid = requireUserId();
-		return walletService.wallet(uid.toString());
+		String uid = requireUserId();
+		return walletService.wallet(uid);
 	}
 
 	@PostMapping("/daily-claim")
 	public DailyClaimResponse dailyClaim() {
-		UUID uid = requireUserId();
-		return walletService.dailyClaim(uid.toString());
+		String uid = requireUserId();
+		return walletService.dailyClaim(uid);
 	}
 
 	@GetMapping("/daily-claim/status")
 	public DailyClaimStatusResponse dailyClaimStatus() {
-		UUID uid = requireUserId();
-		return walletService.dailyClaimStatus(uid.toString());
+		String uid = requireUserId();
+		return walletService.dailyClaimStatus(uid);
 	}
 
 	@GetMapping("/referral")
 	public ReferralInfo referral() {
-		UUID uid = requireUserId();
-		String code = walletService.getOrCreateReferralCode(uid.toString());
+		String uid = requireUserId();
+		String code = walletService.getOrCreateReferralCode(uid);
 		String link = walletService.referralLinkForCode(code);
 		return new ReferralInfo(code, link);
 	}
 
 	@GetMapping("/referral/pending")
 	public List<PendingReferralRewardDto> pendingReferralRewards() {
-		UUID uid = requireUserId();
-		return walletService.listPendingReferralRewards(uid.toString());
+		String uid = requireUserId();
+		return walletService.listPendingReferralRewards(uid);
 	}
 
 	@PostMapping("/referral/pending/{id}/claim")
 	public ClaimReferralRewardResponse claimReferral(@PathVariable String id) {
-		UUID uid = requireUserId();
-		return walletService.claimReferralReward(uid.toString(), id);
+		String uid = requireUserId();
+		return walletService.claimReferralReward(uid, id);
 	}
 
-	private static UUID requireUserId() {
-		return SecurityUtils.getCurrentUserId()
+	private static String requireUserId() {
+		return SecurityUtils.getCurrentUserIdString()
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized"));
 	}
 }

@@ -43,6 +43,12 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     final uri = _uri(path);
+    if (auth) {
+      final token = (tokenGetter() ?? '').trim();
+      if (token.isEmpty) {
+        throw BackendException('Connexion requise', statusCode: 401);
+      }
+    }
     final h = _headers(auth: auth, extra: {
       if (body != null) 'Content-Type': 'application/json',
       ...?headers,

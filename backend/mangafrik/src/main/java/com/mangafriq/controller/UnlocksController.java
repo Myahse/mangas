@@ -22,16 +22,16 @@ public class UnlocksController {
 
 	@PostMapping("/manga")
 	public UnlockResponse unlockManga(@RequestBody UnlockMangaRequest req) {
-		var uid = SecurityUtils.getCurrentUserId().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
+		var uid = SecurityUtils.getCurrentUserIdString().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
 		String slug = req == null ? "" : req.mangaSlug();
-		return walletService.unlockManga(uid.toString(), slug);
+		return walletService.unlockManga(uid, slug);
 	}
 
 	@PostMapping("/chapter")
 	public UnlockResponse unlockChapter(@RequestBody UnlockChapterRequest req) {
-		var uid = SecurityUtils.getCurrentUserId().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
+		var uid = SecurityUtils.getCurrentUserIdString().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
 		if (req == null) throw new IllegalArgumentException("payload is required");
-		return walletService.unlockChapter(uid.toString(), req.mangaSlug(), req.chapterNumber());
+		return walletService.unlockChapter(uid, req.mangaSlug(), req.chapterNumber());
 	}
 }
 

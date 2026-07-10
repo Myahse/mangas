@@ -104,6 +104,17 @@ class AuthController extends ChangeNotifier {
       auth: false,
     );
     await login(email: email.trim(), password: password);
+    if (_user != null) {
+      await _persist(
+        AuthUser(
+          role: _user!.role,
+          displayName: _user!.displayName,
+          email: _user!.email,
+          token: _user!.token,
+          profile: profile,
+        ),
+      );
+    }
   }
 
   Future<void> forgotPassword(String email) async {

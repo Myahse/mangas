@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'auth/auth_controller.dart';
-import 'screens/account_stub_screen.dart';
+import 'screens/account_section_screen.dart';
+import 'screens/become_creator_screen.dart';
+import 'screens/contact_screen.dart';
+import 'screens/not_found_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/reset_password_screen.dart';
+import 'screens/store_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/manga_detail_screen.dart';
@@ -64,6 +70,30 @@ GoRouter createRouter(StartupController startup) {
               ),
             ],
           ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/compte',
+                builder: (context, state) => const AccountSectionScreen(title: 'Mon espace', embedded: true),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/store',
+                builder: (context, state) => const StoreScreen(embedded: true),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/contact',
+                builder: (context, state) => const ContactScreen(embedded: true),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
@@ -74,35 +104,48 @@ GoRouter createRouter(StartupController startup) {
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
         path: '/register',
-        builder: (context, state) => const RegisterScreen(),
-      ),
-      GoRoute(
-        parentNavigatorKey: rootNavigatorKey,
-        path: '/compte',
-        builder: (context, state) => const AccountStubScreen(title: 'Mon espace'),
-      ),
-      GoRoute(
-        parentNavigatorKey: rootNavigatorKey,
-        path: '/compte/profil',
-        builder: (context, state) => const AccountStubScreen(title: 'Mon profil'),
-      ),
-      GoRoute(
-        parentNavigatorKey: rootNavigatorKey,
-        path: '/store',
-        builder: (context, state) => const AccountStubScreen(
-          title: 'Boutique (coins)',
-          subtitle: 'Achetez des coins et gérez votre solde sur le site MangAfric avec le même compte.',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const RegisterScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+            return FadeTransition(
+              opacity: curved,
+              child: SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero).animate(curved),
+                child: child,
+              ),
+            );
+          },
         ),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
+        path: '/compte/profil',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
         path: '/compte/abonnements',
-        builder: (context, state) => const AccountStubScreen(title: 'Mes abonnements'),
+        builder: (context, state) => const AccountSectionScreen(title: 'Mes abonnements'),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
         path: '/compte/favoris',
-        builder: (context, state) => const AccountStubScreen(title: 'Favoris'),
+        builder: (context, state) => const AccountSectionScreen(title: 'Mes favoris'),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/compte/devenir-createur',
+        builder: (context, state) => const BecomeCreatorScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/reset-password',
+        builder: (context, state) {
+          final token = state.uri.queryParameters['token'];
+          return ResetPasswordScreen(token: token);
+        },
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
@@ -122,5 +165,6 @@ GoRouter createRouter(StartupController startup) {
         },
       ),
     ],
+    errorBuilder: (context, state) => const NotFoundScreen(),
   );
 }
