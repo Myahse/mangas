@@ -20,8 +20,12 @@ import com.mangafriq.dto.creator.MangaSubmissionDto;
 import com.mangafriq.services.admin.AdminStore;
 import com.mangafriq.services.admin.AdminUserService;
 import com.mangafriq.services.admin.CreatorAccountService;
+import com.mangafriq.dto.creator.EpisodeDtos.EpisodeDraftDto;
+import com.mangafriq.dto.creator.EpisodeDtos.PublishedEpisodeDto;
 import com.mangafriq.services.creator.CreatorRequestService;
 import com.mangafriq.services.creator.CreatorStore;
+import com.mangafriq.services.catalog.CatalogChapterSyncService;
+import com.mangafriq.services.creator.EpisodeStore;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -41,19 +45,25 @@ public class AdminController {
 	private final CreatorRequestService creatorRequestService;
 	private final CreatorAccountService creatorAccountService;
 	private final AdminUserService adminUserService;
+	private final EpisodeStore episodeStore;
+	private final CatalogChapterSyncService catalogChapterSync;
 
 	public AdminController(
 			AdminStore adminStore,
 			CreatorStore creatorStore,
 			CreatorRequestService creatorRequestService,
 			CreatorAccountService creatorAccountService,
-			AdminUserService adminUserService
+			AdminUserService adminUserService,
+			EpisodeStore episodeStore,
+			CatalogChapterSyncService catalogChapterSync
 	) {
 		this.adminStore = adminStore;
 		this.creatorStore = creatorStore;
 		this.creatorRequestService = creatorRequestService;
 		this.creatorAccountService = creatorAccountService;
 		this.adminUserService = adminUserService;
+		this.episodeStore = episodeStore;
+		this.catalogChapterSync = catalogChapterSync;
 	}
 
 	@GetMapping("/summary")
@@ -104,6 +114,27 @@ public class AdminController {
 	@PostMapping("/manga-submissions/{id}/review")
 	public Object reviewSubmission(@PathVariable String id, @RequestBody ReviewRequest req) {
 		return adminStore.reviewSubmission(id, req);
+	}
+
+	@GetMapping("/creator-episodes/drafts")
+	public List<EpisodeDraftDto> creatorEpisodeDrafts() {
+		return episodeStore.listDrafts();
+	}
+
+	@GetMapping("/creator-episodes/published")
+	public List<PublishedEpisodeDto> creatorEpisodesPublished() {
+		return episodeStore.listPublished();
+	}
+
+	/** Push creator-published episodes for a série into the public catalog (chapters/pages). */
+	@PostMapping("/catalog/sync-series-episodes")
+	public Map<String, String> syncSeriesEpisodesToCatalog(@RequestBody Map<String, String> body) {
+		String seriesTitle = body == null ? null : body.get("seriesTitle");
+		if (seriesTitle == null || seriesTitle.isBlank()) {
+			throw new IllegalArgumentException("seriesTitle is required");
+		}
+		catalogChapterSync.syncAllPublishedEpisodesForSeries(seriesTitle.trim());
+		return Map.of("status", "ok", "seriesTitle", seriesTitle.trim());
 	}
 
 	@GetMapping("/manga-requests")

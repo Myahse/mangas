@@ -85,6 +85,12 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem(key);
   }, [key]);
 
+  useEffect(() => {
+    const onExpired = () => persist(null);
+    window.addEventListener('mangafric:auth-expired', onExpired);
+    return () => window.removeEventListener('mangafric:auth-expired', onExpired);
+  }, [persist]);
+
   const logout = useCallback(() => persist(null), [persist]);
 
   const login = useCallback(

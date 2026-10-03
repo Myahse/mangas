@@ -83,6 +83,7 @@ export function AuthProvider({ children }) {
       const meReq = await request('/creator-requests/me', {
         headers: { Authorization: `Bearer ${t}` },
       });
+      if (!meReq) return null;
       // The backend returns a CreatorRequestDto. Store it under user.profile for UI convenience.
       return {
         penName: meReq?.penName ?? null,

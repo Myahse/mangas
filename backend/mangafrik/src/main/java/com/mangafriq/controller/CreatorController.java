@@ -2,7 +2,6 @@ package com.mangafriq.controller;
 
 import com.mangafriq.constants.AppConstants;
 import com.mangafriq.dto.creator.CreateMangaSubmissionRequest;
-import com.mangafriq.dto.creator.EpisodeDtos.AddCommentRequest;
 import com.mangafriq.dto.creator.EpisodeDtos.CreateDraftRequest;
 import com.mangafriq.dto.creator.EpisodeDtos.CreatePublishedRequest;
 import com.mangafriq.dto.creator.EpisodeDtos.EpisodeDraftDto;
@@ -39,7 +38,14 @@ public class CreatorController {
 
 	@PostMapping("/submissions")
 	public MangaSubmissionDto createSubmission(@RequestBody CreateMangaSubmissionRequest req) {
-		MangaSubmissionDto submission = creatorStore.createSubmission(req);
+		String authEmail = SecurityUtils.getCurrentUserEmail().orElse(null);
+		String authName = SecurityUtils.getCurrentUsername().orElse(null);
+		CreateMangaSubmissionRequest normalized = new CreateMangaSubmissionRequest(
+				authEmail != null && !authEmail.isBlank() ? authEmail : req.creatorEmail(),
+				authName != null && !authName.isBlank() ? authName : req.creatorDisplayName(),
+				req.payload()
+		);
+		MangaSubmissionDto submission = creatorStore.createSubmission(normalized);
 		String mangaTitle = submissionTitle(submission.payload());
 		try {
 			String email = submission.creator() == null ? "" : submission.creator().email();
@@ -59,7 +65,9 @@ public class CreatorController {
 
 	@GetMapping("/submissions")
 	public List<MangaSubmissionDto> listSubmissions(@RequestParam(required = false) String email) {
-		return creatorStore.listSubmissions(email);
+		String authEmail = SecurityUtils.getCurrentUserEmail().orElse("");
+		String filterEmail = !authEmail.isBlank() ? authEmail : (email == null ? "" : email);
+		return creatorStore.listSubmissions(filterEmail);
 	}
 
 	@GetMapping("/episodes/drafts")
@@ -83,19 +91,5 @@ public class CreatorController {
 		return episodeStore.createPublished(req, creatorEmail);
 	}
 
-	@PostMapping("/episodes/published/{id}/view")
-	public PublishedEpisodeDto view(@org.springframework.web.bind.annotation.PathVariable String id) {
-		return episodeStore.incrementView(id);
-	}
-
-	@PostMapping("/episodes/published/{id}/like")
-	public PublishedEpisodeDto like(@org.springframework.web.bind.annotation.PathVariable String id) {
-		return episodeStore.addLike(id);
-	}
-
-	@PostMapping("/episodes/published/{id}/comments")
-	public PublishedEpisodeDto comment(@org.springframework.web.bind.annotation.PathVariable String id, @RequestBody AddCommentRequest req) {
-		return episodeStore.addComment(id, req);
-	}
 }
 

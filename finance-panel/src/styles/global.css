@@ -54,9 +54,12 @@
   /* Layout */
   --navbar-height: 64px;
   --infobar-height: 30px;
+  --bottom-nav-height: 0px;
   --header-total: calc(var(--navbar-height) + var(--infobar-height));
   --container-max: 1280px;
   --sidebar-width: 280px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Dark mode overrides (toggled by adding class="dark" on <html>) */
@@ -193,6 +196,32 @@ img {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #aaa;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --navbar-height: 64px;
+    --bottom-nav-height: calc(56px + var(--safe-bottom));
+    --header-total: calc(var(--navbar-height) + var(--infobar-height) + var(--safe-top));
+  }
+
+  body {
+    padding-bottom: var(--bottom-nav-height);
+  }
+
+  .container {
+    padding: 0 14px;
+  }
+
+  .page-wrapper {
+    min-height: auto;
+    padding-bottom: 8px;
+  }
+
+  .section-header {
+    margin-bottom: 14px;
+    gap: 10px;
+  }
 }
 
 @media (max-width: 768px) {

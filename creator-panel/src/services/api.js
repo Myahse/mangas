@@ -18,6 +18,21 @@ function apiBase() {
   return requiredApiBaseUrl().replace(/\/$/, '');
 }
 
+export function getApiBase() {
+  return apiBase();
+}
+
+/** Turn API-relative storage URLs into absolute URLs for <img src>. */
+export function apiAssetUrl(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  if (/^(https?:|blob:|data:)/i.test(u)) return u;
+  const base = apiBase();
+  const origin = base.replace(/\/api\/v1\/?$/i, '');
+  if (u.startsWith('/')) return `${origin}${u}`;
+  return `${base.replace(/\/$/, '')}/${u.replace(/^\//, '')}`;
+}
+
 async function request(path, { method = 'GET', body, headers } = {}) {
   const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   let token = '';
@@ -28,6 +43,7 @@ async function request(path, { method = 'GET', body, headers } = {}) {
   } catch {}
   const res = await fetch(url, {
     method,
+    cache: 'no-store',
     headers: {
       ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : null),
       ...(token ? { Authorization: `Bearer ${token}` } : null),
@@ -56,11 +72,24 @@ function readSession() {
 
 export const creatorApi = {
   // Storage (R2 via backend)
-  async uploadFile({ file, prefix }) {
+  async uploadFile({ file, prefix, normalize }) {
     const fd = new FormData();
     fd.append('file', file);
-    const qs = prefix ? `?prefix=${encodeURIComponent(prefix)}` : '';
+    const params = new URLSearchParams();
+    if (prefix) params.set('prefix', prefix);
+    if (normalize) params.set('normalize', normalize);
+    const qs = params.toString() ? `?${params.toString()}` : '';
     return request(`/storage/upload${qs}`, { method: 'POST', body: fd });
+  },
+
+  async uploadMangaArchive({ file, prefix, normalize = 'episode_page' }) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const params = new URLSearchParams();
+    if (prefix) params.set('prefix', prefix);
+    if (normalize) params.set('normalize', normalize);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request(`/storage/upload-manga-archive${qs}`, { method: 'POST', body: fd });
   },
 
   // Series submissions
@@ -76,10 +105,7 @@ export const creatorApi = {
     });
   },
   async listMySubmissions() {
-    const session = readSession();
-    const email = encodeURIComponent(session?.email || '');
-    const qs = email ? `?email=${email}` : '';
-    return request(`/creator/submissions${qs}`);
+    return request('/creator/submissions');
   },
 
   // Episodes
@@ -95,19 +121,6 @@ export const creatorApi = {
   async createPublished(entry) {
     return request('/creator/episodes/published', { method: 'POST', body: entry });
   },
-  async addView(id) {
-    return request(`/creator/episodes/published/${encodeURIComponent(id)}/view`, { method: 'POST' });
-  },
-  async addLike(id) {
-    return request(`/creator/episodes/published/${encodeURIComponent(id)}/like`, { method: 'POST' });
-  },
-  async addComment(id, comment) {
-    return request(`/creator/episodes/published/${encodeURIComponent(id)}/comments`, {
-      method: 'POST',
-      body: comment,
-    });
-  },
-
   async createSupportTicket(payload) {
     return request('/support/public/tickets', { method: 'POST', body: payload });
   },

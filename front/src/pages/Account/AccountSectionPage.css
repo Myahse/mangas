@@ -1,6 +1,12 @@
 .account-section {
-  padding: calc(var(--navbar-height, 64px) + 48px) 0 80px;
+  padding: calc(var(--navbar-height, 64px) + 48px) 0 calc(80px + var(--bottom-nav-height, 0px));
   max-width: 720px;
+}
+
+@media (max-width: 900px) {
+  .account-section {
+    padding: calc(var(--header-total) + 16px) 0 24px;
+  }
 }
 
 .account-section__crumb {

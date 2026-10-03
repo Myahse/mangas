@@ -49,3 +49,10 @@
 .account-section__inline-link:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 900px) {
+  .account-section {
+    padding-top: 20px;
+    padding-bottom: 24px;
+  }
+}

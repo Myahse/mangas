@@ -423,6 +423,49 @@
   }
 }
 
+@media (max-width: 900px) {
+  .contact-page {
+    padding: calc(var(--header-total) + 12px) 0 calc(var(--bottom-nav-height) + 20px);
+  }
+
+  .contact-hero h1 {
+    font-size: 1.5rem;
+  }
+
+  .contact-tabs {
+    position: sticky;
+    top: calc(var(--header-total) - 1px);
+    z-index: 20;
+    margin: 14px 0 12px;
+    padding: 6px 0 8px;
+    background: var(--page-bg);
+  }
+
+  .contact-tab {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding: 10px 8px;
+    font-size: 0.82rem;
+  }
+
+  .contact-card {
+    padding: 14px;
+  }
+
+  .contact-chat-transcript {
+    max-height: min(46vh, 380px);
+  }
+
+  .contact-chat-compose-row {
+    position: sticky;
+    bottom: calc(var(--bottom-nav-height) + 8px);
+    z-index: 15;
+    padding-top: 8px;
+    background: linear-gradient(to top, var(--page-bg) 70%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .contact-typing {
     animation: none;

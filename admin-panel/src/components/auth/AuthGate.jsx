@@ -7,7 +7,7 @@ export default function AuthGate({ children }) {
   const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
-    const roleOk = String(user?.role || '') === 'admin';
+    const roleOk = String(user?.role || '').toLowerCase() === 'admin';
     const mustChangePassword = Boolean(user?.mustChangePassword);
     const ok = isAuthenticated && roleOk && !mustChangePassword;
     setOpen(!ok);
@@ -16,14 +16,18 @@ export default function AuthGate({ children }) {
 
   const onClose = useMemo(() => {
     // Panels require auth: ignore close when unauthenticated or password change required.
-    if (!(isAuthenticated && String(user?.role || '') === 'admin') || Boolean(user?.mustChangePassword))
+    if (!(isAuthenticated && String(user?.role || '').toLowerCase() === 'admin') || Boolean(user?.mustChangePassword))
       return () => {};
     return () => setOpen(false);
   }, [isAuthenticated, user]);
 
+  const roleOk = String(user?.role || '').toLowerCase() === 'admin';
+  const canUsePanel =
+    isAuthenticated && roleOk && !Boolean(user?.mustChangePassword);
+
   return (
     <>
-      {children}
+      {canUsePanel ? children : null}
       <AuthModal isOpen={open} initialMode="login" onClose={onClose} />
     </>
   );

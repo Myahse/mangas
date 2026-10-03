@@ -5,36 +5,18 @@ import { creatorApi } from '../services/api';
 import AfterSeriesCreateModal from '../components/modals/AfterSeriesCreateModal';
 import ThumbnailGuideModal from '../components/modals/ThumbnailGuideModal';
 import { notify } from '../services/notify';
+import { persistLastSeriesTitle } from '../lib/creatorSeriesContext';
+import {
+  formatBytes,
+  isSupportedSourceImage,
+  normalizeSeriesThumbnail,
+  SOURCE_IMAGE_MAX_BYTES,
+  THUMB_SQUARE_SPEC,
+  THUMB_VERTICAL_SPEC,
+} from '../lib/imageFormat';
 
 const CATEGORY_1 = ['Action', 'Aventure', 'Comédie', 'Drame', 'Fantaisie', 'Horreur', 'Romance', 'Sci‑Fi', 'Thriller'];
 const CATEGORY_2 = ['Shonen', 'Shojo', 'Seinen', 'Josei', 'Tranche de vie', 'Mystère', 'Surnaturel'];
-
-const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-
-/** Reject wrong MIME labels; empty/octet-stream allowed — real format verified via magic bytes. */
-function isAllowedImageMimeType(type) {
-  const t = (type || '').toLowerCase().trim();
-  if (!t) return true;
-  if (t === 'application/octet-stream') return true;
-  return ACCEPTED_TYPES.includes(t);
-}
-
-/** True only for raw JPEG or PNG file signatures (not WebP, GIF, BMP, SVG, etc.). */
-async function isJpegOrPngSignature(file) {
-  const buf = await file.slice(0, 8).arrayBuffer();
-  const b = new Uint8Array(buf);
-  const jpeg = b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
-  const png =
-    b[0] === 0x89 &&
-    b[1] === 0x50 &&
-    b[2] === 0x4e &&
-    b[3] === 0x47 &&
-    b[4] === 0x0d &&
-    b[5] === 0x0a &&
-    b[6] === 0x1a &&
-    b[7] === 0x0a;
-  return jpeg || png;
-}
 
 function readAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -44,30 +26,6 @@ function readAsDataUrl(file) {
     reader.onerror = () => reject(new Error('read_failed'));
     reader.readAsDataURL(file);
   });
-}
-
-function getImageDimensions(file) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const dims = { width: img.naturalWidth, height: img.naturalHeight };
-      URL.revokeObjectURL(url);
-      resolve(dims);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('invalid_image'));
-    };
-    img.src = url;
-  });
-}
-
-function formatBytes(n) {
-  if (typeof n !== 'number') return '';
-  const kb = n / 1024;
-  if (kb < 1024) return `${Math.round(kb)} kb`;
-  return `${(kb / 1024).toFixed(1)} mb`;
 }
 
 export default function SeriesPage() {
@@ -98,10 +56,7 @@ export default function SeriesPage() {
   }, []);
 
   const setThumbWithValidation = async ({ kind, file }) => {
-    const expected =
-      kind === 'square'
-        ? { width: 1080, height: 1080, maxBytes: 800 * 1024 }
-        : { width: 1080, height: 1920, maxBytes: 800 * 1024 };
+    const spec = kind === 'square' ? THUMB_SQUARE_SPEC : THUMB_VERTICAL_SPEC;
     const setState = kind === 'square' ? setThumbSquare : setThumbVertical;
     const current = kind === 'square' ? thumbSquare : thumbVertical;
 
@@ -112,48 +67,31 @@ export default function SeriesPage() {
       return;
     }
 
-    if (!isAllowedImageMimeType(file.type)) {
-      setState({ file: null, url: '', dims: null, error: 'Format non autorisé (JPG, JPEG, PNG).' });
+    if (!isSupportedSourceImage(file)) {
+      setState({ file: null, url: '', dims: null, error: 'Format non reconnu (JPG, PNG, WebP, GIF, BMP).' });
+      return;
+    }
+
+    if (file.size > SOURCE_IMAGE_MAX_BYTES) {
+      setState({
+        file: null,
+        url: '',
+        dims: null,
+        error: `Fichier source trop lourd (max ${formatBytes(SOURCE_IMAGE_MAX_BYTES)}).`,
+      });
       return;
     }
 
     try {
-      const signatureOk = await isJpegOrPngSignature(file);
-      if (!signatureOk) {
-        setState({
-          file: null,
-          url: '',
-          dims: null,
-          error: 'Fichier non valide : importez une image JPG ou PNG (autres formats non acceptés).',
-        });
-        return;
-      }
-      const dims = await getImageDimensions(file);
-      const dimsOk = dims?.width === expected.width && dims?.height === expected.height;
-      if (!dimsOk) {
-        setState({
-          file: null,
-          url: '',
-          dims,
-          error: `Dimensions invalides: ${dims?.width}×${dims?.height}px. Requis: ${expected.width}×${expected.height}px.`,
-        });
-        return;
-      }
-
-      if (file.size > expected.maxBytes) {
-        setState({
-          file: null,
-          url: '',
-          dims,
-          error: `Fichier trop lourd: ${formatBytes(file.size)}. Maximum: ${Math.round(expected.maxBytes / 1024)} kb.`,
-        });
-        return;
-      }
-
-      const url = URL.createObjectURL(file);
-      setState({ file, url, dims, error: '' });
-    } catch {
-      setState({ file: null, url: '', dims: null, error: "Impossible de lire l'image. Essayez un autre fichier." });
+      const normalized = await normalizeSeriesThumbnail(file, kind);
+      const url = URL.createObjectURL(normalized.file);
+      setState({ file: normalized.file, sourceFile: file, url, dims: normalized.dims, error: '' });
+    } catch (err) {
+      const msg =
+        err?.message === 'output_too_large'
+          ? `Impossible de compresser sous ${formatBytes(spec.maxBytes)}.`
+          : "Impossible de lire ou convertir l'image.";
+      setState({ file: null, url: '', dims: null, error: msg });
     }
   };
 
@@ -198,8 +136,16 @@ export default function SeriesPage() {
       const safeTitle = title.trim().replace(/[^a-z0-9-_]+/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'series';
       const prefix = `series/${safeTitle}/thumbnails`;
       const [squareUp, verticalUp] = await Promise.all([
-        creatorApi.uploadFile({ file: thumbSquare.file, prefix }),
-        creatorApi.uploadFile({ file: thumbVertical.file, prefix }),
+        creatorApi.uploadFile({
+          file: thumbSquare.sourceFile || thumbSquare.file,
+          prefix,
+          normalize: 'thumb_square',
+        }),
+        creatorApi.uploadFile({
+          file: thumbVertical.sourceFile || thumbVertical.file,
+          prefix,
+          normalize: 'thumb_vertical',
+        }),
       ]);
 
       const payload = {
@@ -240,6 +186,7 @@ export default function SeriesPage() {
       } catch {
         /* ignore quota / private mode */
       }
+      persistLastSeriesTitle(payload.title);
       setCreatedSeriesTitle(payload.title);
       setAfterCreateOpen(true);
     } catch (err) {
@@ -288,7 +235,7 @@ export default function SeriesPage() {
                   <input
                     ref={squareInputRef}
                     type="file"
-                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,image/jpeg,image/png,image/webp,image/gif,image/bmp"
                     onChange={onPick('square')}
                   />
                   <div className="creator__media creator__media--square">
@@ -333,8 +280,8 @@ export default function SeriesPage() {
                   )}
                 </div>
                 <p className="creator__help creator__help--mt">
-                  L'image doit avoir un format de 1080 x 1080 px, et ne doit pas dépasser 800 kb. Seuls les formats JPG,
-                  JPEG ou PNG sont autorisés.
+                  Importez n’importe quelle image (JPG, PNG, WebP…). Elle sera recadrée et convertie automatiquement en{' '}
+                  {THUMB_SQUARE_SPEC.width}×{THUMB_SQUARE_SPEC.height} px, max {formatBytes(THUMB_SQUARE_SPEC.maxBytes)}.
                 </p>
                 {squareError && <div className="creator__error">{squareError}</div>}
               </div>
@@ -361,7 +308,7 @@ export default function SeriesPage() {
                   <input
                     ref={verticalInputRef}
                     type="file"
-                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,image/jpeg,image/png,image/webp,image/gif,image/bmp"
                     onChange={onPick('vertical')}
                   />
                   <div className="creator__media creator__media--vertical">
@@ -406,8 +353,8 @@ export default function SeriesPage() {
                   )}
                 </div>
                 <p className="creator__help creator__help--mt">
-                  L'image doit avoir un format de 1080 x 1920 px, et ne doit pas dépasser 800 kb. Seuls les formats JPG,
-                  JPEG ou PNG sont autorisés.
+                  Importez n’importe quelle image (JPG, PNG, WebP…). Elle sera recadrée et convertie automatiquement en{' '}
+                  {THUMB_VERTICAL_SPEC.width}×{THUMB_VERTICAL_SPEC.height} px, max {formatBytes(THUMB_VERTICAL_SPEC.maxBytes)}.
                 </p>
                 {verticalError && <div className="creator__error">{verticalError}</div>}
               </div>

@@ -63,15 +63,14 @@
   height: 34px;
   width: auto;
   display: block;
-  transform: translate(-20px, 6px) scale(3.5);
+  transform: translate(-20px, 6px) scale(4.2);
   transform-origin: left center;
 }
 
 @media (max-width: 520px) {
-  /* iPhone widths: keep the logo from blowing up the header */
   .navbar__logo-img {
     transform: none;
-    height: 30px;
+    height: 56px;
   }
 }
 
@@ -403,8 +402,7 @@
   border-color: color-mix(in srgb, var(--panel-border) 70%, var(--primary) 30%);
 }
 
-@media (max-width: 520px) {
-  /* Keep theme toggle visible by shrinking language/currency control */
+@media (max-width: 900px) {
   .navbar__lang-btn {
     min-width: 56px;
     padding: 0 10px;
@@ -648,20 +646,18 @@
   color: var(--text-muted);
 }
 
-/* ─── Mobile Burger ─── */
+/* ─── Mobile Burger (kept for sheet toggle inside bottom nav) ─── */
 .navbar__burger {
   display: none;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  color: var(--nav-text);
-  border-radius: var(--radius-sm);
-  transition: var(--transition);
 }
 
-.navbar__burger:hover {
-  background: var(--nav-hover-bg);
+/* ─── Bottom nav (mobile) ─── */
+.navbar__bottom {
+  display: none;
+}
+
+.navbar__mobile-backdrop {
+  display: none;
 }
 
 /* ─── Mobile Menu ─── */
@@ -798,42 +794,123 @@
   padding-top: 12px;
 }
 
+body.navbar-more-open {
+  overflow: hidden;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 900px) {
+  .navbar {
+    top: 0;
+    height: calc(var(--navbar-height) + var(--safe-top));
+    padding-top: var(--safe-top);
+    overflow: visible;
+  }
+
+  .navbar__logo-img {
+    transform: none;
+    height: 56px;
+  }
+
+  .navbar__inner {
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 16px;
+  }
+
   .navbar__nav {
     display: none;
   }
-  .navbar__burger {
-    display: flex;
+
+  .navbar__coins-pill,
+  .navbar__login-btn,
+  .navbar__user,
+  .navbar__search,
+  .navbar__theme-btn {
+    display: none;
   }
+
+  .navbar__bottom {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1100;
+    height: var(--bottom-nav-height);
+    padding: 0 4px var(--safe-bottom);
+    background: var(--nav-bg);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--nav-border);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .dark .navbar__bottom {
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .navbar__bottom-item {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 4px 4px;
+    color: var(--nav-text-muted);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    line-height: 1.15;
+    text-align: center;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s ease, background 0.15s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .navbar__bottom-item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .navbar__bottom-item:hover,
+  .navbar__bottom-item--active {
+    color: var(--primary);
+  }
+
+  .navbar__mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1085;
+    border: none;
+    padding: 0;
+    background: var(--overlay-bg);
+  }
+
   .navbar__mobile-menu {
     display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--bottom-nav-height);
+    z-index: 1090;
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+    padding: 8px 0 16px;
+    border-top: 1px solid var(--panel-border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.18);
   }
 }
 
-@media (max-width: 480px) {
-  .navbar__login-btn {
-    display: none;
-  }
-
-  /* Avoid overflow in the fixed top bar; coins stay visible in the burger menu. */
-  .navbar__coins-pill {
-    display: none;
-  }
-
-  .navbar__user-trigger {
-    max-width: none;
-    padding: 8px 10px;
-  }
-
-  .navbar__user-trigger-text,
-  .navbar__user-chevron {
-    display: none;
-  }
-
-  .navbar__search-box {
-    width: auto;
-    left: 16px;
-    right: 16px;
-  }
-}

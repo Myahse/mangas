@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, Moon, Sun, X } from 'lucide-react';
+import { Menu, Moon, Sun, X, Home, ArrowLeftRight, BarChart3 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme.js';
 import { useLocale } from '../../hooks/useLocale.js';
 import { useCurrency } from '../../hooks/useCurrency.js';
@@ -30,6 +30,17 @@ export default function Navbar() {
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle('navbar-more-open', menuOpen);
+    return () => document.body.classList.remove('navbar-more-open');
+  }, [menuOpen]);
+
+  const bottomLinks = [
+    { label: t('nav.overview', 'Overview'), to: '/overview', icon: Home },
+    { label: t('nav.transactions', 'Transactions'), to: '/transactions', icon: ArrowLeftRight },
+    { label: t('nav.reports', 'Reports'), to: '/reports', icon: BarChart3 },
+  ];
 
   return (
     <header className={`navbar${scrolled ? ' navbar--scrolled' : ''}`}>
@@ -67,7 +78,7 @@ export default function Navbar() {
           </button>
           <button
             type="button"
-            className="navbar__icon-btn"
+            className="navbar__icon-btn navbar__theme-btn"
             onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
             aria-label={resolved === 'dark' ? 'Enable light mode' : 'Enable dark mode'}
             title={resolved === 'dark' ? 'Light mode' : 'Dark mode'}
@@ -92,6 +103,15 @@ export default function Navbar() {
       </div>
 
       {menuOpen ? (
+        <button
+          type="button"
+          className="navbar__mobile-backdrop"
+          aria-label="Close menu"
+          onClick={() => setMenuOpen(false)}
+        />
+      ) : null}
+
+      {menuOpen ? (
         <div className="navbar__mobile-menu">
           {navLinks.map((link) => (
             <NavLink key={link.to} to={link.to} className="navbar__mobile-link" onClick={() => setMenuOpen(false)}>
@@ -110,6 +130,31 @@ export default function Navbar() {
           </button>
         </div>
       ) : null}
+      <nav className="navbar__bottom" aria-label="Main navigation">
+        {bottomLinks.map((link) => {
+          const Icon = link.icon;
+          return (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) => `navbar__bottom-item${isActive ? ' navbar__bottom-item--active' : ''}`}
+              onClick={() => setMenuOpen(false)}
+            >
+              <Icon size={20} aria-hidden />
+              <span>{link.label}</span>
+            </NavLink>
+          );
+        })}
+        <button
+          type="button"
+          className={`navbar__bottom-item${menuOpen ? ' navbar__bottom-item--active' : ''}`}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+          <span>{t('nav.more', 'More')}</span>
+        </button>
+      </nav>
       <PreferencesModal isOpen={prefsOpen} onClose={() => setPrefsOpen(false)} />
     </header>
   );

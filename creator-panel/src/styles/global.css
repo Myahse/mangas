@@ -36,8 +36,15 @@
   --nav-hover-bg: rgba(0, 0, 0, 0.05);
 
   --navbar-height: 64px;
+  --bottom-nav-height: 0px;
   --container-max: 1280px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.14);
   --transition: all 0.2s ease;
 
   /* Modal / panels */
@@ -58,6 +65,8 @@ html.dark {
   --bg-white: var(--bg-dark-2);
   --text-dark: var(--text-white);
   --border: var(--border-dark);
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+  --card-shadow-hover: 0 10px 28px rgba(0, 0, 0, 0.55);
 
   --nav-bg: rgba(0, 0, 0, 0.85);
   --nav-border: rgba(255, 255, 255, 0.08);
@@ -118,10 +127,25 @@ a {
 }
 
 .creator-page-wrapper {
-  padding-top: var(--navbar-height);
+  padding-top: calc(var(--navbar-height) + var(--safe-top));
   min-height: 100vh;
 }
 
 .creator-main {
   padding: 26px 0 40px;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --navbar-height: 64px;
+    --bottom-nav-height: calc(56px + var(--safe-bottom));
+  }
+
+  body {
+    padding-bottom: var(--bottom-nav-height);
+  }
+
+  .creator-page-wrapper {
+    padding-top: calc(var(--navbar-height) + var(--safe-top));
+  }
 }

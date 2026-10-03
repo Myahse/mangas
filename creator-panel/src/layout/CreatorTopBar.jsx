@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Sun, Moon, User, ChevronDown, Coins, LogOut } from 'lucide-react';
+import { Sun, Moon, User, ChevronDown, Coins, LogOut, Menu, X, BookOpen, Clapperboard, Newspaper, Activity } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useLocale } from '../hooks/useLocale';
 import { useCurrency } from '../hooks/useCurrency';
@@ -21,6 +21,7 @@ export default function CreatorTopBar() {
   const [walletBalance, setWalletBalance] = useState(null);
   const isCreator = isAuthenticated && String(user?.role || '').toLowerCase() === 'creator';
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
   const isSeriesStatusActive = (() => {
     if (location.pathname !== '/publications') return false;
@@ -53,7 +54,13 @@ export default function CreatorTopBar() {
 
   useEffect(() => {
     setUserMenuOpen(false);
+    setMenuOpen(false);
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    document.body.classList.toggle('navbar-more-open', menuOpen);
+    return () => document.body.classList.remove('navbar-more-open');
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -160,7 +167,7 @@ export default function CreatorTopBar() {
             </button>
             <button
               type="button"
-              className="creator-topbar__icon-btn"
+              className="creator-topbar__icon-btn creator-topbar__theme-btn"
               onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
               aria-label={resolved === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}
               title={resolved === 'dark' ? 'Mode clair' : 'Mode sombre'}
@@ -170,6 +177,88 @@ export default function CreatorTopBar() {
           </div>
         </div>
       </header>
+
+      {menuOpen ? (
+        <button
+          type="button"
+          className="creator-topbar__mobile-backdrop"
+          aria-label="Close menu"
+          onClick={() => setMenuOpen(false)}
+        />
+      ) : null}
+
+      {menuOpen ? (
+        <div className="creator-topbar__mobile-menu">
+          {isAuthenticated && user ? (
+            <>
+              {isCreator ? (
+                <Link to="/profil" className="creator-topbar__mobile-link" onClick={() => setMenuOpen(false)}>
+                  {t('user.profile', 'My profile')}
+                </Link>
+              ) : null}
+              <div className="creator-topbar__mobile-link">
+                Coins: <strong>{walletBalance ?? '—'}</strong>
+              </div>
+              <button
+                type="button"
+                className="creator-topbar__mobile-link"
+                onClick={() => {
+                  logout();
+                  setMenuOpen(false);
+                }}
+              >
+                {t('common.logout', 'Logout')}
+              </button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      <nav className="creator-topbar__bottom" aria-label="Main navigation">
+        <NavLink
+          to="/series"
+          className={({ isActive }) => `creator-topbar__bottom-item${isActive ? ' creator-topbar__bottom-item--active' : ''}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <BookOpen size={20} aria-hidden />
+          <span>{t('nav.series', 'Series')}</span>
+        </NavLink>
+        <NavLink
+          to="/episodes"
+          className={({ isActive }) => `creator-topbar__bottom-item${isActive ? ' creator-topbar__bottom-item--active' : ''}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <Clapperboard size={20} aria-hidden />
+          <span>{t('nav.episodes', 'Episodes')}</span>
+        </NavLink>
+        <NavLink
+          to="/publications"
+          className={({ isActive }) =>
+            `creator-topbar__bottom-item${isActive && !isSeriesStatusActive ? ' creator-topbar__bottom-item--active' : ''}`
+          }
+          onClick={() => setMenuOpen(false)}
+        >
+          <Newspaper size={20} aria-hidden />
+          <span>{t('nav.publications', 'Publications')}</span>
+        </NavLink>
+        <Link
+          to="/publications?tab=series"
+          className={`creator-topbar__bottom-item${isSeriesStatusActive ? ' creator-topbar__bottom-item--active' : ''}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <Activity size={20} aria-hidden />
+          <span>{t('nav.status', 'Status')}</span>
+        </Link>
+        <button
+          type="button"
+          className={`creator-topbar__bottom-item${menuOpen ? ' creator-topbar__bottom-item--active' : ''}`}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+          <span>{t('nav.more', 'More')}</span>
+        </button>
+      </nav>
       <PreferencesModal isOpen={prefsOpen} onClose={() => setPrefsOpen(false)} />
     </>
   );

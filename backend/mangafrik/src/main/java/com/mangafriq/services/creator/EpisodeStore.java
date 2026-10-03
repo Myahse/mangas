@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -195,6 +196,27 @@ public class EpisodeStore {
 			// Email must not block publish.
 		}
 		return dto;
+	}
+
+	public Optional<String> findPublishedEpisodeIdByTitles(String seriesTitle, String episodeTitle) {
+		if (seriesTitle == null || seriesTitle.isBlank()) {
+			return Optional.empty();
+		}
+		String ep = episodeTitle == null ? "" : episodeTitle.trim();
+		List<String> ids = jdbc.query(
+				"""
+				select id::text
+				from creator_published_episodes
+				where lower(trim(series_title)) = lower(trim(:series))
+				  and lower(trim(episode_title)) = lower(trim(:episode))
+				order by published_at desc
+				limit 1
+				""",
+				new MapSqlParameterSource()
+						.addValue("series", seriesTitle.trim())
+						.addValue("episode", ep),
+				(rs, i) -> rs.getString("id"));
+		return ids.isEmpty() ? Optional.empty() : Optional.of(ids.get(0));
 	}
 
 	public PublishedEpisodeDto incrementView(String id) {

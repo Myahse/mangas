@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-01T12:00:00.000Z",
+  "title": "Design System: MangAfric",
+  "extensions": {
+    "colorMeta": {
+      "reader-primary": {
+        "role": "primary",
+        "displayName": "MangAfric Flame",
+        "canonical": "#ff6a00",
+        "tonalRamp": ["#ffb26b", "#ff6a00", "#e63946"]
+      },
+      "creator-primary": {
+        "role": "primary",
+        "displayName": "Studio Blue",
+        "canonical": "#2563eb",
+        "tonalRamp": ["#60a5fa", "#2563eb", "#1d4ed8"]
+      },
+      "admin-primary": {
+        "role": "primary",
+        "displayName": "Moderation Pink",
+        "canonical": "#ff2d7d",
+        "tonalRamp": ["#ff7ab6", "#ff2d7d", "#e11d48"]
+      },
+      "page-bg": {
+        "role": "neutral",
+        "displayName": "Shelf Gray",
+        "canonical": "#f4f4f6",
+        "tonalRamp": ["#ffffff", "#f4f4f6", "#e0e0e0"]
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 2px 12px rgba(0,0,0,0.08)",
+        "purpose": "Default elevated surface."
+      },
+      {
+        "name": "card-hover",
+        "value": "0 8px 24px rgba(0,0,0,0.14)",
+        "purpose": "Hover on interactive cards."
+      },
+      {
+        "name": "panel",
+        "value": "0 12px 40px rgba(0,0,0,0.14)",
+        "purpose": "Modals and popovers."
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-standard",
+        "value": "all 0.2s ease",
+        "purpose": "Buttons, nav, theme toggle."
+      }
+    ],
+    "breakpoints": [
+      { "name": "mobile-nav", "value": "900px" },
+      { "name": "creator-grid", "value": "980px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Reader Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main CTA on reader and shared patterns.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Lire</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border: none; border-radius: 10px; background: #ff6a00; color: #fff; font-weight: 800; cursor: pointer; transition: background 0.2s ease; } .ds-btn-primary:hover { background: #e63946; } .ds-btn-primary:focus-visible { outline: 2px solid #e63946; outline-offset: 2px; }"
+    },
+    {
+      "name": "Admin Surface Card",
+      "kind": "card",
+      "refersTo": "surface-card",
+      "description": "Moderation and content tables wrapper.",
+      "html": "<div class=\"ds-surface\"><div class=\"ds-surface-inner\">Content</div></div>",
+      "css": ".ds-surface { background: var(--surface-bg, #fff); border: 1px solid var(--surface-border, #e0e0e0); border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); } .ds-surface-inner { padding: 16px; }"
+    },
+    {
+      "name": "Creator Episode Thumb",
+      "kind": "custom",
+      "refersTo": "episode-thumb",
+      "description": "5:8 page preview in upload grid.",
+      "html": "<div class=\"ds-ep-thumb\"><img src=\"\" alt=\"Page 1\" /></div>",
+      "css": ".ds-ep-thumb { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; } .ds-ep-thumb img { width: 100%; aspect-ratio: 5 / 8; object-fit: cover; display: block; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The African Serial Shelf",
+    "overview": "Warm reader storefront, focused creator studio, and clear operator moderation. Shared structure with per-app accent colors.",
+    "keyCharacteristics": [
+      "CSS variable theming",
+      "Mobile bottom nav at 900px",
+      "Heavy French UI typography",
+      "Card-based operate layouts"
+    ],
+    "rules": [
+      {
+        "name": "The Panel Identity Rule",
+        "body": "Each shell keeps its own primary accent.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do use semantic CSS variables for new UI.",
+      "Do show real manga pages in review UIs."
+    ],
+    "donts": [
+      "Don't invent marketing claims.",
+      "Don't use horizontal-only page review strips."
+    ]
+  }
+}

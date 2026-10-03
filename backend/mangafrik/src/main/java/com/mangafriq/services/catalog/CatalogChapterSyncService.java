@@ -1,5 +1,8 @@
 package com.mangafriq.services.catalog;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mangafriq.constants.AppConstants;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -19,9 +22,42 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class CatalogChapterSyncService {
 	private final NamedParameterJdbcTemplate jdbc;
+	private final ObjectMapper objectMapper;
 
-	public CatalogChapterSyncService(NamedParameterJdbcTemplate jdbc) {
+	public CatalogChapterSyncService(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
 		this.jdbc = jdbc;
+		this.objectMapper = objectMapper;
+	}
+
+	/**
+	 * After a série is approved into {@code manga}, backfill chapters for episodes that were published earlier.
+	 */
+	public void syncAllPublishedEpisodesForSeries(String seriesTitle) {
+		if (seriesTitle == null || seriesTitle.isBlank()) {
+			return;
+		}
+		List<Map<String, Object>> rows = jdbc.query(
+				"""
+				select episode_title, images, published_at
+				from creator_published_episodes
+				where lower(trim(series_title)) = lower(trim(:title))
+				order by published_at asc
+				""",
+				new MapSqlParameterSource("title", seriesTitle.trim()),
+				(rs, i) -> Map.of(
+						"episodeTitle", rs.getString("episode_title"),
+						"images", rs.getString("images"),
+						"publishedAt", rs.getTimestamp("published_at").toInstant()));
+		for (Map<String, Object> row : rows) {
+			List<Map<String, Object>> images = readImages(row.get("images"));
+			Instant publishedAt = (Instant) row.get("publishedAt");
+			String episodeTitle = String.valueOf(row.get("episodeTitle"));
+			try {
+				syncCreatorEpisodeToCatalog(seriesTitle, episodeTitle, images, publishedAt);
+			} catch (Exception e) {
+				log.warn("Backfill catalog sync failed for series='{}' episode='{}': {}", seriesTitle, episodeTitle, e.getMessage());
+			}
+		}
 	}
 
 	/**
@@ -64,12 +100,18 @@ public class CatalogChapterSyncService {
 		List<UUID> mangaIds = jdbc.query(lookupSql, lookup, (rs, i) -> (UUID) rs.getObject("id"));
 		if (mangaIds.isEmpty()) {
 			log.warn(
-					"Catalog sync skipped: no manga row for seriesTitle='{}'. Use the same title as the submitted série, or slug '{}'.",
+					"Catalog sync skipped: no manga row for seriesTitle='{}'. Approve the série in admin first (same title), or slug '{}'.",
 					t,
 					slug);
 			return;
 		}
 		UUID mangaId = mangaIds.get(0);
+
+		String epTitle = episodeTitle == null ? "" : episodeTitle.trim();
+		if (!epTitle.isBlank() && chapterTitleExists(mangaId, epTitle)) {
+			log.debug("Catalog sync skipped: chapter already in catalog for mangaId={} title='{}'", mangaId, epTitle);
+			return;
+		}
 
 		List<Integer> maxRows = jdbc.query(
 				"""
@@ -84,7 +126,6 @@ public class CatalogChapterSyncService {
 				? publishedAt.atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
 				: java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString();
 		Instant now = Instant.now();
-		String epTitle = episodeTitle == null ? "" : episodeTitle.trim();
 
 		UUID chapterId = UUID.randomUUID();
 		int insertedPages = 0;
@@ -141,12 +182,55 @@ public class CatalogChapterSyncService {
 				t);
 	}
 
+	private boolean chapterTitleExists(UUID mangaId, String episodeTitle) {
+		Integer n = jdbc.queryForObject(
+				"""
+				select count(*)::int from chapters
+				where manga_id = :manga_id and lower(trim(title)) = lower(trim(:title))
+				""",
+				new MapSqlParameterSource().addValue("manga_id", mangaId).addValue("title", episodeTitle),
+				Integer.class);
+		return n != null && n > 0;
+	}
+
+	private List<Map<String, Object>> readImages(Object raw) {
+		if (raw == null) {
+			return List.of();
+		}
+		try {
+			String json = String.valueOf(raw);
+			if (json.isBlank() || "null".equalsIgnoreCase(json)) {
+				return List.of();
+			}
+			return objectMapper.readValue(json, new TypeReference<>() {});
+		} catch (Exception e) {
+			log.warn("Could not parse episode images JSON: {}", e.getMessage());
+			return List.of();
+		}
+	}
+
 	private static String extractUrl(Map<String, Object> img) {
 		if (img == null) {
 			return null;
 		}
 		Object u = img.get("url");
-		return u == null ? null : String.valueOf(u);
+		if (u != null) {
+			String s = String.valueOf(u).trim();
+			if (!s.isBlank() && !"null".equalsIgnoreCase(s)) {
+				return s;
+			}
+		}
+		Object key = img.get("r2Key");
+		if (key == null) {
+			key = img.get("key");
+		}
+		if (key != null) {
+			String k = String.valueOf(key).trim();
+			if (!k.isBlank() && !"null".equalsIgnoreCase(k)) {
+				return AppConstants.API_V1 + "/storage/" + k;
+			}
+		}
+		return null;
 	}
 
 	/** Same normalization as {@code AdminStore#slugify}. */

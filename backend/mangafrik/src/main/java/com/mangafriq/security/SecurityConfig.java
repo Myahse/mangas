@@ -9,6 +9,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 
 @Configuration
@@ -20,7 +21,10 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http, SessionAuthFilter sessionAuthFilter) throws Exception {
+	SecurityFilterChain securityFilterChain(
+			HttpSecurity http,
+			SessionAuthFilter sessionAuthFilter,
+			BearerTokenResolver bearerTokenResolver) throws Exception {
 		return http
 				.cors(Customizer.withDefaults())
 				.csrf(csrf -> csrf.disable())
@@ -44,7 +48,8 @@ public class SecurityConfig {
 						).permitAll()
 						// Paywall: reading pages requires auth; other catalog endpoints remain public.
 						.requestMatchers(HttpMethod.GET, AppConstants.API_V1 + "/manga/*/chapters/*/pages").authenticated()
-						.requestMatchers(AppConstants.API_V1 + "/manga/**").permitAll()
+						.requestMatchers(HttpMethod.POST, AppConstants.API_V1 + "/manga/*/chapters/*/view").authenticated()
+						.requestMatchers(HttpMethod.GET, AppConstants.API_V1 + "/manga/**").permitAll()
 						// Public support (contact page): must come before /support/** so nested paths are not role-gated.
 						.requestMatchers(AppConstants.API_V1 + "/support/public/**").permitAll()
 						.requestMatchers(HttpMethod.POST, AppConstants.API_V1 + "/creator-requests").permitAll()
@@ -52,6 +57,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET, AppConstants.API_V1 + "/ads/system-notices").permitAll()
 						.requestMatchers(HttpMethod.GET, AppConstants.API_V1 + "/store/coin-packs").permitAll()
 						.requestMatchers(AppConstants.API_V1 + "/storage/upload").authenticated()
+						.requestMatchers(AppConstants.API_V1 + "/storage/upload-manga-archive").authenticated()
 						.requestMatchers(AppConstants.API_V1 + "/store/**").authenticated()
 						.requestMatchers(AppConstants.API_V1 + "/creator/**").hasAnyRole("ADMIN", "SUPPORT", "CREATOR")
 						.requestMatchers(AppConstants.API_V1 + "/admin/**").hasRole("ADMIN")
@@ -61,10 +67,11 @@ public class SecurityConfig {
 						.anyRequest().authenticated()
 				)
 				.oauth2ResourceServer(oauth2 -> oauth2
+						.bearerTokenResolver(bearerTokenResolver)
 						.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
 				)
-				/* After JWT Bearer: resolve legacy session tokens that are raw UUIDs (app_sessions). */
-				.addFilterAfter(sessionAuthFilter, BearerTokenAuthenticationFilter.class)
+				/* Before JWT: app session UUID tokens (SessionAwareBearerTokenResolver skips them for JWT). */
+				.addFilterBefore(sessionAuthFilter, BearerTokenAuthenticationFilter.class)
 				.httpBasic(Customizer.withDefaults())
 				.build();
 	}

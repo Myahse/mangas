@@ -105,7 +105,6 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* ─── Responsive ─── */
 @media (max-width: 640px) {
   .infobar__dots {
     display: none;

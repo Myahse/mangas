@@ -25,7 +25,7 @@ const CONFIG = {
     maxKb: 700,
     icon: RectangleVertical,
     tips: [
-      'Choisissez une image au format 9:16 (ex: 1080×1920, 720×1280, etc.).',
+      'Choisissez une image (n’importe quelle taille) : elle sera recadrée automatiquement au format 9:16.',
       'Placez le personnage/titre dans la zone centrale (évitez le bas si vous ajoutez du texte).',
       'Préférez une image nette et contrastée (lisible sur mobile).',
     ],

@@ -55,8 +55,8 @@ export default function AuthModal({ isOpen, onClose }) {
       </button>
 
       <div className="auth-modal__center">
-        <div className="auth-modal__brand" aria-label="MangaAfrik Finance">
-          <span>Manga</span>
+        <div className="auth-modal__brand" aria-label="MangAfric Finance">
+          <span>Mang</span>
           <span className="auth-modal__brand-accent">Afrik</span>
         </div>
         <p className="auth-modal__tagline">Sign in to access the finance panel.</p>
@@ -109,7 +109,7 @@ export default function AuthModal({ isOpen, onClose }) {
       </button>
 
       <div className="auth-modal__footer">
-        <p>MangaAfrik © 2026 — Finance Panel.</p>
+        <p>MangAfric © 2026 — Finance Panel.</p>
       </div>
     </Modal>
   );

@@ -28,6 +28,27 @@ export function storageObjectUrl(key) {
   return `${apiBase()}/storage/${k}`;
 }
 
+/** Resolve API-relative storage paths for `<img src>` on the Vite dev host. */
+export function apiAssetUrl(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  if (/^(https?:|blob:|data:)/i.test(u)) return u;
+  const base = apiBase();
+  const origin = base.replace(/\/api\/v1\/?$/i, '');
+  if (u.startsWith('/')) return `${origin}${u}`;
+  return `${base.replace(/\/$/, '')}/${u.replace(/^\//, '')}`;
+}
+
+function normalizeManga(m) {
+  if (!m) return m;
+  return {
+    ...m,
+    cover: apiAssetUrl(m.cover),
+    banner: apiAssetUrl(m.banner),
+    heroCover: apiAssetUrl(m.heroCover),
+  };
+}
+
 async function postMultipart(path, formData) {
   const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   let token = '';
@@ -101,27 +122,32 @@ async function request(path, { method = 'GET', body, headers, auth = true } = {}
 
 /** Récupère tous les manga */
 export async function fetchAllManga() {
-  return request('/manga');
+  const list = await request('/manga', { auth: false });
+  return Array.isArray(list) ? list.map(normalizeManga) : list;
 }
 
 /** Récupère un manga par son slug */
 export async function fetchMangaBySlug(slug) {
-  return request(`/manga/${encodeURIComponent(slug)}`);
+  const m = await request(`/manga/${encodeURIComponent(slug)}`, { auth: false });
+  return normalizeManga(m);
 }
 
 /** Manga mis en avant (featured: true) */
 export async function fetchFeaturedManga() {
-  return request('/manga/featured');
+  const list = await request('/manga/featured', { auth: false });
+  return Array.isArray(list) ? list.map(normalizeManga) : list;
 }
 
 /** Dernières mises à jour — trié par numéro de chapitre desc */
 export async function fetchLatestUpdated(count = 12) {
-  return request(`/manga/latest?count=${encodeURIComponent(count)}`);
+  const list = await request(`/manga/latest?count=${encodeURIComponent(count)}`, { auth: false });
+  return Array.isArray(list) ? list.map(normalizeManga) : list;
 }
 
 /** Les plus populaires — trié par note desc */
 export async function fetchPopularManga(count = 10) {
-  return request(`/manga/popular?count=${encodeURIComponent(count)}`);
+  const list = await request(`/manga/popular?count=${encodeURIComponent(count)}`, { auth: false });
+  return Array.isArray(list) ? list.map(normalizeManga) : list;
 }
 
 /** Recherche par titre, auteur ou genre */
@@ -157,7 +183,7 @@ export async function fetchSearchManga({ query = '', genre = '', status = '', so
 ════════════════════════════════════════════════════════════ */
 
 export async function fetchGenres() {
-  return request('/genres');
+  return request('/genres', { auth: false });
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -165,15 +191,30 @@ export async function fetchGenres() {
 ════════════════════════════════════════════════════════════ */
 
 export async function fetchChapters(slug) {
-  return request(`/manga/${encodeURIComponent(slug)}/chapters`);
+  return request(`/manga/${encodeURIComponent(slug)}/chapters`, { auth: false });
 }
 
 
 export async function fetchPages(slug, chapterNumber, _nonce) {
   void _nonce;
-  return request(
+  const pages = await request(
     `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/pages`,
   );
+  return Array.isArray(pages)
+    ? pages.map((p) => ({ ...p, url: apiAssetUrl(p.url) }))
+    : pages;
+}
+
+/** Record one view when a logged-in reader opens a chapter (ignored for the série owner). */
+export async function recordChapterView(slug, chapterNumber) {
+  try {
+    await request(
+      `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/view`,
+      { method: 'POST' },
+    );
+  } catch {
+    // Non-blocking: stats must not break reading.
+  }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -253,7 +294,36 @@ export async function submitCreatorRequest(payload) {
 }
 
 export async function getMyCreatorRequest() {
-  return request('/creator-requests/me');
+  const url = `${apiBase()}/creator-requests/me`;
+  let token = '';
+  try {
+    const key = requiredSessionStorageKey();
+    const raw = localStorage.getItem(key);
+    token = raw ? (JSON.parse(raw)?.token || '') : '';
+  } catch {}
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : null),
+    },
+  });
+
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    let message = text || `Request failed (${res.status})`;
+    try {
+      const maybeJson = text ? JSON.parse(text) : null;
+      message = maybeJson?.error || maybeJson?.message || message;
+    } catch {}
+    throw new Error(String(message));
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) return null;
+  const data = await res.json();
+  return data ?? null;
 }
 
 export async function getMyCreatorContract() {

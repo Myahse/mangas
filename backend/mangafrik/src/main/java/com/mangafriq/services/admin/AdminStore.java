@@ -11,6 +11,7 @@ import com.mangafriq.dto.admin.AdminDtos.UpdateManga;
 import com.mangafriq.dto.admin.AdminDtos.UpdateMangaRequest;
 import com.mangafriq.dto.creator.MangaSubmissionDto;
 import com.mangafriq.exception.NotFoundException;
+import com.mangafriq.services.catalog.CatalogChapterSyncService;
 import com.mangafriq.services.creator.CreatorStore;
 import com.mangafriq.services.email.CreatorPublishNotificationService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,24 +26,29 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class AdminStore {
 	private final NamedParameterJdbcTemplate jdbc;
 	private final ObjectMapper objectMapper;
 
 	private final CreatorStore creatorStore;
 	private final CreatorPublishNotificationService creatorPublishNotify;
+	private final CatalogChapterSyncService catalogChapterSync;
 
 	public AdminStore(
 			NamedParameterJdbcTemplate jdbc,
 			ObjectMapper objectMapper,
 			CreatorStore creatorStore,
-			CreatorPublishNotificationService creatorPublishNotify) {
+			CreatorPublishNotificationService creatorPublishNotify,
+			CatalogChapterSyncService catalogChapterSync) {
 		this.jdbc = jdbc;
 		this.objectMapper = objectMapper;
 		this.creatorStore = creatorStore;
 		this.creatorPublishNotify = creatorPublishNotify;
+		this.catalogChapterSync = catalogChapterSync;
 	}
 
 	public AdminSummaryDto summary() {
@@ -248,7 +254,11 @@ public class AdminStore {
 		audit("submission." + req.decision(), Map.of("id", id));
 		String decision = req.decision() == null ? "" : req.decision().trim();
 		if ("approved".equalsIgnoreCase(decision)) {
-			publishFromCreatorSubmission(next);
+			try {
+				publishFromCreatorSubmission((MangaSubmissionDto) next);
+			} catch (Exception e) {
+				log.warn("Catalog publish after submission approval failed (submission {}): {}", id, e.getMessage());
+			}
 		} else if ("rejected".equalsIgnoreCase(decision) && next instanceof MangaSubmissionDto) {
 			try {
 				MangaSubmissionDto dto = (MangaSubmissionDto) next;
@@ -364,6 +374,11 @@ public class AdminStore {
 			}
 		}
 		audit("submission.publish", Map.of("id", submission == null ? "" : submission.id(), "title", title));
+		try {
+			catalogChapterSync.syncAllPublishedEpisodesForSeries(title);
+		} catch (Exception e) {
+			log.warn("Catalog episode backfill after série approval failed for '{}': {}", title, e.getMessage());
+		}
 		try {
 			if (submission != null && submission.creator() != null) {
 				String ce = submission.creator().email();

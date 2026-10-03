@@ -55,17 +55,31 @@ public class CreatorRequestController {
 		if (email == null || email.isBlank() || !email.contains("@")) {
 			return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
 		}
-		return service
-			.findLatestByEmail(email)
-			.<ResponseEntity<?>>map(ResponseEntity::ok)
-			.orElseGet(() -> ResponseEntity.status(404).body(Map.of("error", "not found")));
+		return ResponseEntity.ok(service.findLatestByEmail(email).orElse(null));
 	}
 
 	@GetMapping("/me/contract")
 	public ResponseEntity<?> myContract(Authentication authentication) {
-		ResponseEntity<?> me = me(authentication);
-		if (!me.getStatusCode().is2xxSuccessful() || !(me.getBody() instanceof CreatorRequestDto dto)) {
-			return me;
+		if (authentication == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+
+		String email = null;
+		Object principal = authentication.getPrincipal();
+		if (principal instanceof SessionPrincipal sp) {
+			email = sp.email();
+		} else if (principal instanceof Jwt jwt) {
+			email = jwt.getClaimAsString("email");
+			if (email == null || email.isBlank()) email = jwt.getSubject();
+		} else if (authentication.getName() != null && !authentication.getName().isBlank()) {
+			email = authentication.getName();
+		}
+
+		if (email == null || email.isBlank() || !email.contains("@")) {
+			return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+		}
+
+		CreatorRequestDto dto = service.findLatestByEmail(email).orElse(null);
+		if (dto == null) {
+			return ResponseEntity.status(404).body(Map.of("error", "not found"));
 		}
 		try {
 			return ResponseEntity.ok(contractService.latestStatusForCreatorRequest(dto.id()));

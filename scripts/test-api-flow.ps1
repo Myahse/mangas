@@ -367,7 +367,7 @@ if ($userSession) {
     Test-Endpoint -Name "GET /manga/{slug}/chapters/{n}/pages (auth)" -Method GET -Path "/manga/$mangaSlug/chapters/$chapterNumber/pages" -Headers $userHeaders -AllowedStatus @(200, 402, 403, 404)
   }
 
-  Test-Endpoint -Name "GET /creator-requests/me (no request yet)" -Method GET -Path "/creator-requests/me" -Headers $userHeaders -AllowedStatus @(404)
+  Test-Endpoint -Name "GET /creator-requests/me (no request yet)" -Method GET -Path "/creator-requests/me" -Headers $userHeaders -AllowedStatus @(200)
   Test-Endpoint -Name "GET /admin/summary (user forbidden)" -Method GET -Path "/admin/summary" -Headers $userHeaders -AllowedStatus @(401, 403)
 } else {
   Record-Result -Name "Authenticated user block" -Status skip -Detail "user login failed"

@@ -1,6 +1,6 @@
 .infobar {
   position: fixed;
-  top: var(--navbar-height);
+  top: calc(var(--navbar-height) + var(--safe-top));
   left: 0;
   right: 0;
   z-index: 999;
@@ -52,5 +52,20 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
+}
+
+@media (max-width: 900px) {
+  .infobar {
+    top: calc(var(--navbar-height) + var(--safe-top));
+  }
+
+  .infobar__inner {
+    padding: 0 8px;
+    gap: 6px;
+  }
+
+  .infobar__text {
+    font-size: 0.68rem;
+  }
 }
 

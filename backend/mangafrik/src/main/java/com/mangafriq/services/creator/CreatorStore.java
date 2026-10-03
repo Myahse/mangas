@@ -29,7 +29,9 @@ public class CreatorStore {
 	public MangaSubmissionDto createSubmission(CreateMangaSubmissionRequest req) {
 		Instant now = Instant.now();
 		String id = UUID.randomUUID().toString();
-		String creatorEmail = (req.creatorEmail() == null || req.creatorEmail().isBlank()) ? "unknown" : req.creatorEmail().trim();
+		String creatorEmail = (req.creatorEmail() == null || req.creatorEmail().isBlank())
+				? "unknown"
+				: req.creatorEmail().trim().toLowerCase();
 		String creatorDisplayName = (req.creatorDisplayName() == null || req.creatorDisplayName().isBlank()) ? "Unknown creator" : req.creatorDisplayName().trim();
 		String payloadJson = writeJson(req.payload());
 

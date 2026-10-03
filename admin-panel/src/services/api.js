@@ -18,6 +18,17 @@ function apiBase() {
   return requiredApiBaseUrl().replace(/\/$/, '');
 }
 
+/** Absolute URL for storage paths returned by the API (for <img src>). */
+export function apiAssetUrl(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  if (/^(https?:|blob:|data:)/i.test(u)) return u;
+  const base = apiBase();
+  const origin = base.replace(/\/api\/v1\/?$/i, '');
+  if (u.startsWith('/')) return `${origin}${u}`;
+  return `${base.replace(/\/$/, '')}/${u.replace(/^\//, '')}`;
+}
+
 async function request(path, { method = 'GET', body, headers } = {}) {
   const url = `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
   let token = '';
@@ -28,6 +39,7 @@ async function request(path, { method = 'GET', body, headers } = {}) {
   } catch {}
   const res = await fetch(url, {
     method,
+    cache: 'no-store',
     headers: {
       ...(body ? { 'Content-Type': 'application/json' } : null),
       ...(token ? { Authorization: `Bearer ${token}` } : null),
@@ -37,7 +49,22 @@ async function request(path, { method = 'GET', body, headers } = {}) {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(text || `Request failed (${res.status})`);
+    let message = text || `Request failed (${res.status})`;
+    try {
+      const json = text ? JSON.parse(text) : null;
+      message = json?.message || json?.error || message;
+    } catch {
+      /* keep raw text */
+    }
+    if (res.status === 401) {
+      try {
+        localStorage.removeItem(requiredSessionStorageKey());
+      } catch {
+        /* ignore */
+      }
+      window.dispatchEvent(new CustomEvent('mangafric:auth-expired'));
+    }
+    throw new Error(String(message));
   }
   const contentType = res.headers.get('content-type') || '';
   if (contentType.includes('application/json')) return res.json();
@@ -83,6 +110,12 @@ export const adminApi = {
   },
   reviewMangaSubmission(id, payload) {
     return request(`/admin/manga-submissions/${encodeURIComponent(id)}/review`, { method: 'POST', body: payload });
+  },
+  creatorEpisodeDrafts() {
+    return request('/admin/creator-episodes/drafts');
+  },
+  creatorEpisodesPublished() {
+    return request('/admin/creator-episodes/published');
   },
   mangaRequests() {
     return request('/admin/manga-requests');

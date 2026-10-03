@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, ChevronDown, Sun, Moon, User, Coins } from 'lucide-react';
+import { Search, Menu, X, ChevronDown, Sun, Moon, User, Coins, Home, Compass, MessageCircle } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
 import { useFetch, fetchAllManga, fetchGenres, fetchWallet } from '../../services/api';
 import { useTheme } from '../../hooks/useTheme';
@@ -86,6 +86,8 @@ export default function Navbar() {
       setMobileGenresOpen(false);
       setMobilePreviewGenre(null);
     }
+    document.body.classList.toggle('navbar-more-open', menuOpen);
+    return () => document.body.classList.remove('navbar-more-open');
   }, [menuOpen]);
 
   const handleLogout = () => {
@@ -355,10 +357,10 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Theme toggle */}
+          {/* Theme toggle (desktop); mobile follows the system theme */}
           <button
             type="button"
-            className="navbar__icon-btn"
+            className="navbar__icon-btn navbar__theme-btn"
             onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
             aria-label={resolved === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}
             title={resolved === 'dark' ? 'Mode clair' : 'Mode sombre'}
@@ -488,21 +490,21 @@ export default function Navbar() {
               Connexion
             </button>
           )}
-
-          {/* Mobile burger */}
-          <button
-            className="navbar__burger"
-            onClick={() => setMenuOpen(s => !s)}
-            aria-label="Menu"
-          >
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
         </div>
       </div>
+    </header>
 
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div className="navbar__mobile-menu">
+      {menuOpen ? (
+        <button
+          type="button"
+          className="navbar__mobile-backdrop"
+          aria-label="Fermer le menu"
+          onClick={() => setMenuOpen(false)}
+        />
+      ) : null}
+
+      {menuOpen ? (
+        <div className="navbar__mobile-menu" id="navbar-mobile-menu">
           {navLinks.map((link) =>
             link.hasDropdown ? (
               <div key={link.label} className="navbar__mobile-genres">
@@ -587,6 +589,13 @@ export default function Navbar() {
               </NavLink>
             ),
           )}
+          <NavLink
+            to="/contact"
+            className="navbar__mobile-link"
+            onClick={() => setMenuOpen(false)}
+          >
+            {t('nav.contact', 'Support')}
+          </NavLink>
           <div className="navbar__mobile-divider" />
           {isAuthenticated && user ? (
             <>
@@ -652,8 +661,52 @@ export default function Navbar() {
             </button>
           )}
         </div>
-      )}
-    </header>
+      ) : null}
+
+      <nav className="navbar__bottom" aria-label="Navigation principale">
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) => `navbar__bottom-item${isActive ? ' navbar__bottom-item--active' : ''}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <Home size={20} aria-hidden />
+          <span>{t('nav.home', 'Accueil')}</span>
+        </NavLink>
+        <NavLink
+          to="/browse"
+          className={({ isActive }) => `navbar__bottom-item${isActive ? ' navbar__bottom-item--active' : ''}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <Compass size={20} aria-hidden />
+          <span>{t('nav.browse', 'Browse')}</span>
+        </NavLink>
+        <NavLink
+          to="/contact"
+          className={({ isActive }) => `navbar__bottom-item${isActive ? ' navbar__bottom-item--active' : ''}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <MessageCircle size={20} aria-hidden />
+          <span>{t('nav.contact', 'Support')}</span>
+        </NavLink>
+        <NavLink
+          to="/store"
+          className={({ isActive }) => `navbar__bottom-item${isActive ? ' navbar__bottom-item--active' : ''}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <Coins size={20} aria-hidden />
+          <span>{t('nav.store', 'Boutique')}</span>
+        </NavLink>
+        <button
+          type="button"
+          className={`navbar__bottom-item${menuOpen ? ' navbar__bottom-item--active' : ''}`}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+          <span>{t('nav.more', 'Plus')}</span>
+        </button>
+      </nav>
 
     <AuthModal
       isOpen={authOpen}

@@ -232,6 +232,7 @@
 
 .creator__media {
   width: 100%;
+  display: grid;
   border-radius: 12px;
   border: 1px solid var(--surface-border);
   background: rgba(0, 0, 0, 0.04);
@@ -446,6 +447,17 @@
   .creator__preview-img {
     width: 100%;
     max-width: 220px;
+  }
+}
+
+@media (max-width: 900px) {
+  .creator {
+    padding-top: 20px;
+    padding-bottom: 24px;
+  }
+
+  .creator__aside-card {
+    top: 12px;
   }
 }
 

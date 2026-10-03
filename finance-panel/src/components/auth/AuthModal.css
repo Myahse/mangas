@@ -182,7 +182,7 @@
   height: 48px;
   border-radius: 12px;
   background: var(--primary);
-  color: #fff;
+  color: #0d0d0d;
   font-weight: 800;
   font-size: 0.95rem;
   transition: background 120ms ease, box-shadow 120ms ease, filter 120ms ease, opacity 120ms ease;
@@ -235,40 +235,88 @@
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 900px) {
   .auth-modal__overlay {
     align-items: center;
-    padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+    justify-content: center;
+    padding: calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom));
   }
 
-  .auth-modal__panel {
+  .auth-modal__panel,
+  .auth-modal__panel--expanded {
+    display: flex;
+    flex-direction: column;
     height: auto;
-    border-radius: 20px;
     width: 100%;
-    max-width: 520px;
+    max-width: 400px;
     max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 18px;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
   }
 
-  .auth-modal__center {
-    position: relative;
-    padding: 62px 16px 24px;
-    gap: 14px;
+  .auth-modal__close {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
   }
 
-  .auth-modal__primary {
+  .auth-modal__center,
+  .auth-modal__panel--expanded .auth-modal__center {
+    position: relative;
+    inset: auto;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    padding: 52px 20px 8px;
+    gap: 12px;
+  }
+
+  .auth-modal__brand {
+    font-size: 1.4rem;
+    margin: 0;
+  }
+
+  .auth-modal__tagline {
+    width: 100%;
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  .auth-modal__spacer,
+  .auth-modal__spacer--open {
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    transition: none;
+  }
+
+  .auth-modal__primary,
+  .auth-modal__panel--expanded > .auth-modal__primary {
     position: relative;
     left: auto;
     top: auto;
     bottom: auto;
     transform: none;
-    width: min(300px, 100%);
-    height: 42px;
-    margin: 14px auto 0;
-    font-size: 0.875rem;
-    font-weight: 700;
-    border-radius: 10px;
+    width: calc(100% - 40px);
+    height: 46px;
+    margin: 8px 20px 0;
+    font-size: 0.9rem;
+    font-weight: 800;
+    border-radius: 12px;
+  }
+
+  .auth-modal__footer {
+    position: relative;
+    bottom: auto;
+    margin: 12px 0 0;
+    padding: 4px 20px 16px;
+  }
+
+  .auth-modal__footer p {
+    font-size: 0.75rem;
+    line-height: 1.35;
   }
 }
 

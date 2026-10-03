@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { creatorApi } from '../../services/api';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { apiAssetUrl, creatorApi } from '../../services/api';
 import { notify } from '../../services/notify';
 import '../publications/PublicationsPage.css';
 
@@ -11,6 +11,18 @@ function formatWhen(iso) {
   } catch {
     return iso;
   }
+}
+
+function submissionStatus(s) {
+  return String(s?.status || 'pending').trim().toLowerCase();
+}
+
+function pagePreviewUrl(page) {
+  if (!page) return '';
+  if (page.url) return apiAssetUrl(page.url);
+  const key = page.r2Key || page.key;
+  if (key) return apiAssetUrl(`/api/v1/storage/${String(key).replace(/^\//, '')}`);
+  return '';
 }
 
 function pickThumbSquareUrl(payload) {
@@ -28,7 +40,6 @@ function pickThumbSquareUrl(payload) {
 
 export default function PublicationsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [commentTextById, setCommentTextById] = useState({});
   const [episodes, setEpisodes] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,16 +51,19 @@ export default function PublicationsPage() {
     return (params.get('tab') || 'episodes').toLowerCase() === 'series' ? 'series' : 'episodes';
   }, [location.search]);
 
+  const loadData = async () => {
+    const [eps, subs] = await Promise.all([creatorApi.listPublished(), creatorApi.listMySubmissions()]);
+    setEpisodes(Array.isArray(eps) ? eps : []);
+    setSubmissions(Array.isArray(subs) ? subs : []);
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
         void refreshKey;
-        const [eps, subs] = await Promise.all([creatorApi.listPublished(), creatorApi.listMySubmissions()]);
-        if (cancelled) return;
-        setEpisodes(Array.isArray(eps) ? eps : []);
-        setSubmissions(Array.isArray(subs) ? subs : []);
+        await loadData();
       } catch (err) {
         if (!cancelled) {
           notify.error(`Impossible de charger les publications. ${(err && err.message) || ''}`.trim());
@@ -62,19 +76,35 @@ export default function PublicationsPage() {
       cancelled = true;
     };
   }, [refreshKey]);
+
+  useEffect(() => {
+    const onFocus = () => setRefreshKey((k) => k + 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   const counts = useMemo(() => {
-    const pending = submissions.filter((s) => s.status === 'pending').length;
-    const approved = submissions.filter((s) => s.status === 'approved').length;
-    const rejected = submissions.filter((s) => s.status === 'rejected' || s.status === 'resubmit').length;
+    const pending = submissions.filter((s) => submissionStatus(s) === 'pending').length;
+    const approved = submissions.filter((s) => submissionStatus(s) === 'approved').length;
+    const rejected = submissions.filter((s) => {
+      const st = submissionStatus(s);
+      return st === 'rejected' || st === 'resubmit';
+    }).length;
     return { pending, approved, rejected, total: submissions.length };
   }, [submissions]);
 
   return (
     <div className="pub container">
       <h1 className="pub__title">Publications</h1>
-      <p className="pub__lead">Suivez vos épisodes publiés et le statut de vos séries (demo).</p>
+      <p className="pub__lead">Suivez vos épisodes publiés et le statut de vos séries.</p>
 
-      <div className="pub__actions" style={{ marginTop: 12 }}>
+      <div className="pub__actions pub__actions--hero">
+        <Link to="/episodes" className="pub__btn pub__btn--primary pub__btn--publish-cta">
+          Publier un épisode
+        </Link>
+      </div>
+
+      <div className="pub__actions" style={{ marginTop: 12, flexWrap: 'wrap' }}>
         <button
           type="button"
           className={`pub__btn${tab === 'episodes' ? ' pub__btn--primary' : ''}`}
@@ -89,13 +119,26 @@ export default function PublicationsPage() {
         >
           Séries · {counts.pending} en attente · {counts.approved} acceptées
         </button>
+        <button
+          type="button"
+          className="pub__btn"
+          onClick={() => setRefreshKey((k) => k + 1)}
+          disabled={loading}
+        >
+          Actualiser
+        </button>
       </div>
 
       {loading ? (
         <div className="pub__empty">Chargement…</div>
       ) : tab === 'episodes' ? (
         episodes.length === 0 ? (
-          <div className="pub__empty">Aucune publication pour le moment. Publiez un épisode dans l’onglet ÉPISODES.</div>
+          <div className="pub__empty">
+            Aucun épisode publié pour le moment.
+            <div style={{ marginTop: 12 }}>
+              <Link to="/episodes" className="pub__btn pub__btn--primary">Publier un épisode</Link>
+            </div>
+          </div>
         ) : (
           <div className="pub__grid">
             {episodes.map((ep) => (
@@ -109,7 +152,7 @@ export default function PublicationsPage() {
                       {ep.scheduledFor ? ` · Programmé: ${ep.scheduledFor}` : ''}
                     </div>
                   </div>
-                  <div className="pub__stats">
+                  <div className="pub__stats" title="Comptées depuis l’app lecteur uniquement">
                     <div className="pub__stat">
                       <span>Vues</span>
                       <strong>{ep.stats?.views ?? 0}</strong>
@@ -127,63 +170,23 @@ export default function PublicationsPage() {
 
                 {ep.creatorNote ? <div className="pub__note">{ep.creatorNote}</div> : null}
 
-                <div className="pub__actions">
-                  <button
-                    type="button"
-                    className="pub__btn"
-                    onClick={async () => {
-                      try {
-                        await creatorApi.addLike(ep.id);
-                        setRefreshKey((k) => k + 1);
-                      } catch (err) {
-                        notify.error(`Impossible d'ajouter un like. ${(err && err.message) || ''}`.trim());
-                      }
-                    }}
-                  >
-                    +1 Like
-                  </button>
-                  <button
-                    type="button"
-                    className="pub__btn"
-                    onClick={async () => {
-                      try {
-                        await creatorApi.addView(ep.id);
-                        setRefreshKey((k) => k + 1);
-                      } catch (err) {
-                        notify.error(`Impossible d'ajouter une vue. ${(err && err.message) || ''}`.trim());
-                      }
-                    }}
-                  >
-                    +1 Vue (demo)
-                  </button>
-                </div>
-
-                <div className="pub__comments">
-                  <div className="pub__comments-title">Commentaires</div>
-                  <div className="pub__comments-form">
-                    <input
-                      value={commentTextById[ep.id] ?? ''}
-                      onChange={(e) => setCommentTextById((p) => ({ ...p, [ep.id]: e.target.value }))}
-                      placeholder="Écrire un commentaire (demo)"
-                    />
-                    <button
-                      type="button"
-                      className="pub__btn pub__btn--primary"
-                      onClick={async () => {
-                        const text = (commentTextById[ep.id] ?? '').trim();
-                        if (!text) return;
-                        try {
-                          await creatorApi.addComment(ep.id, { author: 'Lecteur', text });
-                          setCommentTextById((p) => ({ ...p, [ep.id]: '' }));
-                          setRefreshKey((k) => k + 1);
-                        } catch (err) {
-                          notify.error(`Impossible d'ajouter un commentaire. ${(err && err.message) || ''}`.trim());
-                        }
-                      }}
-                    >
-                      Ajouter
-                    </button>
+                {Array.isArray(ep.images) && ep.images.length > 0 ? (
+                  <div className="pub__page-strip" aria-label="Pages de l'épisode">
+                    {ep.images.slice(0, 10).map((img, idx) => {
+                      const src = pagePreviewUrl(img);
+                      return src ? (
+                        <img key={`${ep.id}-pg-${idx}`} src={src} alt={`Page ${idx + 1}`} loading="lazy" />
+                      ) : null;
+                    })}
+                    {ep.images.length > 10 ? (
+                      <span className="pub__page-strip-more">+{ep.images.length - 10}</span>
+                    ) : null}
                   </div>
+                ) : null}
+
+                {(ep.comments ?? []).length > 0 ? (
+                <div className="pub__comments">
+                  <div className="pub__comments-title">Commentaires lecteurs</div>
 
                   {(ep.comments ?? []).slice(0, 5).map((c) => (
                     <div key={c.id} className="pub__comment">
@@ -195,6 +198,7 @@ export default function PublicationsPage() {
                   ))}
                   {(ep.comments ?? []).length > 5 ? <div className="pub__more">…</div> : null}
                 </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -204,12 +208,13 @@ export default function PublicationsPage() {
       ) : (
         <div className="pub__grid">
           {submissions.map((s) => {
+            const st = submissionStatus(s);
             const statusLabel =
-              s.status === 'approved'
+              st === 'approved'
                 ? 'Acceptée'
-                : s.status === 'pending'
+                : st === 'pending'
                   ? 'En attente'
-                  : s.status === 'resubmit'
+                  : st === 'resubmit'
                     ? 'À corriger'
                     : 'Refusée';
             return (
@@ -218,7 +223,7 @@ export default function PublicationsPage() {
                   <div className="pub__left">
                     <div className="pub__thumb pub__thumb--square" aria-hidden="true">
                       {pickThumbSquareUrl(s.payload) ? (
-                        <img src={pickThumbSquareUrl(s.payload)} alt="" />
+                        <img src={apiAssetUrl(pickThumbSquareUrl(s.payload))} alt="" />
                       ) : (
                         <div className="pub__thumb-ph" />
                       )}
@@ -232,13 +237,12 @@ export default function PublicationsPage() {
                     {s.moderation?.reason ? <div className="pub__note">Motif: {s.moderation.reason}</div> : null}
                   </div>
                   <div className="pub__actions" style={{ marginTop: 0 }}>
-                    <button
-                      type="button"
+                    <Link
+                      to={`/episodes?seriesTitle=${encodeURIComponent(s.payload?.title || '')}`}
                       className="pub__btn pub__btn--primary"
-                      onClick={() => navigate(`/episodes?seriesTitle=${encodeURIComponent(s.payload?.title || '')}`)}
                     >
-                      Importer un épisode
-                    </button>
+                      Publier un épisode
+                    </Link>
                   </div>
                 </div>
               </div>

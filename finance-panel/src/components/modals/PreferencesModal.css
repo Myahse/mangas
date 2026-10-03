@@ -155,23 +155,71 @@
   transform: translateY(-1px);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
+  .prefs-modal__overlay {
+    align-items: center;
+    justify-content: center;
+    padding: calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
   .prefs-modal__panel {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 18px;
     -webkit-overflow-scrolling: touch;
   }
 
+  .prefs-modal__close {
+    top: 10px;
+    right: 10px;
+  }
+
   .prefs-modal__center {
-    padding: 66px 16px 22px;
+    padding: 52px 18px 20px;
+    gap: 12px;
+  }
+
+  .prefs-modal__brand {
+    font-size: 1.4rem;
+    margin: 0;
+  }
+
+  .prefs-modal__tagline {
+    width: 100%;
+    margin: 0;
+    font-size: 0.88rem;
+  }
+
+  .prefs-modal__rows,
+  .prefs-modal__footer {
+    width: 100%;
   }
 
   .prefs-modal__row {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+    padding: 12px;
   }
 
   .prefs-modal__segmented {
     width: 100%;
-    justify-content: space-between;
+    display: flex;
+  }
+
+  .prefs-modal__segmented-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  .prefs-modal__footer {
+    justify-content: stretch;
+    margin-top: 4px;
+  }
+
+  .prefs-modal__done {
+    width: 100%;
   }
 }
 

@@ -4,7 +4,16 @@ import {
   ChevronLeft, ChevronRight, Home, List,
   ZoomIn, ZoomOut, Settings, ArrowLeft,
 } from 'lucide-react';
-import { useFetch, fetchMangaBySlug, fetchChapters, fetchPages, fetchWallet, dailyClaimCoins, unlockChapter } from '../services/api';
+import {
+  useFetch,
+  fetchMangaBySlug,
+  fetchChapters,
+  fetchPages,
+  fetchWallet,
+  dailyClaimCoins,
+  unlockChapter,
+  recordChapterView,
+} from '../services/api';
 import { onWalletUpdated } from '../realtime/walletEvents';
 import './ReaderPage.css';
 
@@ -45,6 +54,15 @@ export default function ReaderPage() {
   }, []);
 
   useEffect(() => onWalletUpdated(() => setWalletKey((k) => k + 1)), []);
+
+  const viewRecordedKeyRef = useRef('');
+  useEffect(() => {
+    const key = `${slug}:${chapterNum}`;
+    if (!slug || !chapterNum || pageList.length === 0 || pagesError) return;
+    if (viewRecordedKeyRef.current === key) return;
+    viewRecordedKeyRef.current = key;
+    recordChapterView(slug, chapterNum);
+  }, [slug, chapterNum, pageList.length, pagesError]);
 
   if (!manga) {
     return (

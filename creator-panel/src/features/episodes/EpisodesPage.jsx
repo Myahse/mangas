@@ -2,14 +2,55 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import '../../pages/SeriesPage.css';
 import '../../pages/EpisodesPage.css';
-import { creatorApi } from '../../services/api';
+import { apiAssetUrl, creatorApi } from '../../services/api';
 import { notify } from '../../services/notify';
-import { formatBytes, resizeForUpload } from './utils';
+import {
+  formatBytes,
+  normalizeEpisodePage,
+  EP_PAGE_SPEC,
+  SOURCE_IMAGE_MAX_BYTES,
+  isSupportedSourceImage,
+} from './utils';
+import { isArchiveFile, isPdfFile } from '../../lib/episodeImportSources';
+import {
+  fetchSeriesTitleOptions,
+  persistLastSeriesTitle,
+  readLastSeriesTitle,
+  resolveDefaultSeriesTitle,
+} from '../../lib/creatorSeriesContext';
 
 const LS_SERIES_THUMBS = 'MangAfric_creator_series_thumbs_v1';
 
 function normalizeSeriesTitle(t) {
   return (t || '').trim().toLowerCase();
+}
+
+function normalizeEpisodeTitle(t) {
+  return (t || '').trim().toLowerCase();
+}
+
+function pagePreviewUrl(page) {
+  if (!page) return '';
+  if (page.url) return apiAssetUrl(page.url);
+  const key = page.r2Key || page.key;
+  if (key) return apiAssetUrl(`/api/v1/storage/${String(key).replace(/^\//, '')}`);
+  return '';
+}
+
+function imagesToEditorItems(images) {
+  return (images || []).map((img, idx) => ({
+    id: crypto.randomUUID(),
+    serverPage: true,
+    r2Key: img.r2Key || img.key || '',
+    url: img.url || '',
+    size: typeof img.size === 'number' ? img.size : 0,
+    file: null,
+    sourceFile: null,
+    archiveFile: null,
+    previewUrl: pagePreviewUrl(img),
+    error: '',
+    name: img.name || `page-${idx + 1}.jpg`,
+  }));
 }
 
 function readStoredSeriesThumbnails(seriesTitle) {
@@ -36,8 +77,6 @@ function thumbPayloadFromBundle(bundle) {
   };
 }
 
-const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-const EP_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 const EP_TOTAL_MAX_BYTES = 20 * 1024 * 1024;
 const EP_TOTAL_MAX_FILES = 100;
 
@@ -45,7 +84,10 @@ function getPublishBlockingReasons({ episodeTitle, items, totals }) {
   const reasons = [];
   if (!episodeTitle.trim()) reasons.push("Titre d'épisode requis.");
   if (episodeTitle.length > 60) reasons.push("Titre d'épisode: maximum 60 caractères.");
-  if (items.length === 0) reasons.push('Importer au moins 1 image.');
+  const importables = items.filter(
+    (x) => !x.error && (x.file || x.archiveFile || x.sourceFile || x.serverPage),
+  );
+  if (importables.length === 0) reasons.push('Importer au moins 1 image ou une archive.');
   if (items.length > EP_TOTAL_MAX_FILES) reasons.push('Maximum 100 images.');
   if (totals.totalBytes > EP_TOTAL_MAX_BYTES) reasons.push('Limite totale 20MB dépassée.');
   const invalid = items.filter((x) => x.error).length;
@@ -55,10 +97,15 @@ function getPublishBlockingReasons({ episodeTitle, items, totals }) {
 
 export default function EpisodesPage() {
   const location = useLocation();
-  const [seriesTitle, setSeriesTitle] = useState('');
+  const [seriesTitle, setSeriesTitle] = useState(() => readLastSeriesTitle());
+  const [seriesTitleOptions, setSeriesTitleOptions] = useState(() => {
+    const last = readLastSeriesTitle();
+    return last ? [last] : [];
+  });
   const [episodeTitle, setEpisodeTitle] = useState('');
   const [creatorNote, setCreatorNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   /** Loaded from série submission / localStorage — used only for API thumb + preview header. */
   const [seriesThumbBundle, setSeriesThumbBundle] = useState(null);
@@ -66,18 +113,43 @@ export default function EpisodesPage() {
   const [items, setItems] = useState([]);
   const filesInputRef = useRef(null);
   const draggingIdRef = useRef(null);
+  const publishSectionRef = useRef(null);
 
   const [previewMode, setPreviewMode] = useState('pc'); // 'pc' | 'mobile'
   const [commentsEnabled, setCommentsEnabled] = useState(true);
   const [publishMode, setPublishMode] = useState('now'); // 'now' | 'schedule'
   const [publishDate, setPublishDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [publishTime, setPublishTime] = useState('09:40');
+  const [remoteEpisodes, setRemoteEpisodes] = useState([]);
+  const [remoteLoading, setRemoteLoading] = useState(false);
+  const [remoteRefreshKey, setRemoteRefreshKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     const params = new URLSearchParams(location.search);
     const fromUrl = (params.get('seriesTitle') || '').trim();
-    if (fromUrl) setSeriesTitle(fromUrl);
+    (async () => {
+      const [title, options] = await Promise.all([
+        resolveDefaultSeriesTitle(fromUrl),
+        fetchSeriesTitleOptions(),
+      ]);
+      if (cancelled) return;
+      setSeriesTitleOptions(options);
+      if (title) {
+        setSeriesTitle(title);
+        persistLastSeriesTitle(title);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [location.search]);
+
+  const applySeriesTitle = (next) => {
+    const t = String(next || '').slice(0, 80);
+    setSeriesTitle(t);
+    if (t.trim()) persistLastSeriesTitle(t);
+  };
 
   useEffect(() => {
     return () => {
@@ -129,11 +201,64 @@ export default function EpisodesPage() {
     };
   }, [seriesTitle]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const st = seriesTitle.trim();
+    if (!st) {
+      setRemoteEpisodes([]);
+      return undefined;
+    }
+    setRemoteLoading(true);
+    (async () => {
+      try {
+        const [drafts, published] = await Promise.all([
+          creatorApi.listDrafts(),
+          creatorApi.listPublished(),
+        ]);
+        if (cancelled) return;
+        const all = [...(Array.isArray(published) ? published : []), ...(Array.isArray(drafts) ? drafts : [])];
+        const forSeries = all.filter(
+          (ep) => normalizeSeriesTitle(ep.seriesTitle) === normalizeSeriesTitle(st),
+        );
+        setRemoteEpisodes(forSeries);
+      } catch {
+        if (!cancelled) setRemoteEpisodes([]);
+      } finally {
+        if (!cancelled) setRemoteLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [seriesTitle, remoteRefreshKey]);
+
+  useEffect(() => {
+    const et = episodeTitle.trim();
+    if (!et || items.length > 0) return;
+    const exact = remoteEpisodes.find(
+      (ep) => normalizeEpisodeTitle(ep.episodeTitle) === normalizeEpisodeTitle(et),
+    );
+    if (!exact?.images?.length) return;
+    setItems(imagesToEditorItems(exact.images));
+    if (exact.creatorNote && !creatorNote.trim()) {
+      setCreatorNote(String(exact.creatorNote));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episodeTitle, remoteEpisodes]);
+
+  const loadEpisodeFromServer = (ep) => {
+    if (!ep) return;
+    setEpisodeTitle(ep.episodeTitle || '');
+    if (ep.creatorNote) setCreatorNote(String(ep.creatorNote));
+    setItems(imagesToEditorItems(ep.images || []));
+    notify.success('Pages chargées depuis le serveur.');
+  };
+
   const episodeTitleLeft = 60 - episodeTitle.length;
   const noteLeft = 400 - creatorNote.length;
 
   const totals = useMemo(() => {
-    const totalBytes = items.reduce((acc, it) => acc + (it.file?.size ?? 0), 0);
+    const totalBytes = items.reduce((acc, it) => acc + (it.file?.size ?? it.size ?? 0), 0);
     return { totalBytes, count: items.length };
   }, [items]);
 
@@ -151,34 +276,130 @@ export default function EpisodesPage() {
 
   const canPublish = publishBlockingReasons.length === 0;
 
-  const previewHeaderThumbUrl =
-    seriesThumbBundle?.square?.url || items.find((x) => x.previewUrl)?.previewUrl || '';
+  const previewHeaderThumbUrl = useMemo(() => {
+    const raw = seriesThumbBundle?.square?.url || items.find((x) => x.previewUrl)?.previewUrl || '';
+    return raw.startsWith('blob:') ? raw : apiAssetUrl(raw);
+  }, [seriesThumbBundle, items]);
+
+  const buildEpisodePrefix = () => {
+    const safeSeries = (seriesTitle || 'series')
+      .trim()
+      .replace(/[^a-z0-9-_]+/gi, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60);
+    const safeEpisode = (episodeTitle || 'episode')
+      .trim()
+      .replace(/[^a-z0-9-_]+/gi, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60);
+    return `episodes/${safeSeries}/${safeEpisode}`;
+  };
+
+  const uploadEpisodePages = async (prefix) => {
+    const uploaded = [];
+    const meta = [];
+    for (const it of items) {
+      if (it.error) continue;
+      if (it.serverPage && (it.r2Key || it.url)) {
+        uploaded.push({
+          key: it.r2Key,
+          url: it.url,
+          size: it.size,
+        });
+        meta.push({ name: it.name, size: it.size });
+        continue;
+      }
+      if (it.archiveFile) {
+        const res = await creatorApi.uploadMangaArchive({
+          file: it.archiveFile,
+          prefix,
+          normalize: 'episode_page',
+        });
+        for (const page of res.pages || []) {
+          uploaded.push(page);
+          meta.push({ name: it.name, size: page.size });
+        }
+        continue;
+      }
+      const raw = it.sourceFile || it.file;
+      if (!raw) continue;
+      const page = await creatorApi.uploadFile({ file: raw, prefix, normalize: 'episode_page' });
+      uploaded.push(page);
+      meta.push({ name: raw.name, size: raw.size });
+    }
+    return { uploaded, meta };
+  };
 
   const addEpisodeFiles = async (fileList) => {
     const list = Array.from(fileList ?? []);
     if (list.length === 0) return;
     if (items.length >= EP_TOTAL_MAX_FILES) return;
 
+    setImporting(true);
+    try {
     const remainingSlots = EP_TOTAL_MAX_FILES - items.length;
-    const toProcess = list.slice(0, remainingSlots);
+    const slotsLeft = { n: remainingSlots };
 
     const next = [];
-    for (const f of toProcess) {
-      if (!ACCEPTED_TYPES.includes(f.type)) {
-        next.push({ id: crypto.randomUUID(), file: null, previewUrl: '', error: 'Format non autorisé (JPG, JPEG, PNG).', name: f.name });
+    for (const f of list) {
+      if (slotsLeft.n <= 0) break;
+
+      if (isArchiveFile(f) || isPdfFile(f)) {
+        next.push({
+          id: crypto.randomUUID(),
+          archiveFile: f,
+          file: null,
+          sourceFile: null,
+          previewUrl: '',
+          error: '',
+          name: f.name,
+        });
+        slotsLeft.n -= 1;
         continue;
       }
-      if (f.size > EP_IMAGE_MAX_BYTES) {
-        next.push({ id: crypto.randomUUID(), file: null, previewUrl: '', error: `Fichier > 2MB (${formatBytes(f.size)}).`, name: f.name });
+
+      if (!isSupportedSourceImage(f)) {
+        next.push({
+          id: crypto.randomUUID(),
+          file: null,
+          previewUrl: '',
+          error: 'Format non reconnu (image, HEIC, ZIP, CBZ ou PDF).',
+          name: f.name,
+        });
+        continue;
+      }
+      if (f.size > SOURCE_IMAGE_MAX_BYTES) {
+        next.push({
+          id: crypto.randomUUID(),
+          file: null,
+          previewUrl: '',
+          error: `Fichier source trop lourd (max ${formatBytes(SOURCE_IMAGE_MAX_BYTES)}).`,
+          name: f.name,
+        });
         continue;
       }
       try {
         // eslint-disable-next-line no-await-in-loop
-        const resized = await resizeForUpload({ file: f, targetWidth: 800, targetHeight: 1280, maxBytes: EP_IMAGE_MAX_BYTES });
+        const resized = await normalizeEpisodePage(f);
         const previewUrl = URL.createObjectURL(resized.file);
-        next.push({ id: crypto.randomUUID(), file: resized.file, previewUrl, error: '', name: resized.file.name });
-      } catch {
-        next.push({ id: crypto.randomUUID(), file: null, previewUrl: '', error: "Impossible de lire l'image.", name: f.name });
+        next.push({
+          id: crypto.randomUUID(),
+          sourceFile: f,
+          file: resized.file,
+          previewUrl,
+          error: '',
+          name: resized.file.name,
+          converted: true,
+        });
+        slotsLeft.n -= 1;
+      } catch (err) {
+        const msg =
+          err?.message === 'output_too_large'
+            ? `Impossible de compresser sous ${formatBytes(EP_PAGE_SPEC.maxBytes)}.`
+            : "Impossible de lire ou convertir l'image.";
+        next.push({ id: crypto.randomUUID(), file: null, previewUrl: '', error: msg, name: f.name });
       }
     }
 
@@ -198,6 +419,11 @@ export default function EpisodesPage() {
       }
       return kept;
     });
+
+    } finally {
+      setImporting(false);
+      if (filesInputRef.current) filesInputRef.current.value = '';
+    }
   };
 
   const moveItem = (fromId, toId) => {
@@ -219,6 +445,14 @@ export default function EpisodesPage() {
     await addEpisodeFiles(e.dataTransfer?.files);
   };
 
+  const removeItem = (id) => {
+    setItems((prev) => {
+      const it = prev.find((x) => x.id === id);
+      if (it?.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(it.previewUrl);
+      return prev.filter((x) => x.id !== id);
+    });
+  };
+
   const clearAll = () => {
     for (const it of items) if (it.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(it.previewUrl);
     setItems([]);
@@ -229,24 +463,9 @@ export default function EpisodesPage() {
     if (!canSaveDraft) return;
     try {
       setSaving(true);
-      const safeSeries = (seriesTitle || 'series')
-        .trim()
-        .replace(/[^a-z0-9-_]+/gi, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 60);
-      const safeEpisode = (episodeTitle || 'episode')
-        .trim()
-        .replace(/[^a-z0-9-_]+/gi, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 60);
-      const prefix = `episodes/${safeSeries}/${safeEpisode}`;
-
+      const prefix = buildEpisodePrefix();
       const thumbPayload = thumbPayloadFromBundle(seriesThumbBundle);
-
-      const files = items.filter((x) => x.file).map((x) => x.file);
-      const uploadedImages = await Promise.all(files.map((f) => creatorApi.uploadFile({ file: f, prefix })));
+      const { uploaded: uploadedImages, meta } = await uploadEpisodePages(prefix);
 
       await creatorApi.createDraft({
         seriesTitle,
@@ -257,13 +476,15 @@ export default function EpisodesPage() {
         publishAt: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : 'now',
         thumb: thumbPayload,
         images: uploadedImages.map((up, idx) => ({
-          name: files[idx]?.name,
-          size: files[idx]?.size,
+          name: meta[idx]?.name,
+          size: meta[idx]?.size ?? up.size,
           r2Key: up.key,
           url: up.url,
         })),
       });
+      persistLastSeriesTitle(seriesTitle);
       notify.success('Brouillon enregistré.');
+      setRemoteRefreshKey((k) => k + 1);
     } catch (err) {
       notify.error(`Impossible d'enregistrer le brouillon. ${(err && err.message) || ''}`.trim());
     } finally {
@@ -275,24 +496,9 @@ export default function EpisodesPage() {
     if (!canPublish) return;
     try {
       setSaving(true);
-      const safeSeries = (seriesTitle || 'series')
-        .trim()
-        .replace(/[^a-z0-9-_]+/gi, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 60);
-      const safeEpisode = (episodeTitle || 'episode')
-        .trim()
-        .replace(/[^a-z0-9-_]+/gi, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 60);
-      const prefix = `episodes/${safeSeries}/${safeEpisode}`;
-
+      const prefix = buildEpisodePrefix();
       const thumbPayload = thumbPayloadFromBundle(seriesThumbBundle);
-
-      const files = items.filter((x) => x.file).map((x) => x.file);
-      const uploadedImages = await Promise.all(files.map((f) => creatorApi.uploadFile({ file: f, prefix })));
+      const { uploaded: uploadedImages, meta } = await uploadEpisodePages(prefix);
 
       await creatorApi.createPublished({
         scheduledFor: publishMode === 'schedule' ? `${publishDate} ${publishTime}` : null,
@@ -302,13 +508,15 @@ export default function EpisodesPage() {
         commentsEnabled,
         thumb: thumbPayload,
         images: uploadedImages.map((up, idx) => ({
-          name: files[idx]?.name,
-          size: files[idx]?.size,
+          name: meta[idx]?.name,
+          size: meta[idx]?.size ?? up.size,
           r2Key: up.key,
           url: up.url,
         })),
       });
+      persistLastSeriesTitle(seriesTitle);
       notify.success('Épisode publié.');
+      setRemoteRefreshKey((k) => k + 1);
     } catch (err) {
       notify.error(`Impossible de publier l'épisode. ${(err && err.message) || ''}`.trim());
     } finally {
@@ -316,8 +524,18 @@ export default function EpisodesPage() {
     }
   };
 
+  const handlePublishClick = () => {
+    if (!canPublish) {
+      const first = publishBlockingReasons[0];
+      notify.info(first || 'Complétez le titre, importez des pages, puis publiez.');
+      publishSectionRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    onPublish();
+  };
+
   return (
-    <div className="creator container">
+    <div className="creator container ep-page">
       <div className="creator__tabs" role="tablist" aria-label="Navigation créateur">
         <a className="creator__tab" href="/series">
           SÉRIES
@@ -330,6 +548,10 @@ export default function EpisodesPage() {
       <div className="creator__grid">
         <main className="creator__main">
           <h1 className="creator__title">Publier un épisode</h1>
+          <p className="ep__lead">
+            Renseignez la série et l&apos;épisode, importez vos pages (images, ZIP ou PDF), puis appuyez sur{' '}
+            <strong>Publier</strong> (barre fixe en bas de l&apos;écran).
+          </p>
 
           {/* Titles */}
           <div className="ep__section">
@@ -338,7 +560,33 @@ export default function EpisodesPage() {
             </div>
             <label className="ep__field">
               <span>Série</span>
-              <input value={seriesTitle} onChange={(e) => setSeriesTitle(e.target.value.slice(0, 80))} placeholder="Nom de la série" />
+              {seriesTitleOptions.length > 1 ? (
+                <select
+                  className="ep__select"
+                  value={seriesTitle}
+                  onChange={(e) => {
+                    applySeriesTitle(e.target.value);
+                    setItems([]);
+                  }}
+                >
+                  {seriesTitleOptions.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              ) : seriesTitle.trim() ? (
+                <input className="ep__input-readonly" value={seriesTitle} readOnly aria-readonly="true" />
+              ) : (
+                <input
+                  value={seriesTitle}
+                  onChange={(e) => applySeriesTitle(e.target.value)}
+                  placeholder="Nom de la série"
+                />
+              )}
+              <small className="ep__help ep__help--nb">
+                {seriesTitleOptions.length > 0
+                  ? 'Reprise automatique de votre série enregistrée — pas besoin de la retaper.'
+                  : 'Créez d’abord une série dans l’onglet SÉRIES, ou saisissez le titre ici.'}
+              </small>
             </label>
             <label className="ep__field">
               <span>Titre d'épisode</span>
@@ -346,6 +594,45 @@ export default function EpisodesPage() {
               <small className={`ep__count${episodeTitleLeft < 0 ? ' is-bad' : ''}`}>{episodeTitleLeft} caractères restants</small>
             </label>
           </div>
+
+          {seriesTitle.trim() && remoteEpisodes.length > 0 && (
+            <div className="ep__section ep__section--remote">
+              <div className="ep__label">Pages déjà sur le serveur</div>
+              <p className="ep__help">
+                {remoteLoading
+                  ? 'Chargement…'
+                  : 'Ces épisodes ont déjà été enregistrés. Choisissez-en un pour afficher les pages ici.'}
+              </p>
+              <div className="ep__remote-list">
+                {remoteEpisodes.map((ep) => {
+                  const pageCount = ep.images?.length ?? 0;
+                  const isActive =
+                    normalizeEpisodeTitle(ep.episodeTitle) === normalizeEpisodeTitle(episodeTitle);
+                  return (
+                    <div key={ep.id} className={`ep__remote-card${isActive ? ' is-active' : ''}`}>
+                      <div className="ep__remote-card-head">
+                        <strong>{ep.episodeTitle || 'Sans titre'}</strong>
+                        <span className="ep__remote-meta">{pageCount} page(s)</span>
+                      </div>
+                      {pageCount > 0 ? (
+                        <div className="ep__thumbs ep__thumbs--remote">
+                          {ep.images.slice(0, 8).map((img, idx) => {
+                            const src = pagePreviewUrl(img);
+                            return src ? (
+                              <img key={`${ep.id}-p-${idx}`} src={src} alt="" loading="lazy" />
+                            ) : null;
+                          })}
+                        </div>
+                      ) : null}
+                      <button type="button" className="ep__btn" onClick={() => loadEpisodeFromServer(ep)}>
+                        Afficher dans l&apos;éditeur
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Files */}
           <div className="ep__section">
@@ -356,7 +643,7 @@ export default function EpisodesPage() {
               <input
                 ref={filesInputRef}
                 type="file"
-                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.heic,.heif,.zip,.cbz,.pdf,image/*,application/pdf,application/zip"
                 multiple
                 onChange={(e) => addEpisodeFiles(e.target.files)}
               />
@@ -374,11 +661,23 @@ export default function EpisodesPage() {
                   </div>
                 </div>
               </div>
-              <div className="ep__drop-hint">Glissez et lâchez les fichiers d'image</div>
+              <div className="ep__drop-hint">
+                Images, ZIP/CBZ ou PDF — aperçu local puis conversion serveur en {EP_PAGE_SPEC.width}×{EP_PAGE_SPEC.height}{' '}
+                JPG (max {formatBytes(EP_PAGE_SPEC.maxBytes)} / page). HEIC iPhone accepté.
+                {importing ? ' Import en cours…' : ''}
+              </div>
+
+              {items.length === 0 && seriesTitle.trim() && episodeTitle.trim() && !remoteLoading ? (
+                <p className="ep__help ep__help--nb">
+                  Aucun fichier local. Si vous avez déjà publié, utilisez « Pages déjà sur le serveur » ci-dessus ou
+                  saisissez le même titre d&apos;épisode pour recharger automatiquement.
+                </p>
+              ) : null}
 
               {items.length > 0 && (
                 <div className="ep__thumbs">
-                  {items.slice(0, 12).map((it) => (
+                  <div className="ep__thumbs-count">{items.length} page(s) dans l&apos;éditeur</div>
+                  {items.map((it, idx) => (
                     <div
                       key={it.id}
                       className={`ep__thumb-item${it.error ? ' has-error' : ''}`}
@@ -401,12 +700,28 @@ export default function EpisodesPage() {
                       }}
                       title="Glissez pour réordonner"
                     >
-                      {it.previewUrl ? <img src={it.previewUrl} alt={it.name} /> : <div className="ep__thumb-ph" />}
+                      <button
+                        type="button"
+                        className="ep__thumb-remove"
+                        aria-label={`Supprimer la page ${idx + 1}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeItem(it.id);
+                        }}
+                      >
+                        ×
+                      </button>
+                      {it.previewUrl ? (
+                        <img src={it.previewUrl} alt={it.name} />
+                      ) : it.archiveFile ? (
+                        <div className="ep__thumb-ph ep__thumb-ph--archive">ZIP/PDF</div>
+                      ) : (
+                        <div className="ep__thumb-ph" />
+                      )}
                       <div className="ep__thumb-item-name">{it.name}</div>
                       {it.error && <div className="ep__thumb-item-err">{it.error}</div>}
                     </div>
                   ))}
-                  {items.length > 12 && <div className="ep__more">+{items.length - 12} autres</div>}
                 </div>
               )}
             </div>
@@ -485,7 +800,7 @@ export default function EpisodesPage() {
           </div>
 
           {/* Publish */}
-          <div className="ep__section">
+          <div className="ep__section" ref={publishSectionRef}>
             <div className="ep__label">Publier</div>
             <div className="ep__seg">
               <button type="button" className={`ep__seg-btn${publishMode === 'now' ? ' is-active' : ''}`} onClick={() => setPublishMode('now')}>
@@ -521,11 +836,30 @@ export default function EpisodesPage() {
               </div>
             )}
 
-            <button type="button" className="ep__btn ep__btn--publish" disabled={!canPublish || saving} onClick={onPublish}>
+            <button type="button" className="ep__btn ep__btn--publish" disabled={saving} onClick={handlePublishClick}>
               Publier un épisode
             </button>
           </div>
         </main>
+      </div>
+
+      <div className="ep__sticky-actions" role="region" aria-label="Actions de publication">
+        <button
+          type="button"
+          className="ep__btn ep__sticky-actions__draft"
+          disabled={!canSaveDraft || saving}
+          onClick={onSaveDraft}
+        >
+          Brouillon
+        </button>
+        <button
+          type="button"
+          className="ep__btn ep__btn--publish ep__sticky-actions__publish"
+          disabled={saving}
+          onClick={handlePublishClick}
+        >
+          {saving ? 'Publication…' : 'Publier'}
+        </button>
       </div>
     </div>
   );

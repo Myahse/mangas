@@ -2,8 +2,14 @@ package com.mangafriq.controller;
 
 import com.mangafriq.constants.AppConstants;
 import com.mangafriq.exception.NotFoundException;
+import com.mangafriq.services.media.MangaArchiveImportService;
+import com.mangafriq.services.media.MangaImageNormalizeService;
+import com.mangafriq.services.media.MangaNormalizeProfile;
 import com.mangafriq.storage.ObjectStorageService;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -24,41 +30,91 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 @RequestMapping(AppConstants.API_V1 + "/storage")
 public class StorageController {
 	private final ObjectStorageService storage;
+	private final MangaImageNormalizeService mangaImageNormalizeService;
+	private final MangaArchiveImportService mangaArchiveImportService;
 
-	public StorageController(ObjectStorageService storage) {
+	public StorageController(
+		ObjectStorageService storage,
+		MangaImageNormalizeService mangaImageNormalizeService,
+		MangaArchiveImportService mangaArchiveImportService
+	) {
 		this.storage = storage;
+		this.mangaImageNormalizeService = mangaImageNormalizeService;
+		this.mangaArchiveImportService = mangaArchiveImportService;
 	}
 
 	@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public Map<String, Object> upload(
 		@RequestPart("file") MultipartFile file,
-		@RequestParam(required = false) String prefix
+		@RequestParam(required = false) String prefix,
+		@RequestParam(required = false) String normalize
 	) throws IOException {
-		String safePrefix = (prefix == null ? "" : prefix.trim());
-		if (!safePrefix.isEmpty() && !safePrefix.endsWith("/")) safePrefix = safePrefix + "/";
+		String safePrefix = normalizePrefix(prefix);
+		byte[] payload;
+		String ext;
+		String contentType;
 
-		String original = file.getOriginalFilename();
-		String ext = "";
-		if (StringUtils.hasText(original) && original.contains(".")) {
-			ext = original.substring(original.lastIndexOf('.'));
+		if (StringUtils.hasText(normalize)) {
+			MangaNormalizeProfile profile = MangaNormalizeProfile.fromParam(normalize);
+			payload = mangaImageNormalizeService.normalizeBytes(file.getBytes(), profile);
+			ext = ".jpg";
+			contentType = "image/jpeg";
+		} else {
+			payload = file.getBytes();
+			ext = extensionFromOriginal(file.getOriginalFilename());
+			contentType = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
 		}
 
+		return storeBytes(safePrefix, ext, contentType, payload);
+	}
+
+	@PostMapping(value = "/upload-manga-archive", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public Map<String, Object> uploadMangaArchive(
+		@RequestPart("file") MultipartFile file,
+		@RequestParam(required = false) String prefix,
+		@RequestParam(defaultValue = "episode_page") String normalize
+	) throws IOException {
+		String safePrefix = normalizePrefix(prefix);
+		MangaNormalizeProfile profile = MangaNormalizeProfile.fromParam(normalize);
+		List<byte[]> pages = mangaArchiveImportService.extractAndNormalizePages(file, profile);
+
+		List<Map<String, Object>> uploaded = new ArrayList<>();
+		for (byte[] page : pages) {
+			uploaded.add(storeBytes(safePrefix, ".jpg", "image/jpeg", page));
+		}
+		return Map.of("pages", uploaded, "count", uploaded.size());
+	}
+
+	private Map<String, Object> storeBytes(String safePrefix, String ext, String contentType, byte[] payload)
+		throws IOException {
 		String key = safePrefix + UUID.randomUUID() + ext;
-		String contentType = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
-
-		storage.put(key, contentType, file.getInputStream(), file.getSize());
-
+		storage.put(key, contentType, new ByteArrayInputStream(payload), payload.length);
 		return Map.of(
 			"key", key,
 			"contentType", contentType,
-			"size", file.getSize(),
+			"size", payload.length,
 			"url", AppConstants.API_V1 + "/storage/" + key
 		);
 	}
 
+	private static String normalizePrefix(String prefix) {
+		String safePrefix = prefix == null ? "" : prefix.trim();
+		if (!safePrefix.isEmpty() && !safePrefix.endsWith("/")) {
+			safePrefix = safePrefix + "/";
+		}
+		return safePrefix;
+	}
+
+	private static String extensionFromOriginal(String original) {
+		if (StringUtils.hasText(original) && original.contains(".")) {
+			return original.substring(original.lastIndexOf('.'));
+		}
+		return "";
+	}
 
 	@GetMapping("/{*key}")
-	public ResponseEntity<org.springframework.core.io.InputStreamResource> download(@PathVariable String key) throws IOException {
+	public ResponseEntity<org.springframework.core.io.InputStreamResource> download(@PathVariable String key)
+		throws IOException {
 
 		String normalizedKey = key != null && key.startsWith("/") ? key.substring(1) : key;
 
@@ -66,7 +122,6 @@ public class StorageController {
 		try {
 			obj = storage.get(normalizedKey);
 		} catch (IOException e) {
-		
 			if (e.getCause() instanceof NoSuchKeyException) {
 				throw new NotFoundException("File not found: " + normalizedKey);
 			}
@@ -83,4 +138,3 @@ public class StorageController {
 			.body(new org.springframework.core.io.InputStreamResource(obj.body()));
 	}
 }
-

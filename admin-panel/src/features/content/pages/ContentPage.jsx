@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, Ban, Trash2, UploadCloud } from 'lucide-react';
+import { Archive, Ban, RefreshCcw, Trash2, UploadCloud } from 'lucide-react';
 import { AdminSectionPage } from '../../../pages/AdminSectionPage.jsx';
 import { notify } from '../../../services/notify.js';
 import { adminApi } from '../../../services/api.js';
@@ -32,6 +32,12 @@ export function ContentPage() {
     };
   }, [refreshKey]);
 
+  useEffect(() => {
+    const onFocus = () => setRefreshKey((k) => k + 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   const rows = useMemo(() => {
     const all = allRows;
     const q = query.trim().toLowerCase();
@@ -44,8 +50,14 @@ export function ContentPage() {
   return (
     <AdminSectionPage
       title="Content"
-      description="Moderate mangas (publish, suspend, block, archive, delete)."
+      description="Moderate mangas (publish, suspend, block, archive, delete). Approved creator series appear here."
     >
+      <div className="admin-actions" style={{ marginBottom: 12 }}>
+        <button type="button" className="admin-btn" onClick={() => setRefreshKey((k) => k + 1)}>
+          <RefreshCcw size={16} />
+          Refresh
+        </button>
+      </div>
       {error ? (
         <div className="admin-surface">
           <div className="admin-surface__inner">

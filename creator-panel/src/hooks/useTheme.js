@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = 'theme';
+const MOBILE_MQ = '(max-width: 900px)';
 
 function getSystemPrefersDark() {
   return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false;
+}
+
+function getIsMobile() {
+  return window.matchMedia?.(MOBILE_MQ)?.matches ?? false;
 }
 
 function applyTheme(mode) {
@@ -17,25 +22,38 @@ export function useTheme() {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
   });
+  const [isMobile, setIsMobile] = useState(() => getIsMobile());
+
+  useEffect(() => {
+    const mql = window.matchMedia?.(MOBILE_MQ);
+    if (!mql) return;
+    const handler = () => setIsMobile(mql.matches);
+    mql.addEventListener?.('change', handler);
+    return () => mql.removeEventListener?.('change', handler);
+  }, []);
+
+  const effectiveMode = isMobile ? 'system' : mode;
 
   const resolved = useMemo(() => {
-    const isDark = mode === 'dark' || (mode === 'system' && getSystemPrefersDark());
+    const isDark = effectiveMode === 'dark' || (effectiveMode === 'system' && getSystemPrefersDark());
     return isDark ? 'dark' : 'light';
-  }, [mode]);
+  }, [effectiveMode]);
 
   useEffect(() => {
-    applyTheme(mode);
-    window.localStorage.setItem(STORAGE_KEY, mode);
-  }, [mode]);
+    applyTheme(effectiveMode);
+    if (!isMobile) {
+      window.localStorage.setItem(STORAGE_KEY, mode);
+    }
+  }, [effectiveMode, isMobile, mode]);
 
   useEffect(() => {
-    if (mode !== 'system') return;
+    if (effectiveMode !== 'system') return;
     const mql = window.matchMedia?.('(prefers-color-scheme: dark)');
     if (!mql) return;
     const handler = () => applyTheme('system');
     mql.addEventListener?.('change', handler);
     return () => mql.removeEventListener?.('change', handler);
-  }, [mode]);
+  }, [effectiveMode]);
 
   return { mode, resolved, setMode };
 }
