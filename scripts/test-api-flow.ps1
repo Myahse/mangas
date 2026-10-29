@@ -19,7 +19,7 @@
 param(
   [string]$BaseUrl = $(if ($env:APP_PUBLIC_API_BASE_URL) { $env:APP_PUBLIC_API_BASE_URL } else { "http://localhost:8088" }),
   [string]$AdminEmail = $(if ($env:APP_BOOTSTRAP_ADMIN_EMAIL) { $env:APP_BOOTSTRAP_ADMIN_EMAIL } else { "mangafric@gmail.com" }),
-  [string]$AdminPassword = $(if ($env:APP_BOOTSTRAP_ADMIN_PASSWORD) { $env:APP_BOOTSTRAP_ADMIN_PASSWORD } else { "MangAfric123" }),
+  [string]$AdminPassword = $env:APP_BOOTSTRAP_ADMIN_PASSWORD,
   [int]$HealthTimeoutSec = 90,
   [switch]$IncludeOpenApi,
   [switch]$IncludeEmailSend
@@ -27,6 +27,28 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# Admin password: -AdminPassword, else APP_BOOTSTRAP_ADMIN_PASSWORD, else the backend's untracked
+# .env / .env.local (same order the API reads them). Never hard-coded.
+function Read-BackendEnvValue([string]$Key) {
+  $backendDir = Join-Path (Split-Path -Parent $PSScriptRoot) "backend\mangafrik"
+  foreach ($name in @(".env", ".env.local")) {
+    $file = Join-Path $backendDir $name
+    if (-not (Test-Path -LiteralPath $file)) { continue }
+    foreach ($line in Get-Content -LiteralPath $file) {
+      if ($line -match "^\s*$([regex]::Escape($Key))\s*=\s*(.*)$") {
+        $value = $Matches[1].Trim().Trim('"').Trim("'")
+        if ($value) { return $value }
+      }
+    }
+  }
+  return ""
+}
+if (-not $AdminPassword) { $AdminPassword = Read-BackendEnvValue "APP_BOOTSTRAP_ADMIN_PASSWORD" }
+if (-not $AdminPassword) {
+  Write-Host "Admin password missing: pass -AdminPassword or set APP_BOOTSTRAP_ADMIN_PASSWORD (env or backend/mangafrik/.env)." -ForegroundColor Red
+  exit 1
+}
 
 $ApiRoot = ($BaseUrl.TrimEnd("/")) + "/api/v1"
 $RunId = [Guid]::NewGuid().ToString("N").Substring(0, 8)
@@ -89,6 +111,9 @@ function Invoke-Api {
   if ($null -ne $Body) {
     $params.Body = ($Body | ConvertTo-Json -Depth 12 -Compress)
   }
+
+  # PowerShell 7 returns error responses directly; Windows PowerShell 5 throws them (handled in catch).
+  if ($PSVersionTable.PSVersion.Major -ge 7) { $params.SkipHttpErrorCheck = $true }
 
   try {
     $response = Invoke-WebRequest @params -UseBasicParsing

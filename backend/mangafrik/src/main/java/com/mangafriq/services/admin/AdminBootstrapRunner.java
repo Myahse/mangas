@@ -27,7 +27,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
 	@Value("${app.bootstrap.admin.email:mangafric@gmail.com}")
 	private String adminEmail;
 
-	@Value("${app.bootstrap.admin.password:MangAfric123}")
+	@Value("${app.bootstrap.admin.password:}")
 	private String adminPassword;
 
 	@Value("${app.bootstrap.admin.display-name:MangAfric Admin}")
@@ -51,7 +51,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
 			return;
 		}
 		if (password.length() < 6) {
-			log.warn("Admin bootstrap skipped: invalid password");
+			log.warn("Admin bootstrap skipped: set APP_BOOTSTRAP_ADMIN_PASSWORD (6+ characters) to create {}", email);
 			return;
 		}
 		if (displayName.isBlank()) displayName = "Admin";
