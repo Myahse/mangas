@@ -80,6 +80,11 @@ class AppNavbar extends StatelessWidget implements PreferredSizeWidget {
                             icon: const Icon(Icons.search, size: 22),
                             onPressed: onSearch,
                           ),
+                          IconButton(
+                            tooltip: 'Téléchargements',
+                            icon: const Icon(Icons.download_for_offline_outlined, size: 22),
+                            onPressed: () => context.push('/telechargements'),
+                          ),
                           if (authed)
                             ListenableBuilder(
                               listenable: notificationController,

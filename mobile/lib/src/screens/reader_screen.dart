@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../api/api_client.dart';
 import '../data/catalog_service.dart';
 import '../data/models.dart';
+import '../offline/offline_store.dart';
 import '../theme.dart';
 import '../widgets/reader_auth_sheet.dart';
 
@@ -22,11 +23,73 @@ class _ReaderScreenState extends State<ReaderScreen> {
   late Future<_ReaderBundle> _future;
   bool _showChrome = true;
   double _zoom = 1;
+  bool _saved = false;
+  double? _dlProgress;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    offlineStore.isSaved(widget.slug, widget.chapter).then((v) {
+      if (mounted) setState(() => _saved = v);
+    });
+  }
+
+  Future<void> _download() async {
+    if (_saved) {
+      context.push('/telechargements/${offlineId(widget.slug, widget.chapter)}');
+      return;
+    }
+    final lite = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(title: Text('Télécharger ce chapitre', style: TextStyle(fontWeight: FontWeight.w800))),
+            ListTile(
+              leading: const Icon(Icons.data_saver_on),
+              title: const Text('Économie de données (recommandé)'),
+              subtitle: const Text('Environ 70 % plus léger, idéal pour partager.'),
+              onTap: () => Navigator.pop(ctx, true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.hd_outlined),
+              title: const Text('Qualité originale'),
+              onTap: () => Navigator.pop(ctx, false),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (lite == null || !mounted) return;
+    setState(() => _dlProgress = 0);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await offlineStore.download(
+        widget.slug,
+        widget.chapter,
+        lite: lite,
+        onProgress: (done, total) {
+          if (mounted) setState(() => _dlProgress = done / total);
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _saved = true;
+        _dlProgress = null;
+      });
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Chapitre téléchargé. Lisible sans connexion.'),
+          action: SnackBarAction(label: 'Envoyer', onPressed: () => context.push('/telechargements/${offlineId(widget.slug, widget.chapter)}/envoyer')),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _dlProgress = null);
+      messenger.showSnackBar(SnackBar(content: Text(e is BackendException ? e.message : 'Téléchargement impossible : $e')));
+    }
   }
 
   Future<_ReaderBundle> _load() async {
@@ -122,6 +185,21 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   ),
                   leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
                   actions: [
+                    if (_dlProgress != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(value: _dlProgress, strokeWidth: 2.5, color: Colors.white),
+                        ),
+                      )
+                    else
+                      IconButton(
+                        tooltip: _saved ? 'Téléchargé · lire hors ligne' : 'Télécharger',
+                        onPressed: _download,
+                        icon: Icon(_saved ? Icons.download_done : Icons.download_outlined),
+                      ),
                     IconButton(
                       onPressed: () => setState(() => _zoom = (_zoom - 0.1).clamp(0.6, 1.3)),
                       icon: const Icon(Icons.remove),

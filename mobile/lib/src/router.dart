@@ -5,7 +5,9 @@ import 'auth/auth_controller.dart';
 import 'screens/account_section_screen.dart';
 import 'screens/become_creator_screen.dart';
 import 'screens/contact_screen.dart';
+import 'screens/downloads_screen.dart';
 import 'screens/not_found_screen.dart';
+import 'screens/offline_reader_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/store_screen.dart';
@@ -100,6 +102,26 @@ GoRouter createRouter(StartupController startup) {
         parentNavigatorKey: rootNavigatorKey,
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/telechargements',
+        builder: (context, state) => const DownloadsScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/telechargements/recevoir',
+        builder: (context, state) => const ShareReceiveScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/telechargements/:id',
+        builder: (context, state) => OfflineReaderScreen(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        parentNavigatorKey: rootNavigatorKey,
+        path: '/telechargements/:id/envoyer',
+        builder: (context, state) => ShareSendScreen(id: state.pathParameters['id']!),
       ),
       GoRoute(
         parentNavigatorKey: rootNavigatorKey,
