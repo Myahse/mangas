@@ -56,6 +56,8 @@ public class SecurityConfig {
 						.requestMatchers(AppConstants.API_V1 + "/creator-contracts/**").permitAll()
 						.requestMatchers(HttpMethod.GET, AppConstants.API_V1 + "/ads/system-notices").permitAll()
 						.requestMatchers(HttpMethod.GET, AppConstants.API_V1 + "/store/coin-packs").permitAll()
+						// Called by GeniusPay; authenticated by its HMAC signature instead of a user token.
+						.requestMatchers(HttpMethod.POST, AppConstants.API_V1 + "/payments/geniuspay/webhook").permitAll()
 						.requestMatchers(AppConstants.API_V1 + "/storage/upload").authenticated()
 						.requestMatchers(AppConstants.API_V1 + "/storage/upload-manga-archive").authenticated()
 						.requestMatchers(AppConstants.API_V1 + "/store/**").authenticated()

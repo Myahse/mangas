@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { createCoinPurchaseIntent, fetchCoinPacks, fetchWallet, useFetch } from '../services/api';
+import { Link, useSearchParams } from 'react-router-dom';
+import { createCoinPurchaseIntent, fetchCoinPacks, fetchCoinPurchaseIntent, fetchWallet, useFetch } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { onWalletUpdated } from '../realtime/walletEvents';
 import { useLocale } from '../hooks/useLocale';
@@ -15,11 +15,45 @@ export default function StorePage() {
   const { data: packsRes } = useFetch(fetchCoinPacks, packsKey);
   const [busyPack, setBusyPack] = useState('');
   const [message, setMessage] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const returnedIntent = searchParams.get('intent') || '';
+  const returnedOutcome = searchParams.get('payment') || '';
 
   useEffect(() => {
     if (!isAuthenticated) return;
     return onWalletUpdated(() => setWalletKey((k) => k + 1));
   }, [isAuthenticated]);
+
+  // Back from GeniusPay (?payment=success|error&intent=…): poll until the backend confirms the payment.
+  useEffect(() => {
+    if (!isAuthenticated || !returnedIntent) return;
+    let cancelled = false;
+    let timer;
+    let tries = 0;
+    const done = (text) => {
+      setMessage(text);
+      setWalletKey((k) => k + 1);
+      setSearchParams({}, { replace: true });
+    };
+    const check = () => {
+      fetchCoinPurchaseIntent(returnedIntent)
+        .then((intent) => {
+          if (cancelled) return;
+          if (intent.status === 'paid') return done(`Paiement confirmé : ${intent.coins} coins ajoutés.`);
+          if (intent.status !== 'pending') return done('Le paiement n’a pas abouti. Aucun montant n’a été crédité.');
+          tries += 1;
+          if (tries >= 20) return done('Paiement en cours de confirmation. Vos coins apparaîtront dès sa validation.');
+          setMessage(returnedOutcome === 'error' ? 'Vérification du paiement…' : 'Confirmation du paiement…');
+          timer = setTimeout(check, 3000);
+        })
+        .catch((e) => !cancelled && done(e?.message || 'Impossible de vérifier le paiement.'));
+    };
+    check();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isAuthenticated, returnedIntent, returnedOutcome, setSearchParams]);
 
   if (!isAuthenticated) {
     return (
@@ -82,14 +116,22 @@ export default function StorePage() {
                     setMessage('');
                     createCoinPurchaseIntent(p.id)
                       .then((intent) => {
-                        setMessage(`Intent created: ${intent.id}\nStatus: ${intent.status}\nProvider: ${intent.provider}`);
+                        if (intent.checkoutUrl) {
+                          // GeniusPay hosted checkout (Wave, Orange Money, MTN, Moov, carte…).
+                          window.location.assign(intent.checkoutUrl);
+                          return;
+                        }
+                        setMessage(`Demande d’achat enregistrée (${intent.id}).\nVos coins seront ajoutés après validation du paiement.`);
                         setWalletKey((k) => k + 1);
+                        setBusyPack('');
                       })
-                      .catch((e) => setMessage(e?.message || 'Failed to create intent'))
-                      .finally(() => setBusyPack(''));
+                      .catch((e) => {
+                        setMessage(e?.message || 'Impossible de lancer le paiement.');
+                        setBusyPack('');
+                      });
                   }}
                 >
-                  {busyPack === p.id ? 'Création…' : 'Acheter'}
+                  {busyPack === p.id ? 'Redirection…' : 'Acheter'}
                 </button>
               </div>
             </div>

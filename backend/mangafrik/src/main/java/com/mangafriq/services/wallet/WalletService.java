@@ -627,6 +627,16 @@ public class WalletService {
 		return out;
 	}
 
+	/** Paid coins for a purchase intent; the caller guarantees it runs once per intent. */
+	@Transactional
+	public int creditPurchase(String userId, int coins, String intentId) {
+		lockUserRow(userId);
+		credit(userId, "PURCHASE_TOPUP", coins, "purchase_intent", intentId);
+		int bal = balance(userId);
+		publishWalletUpdate(userId, bal, balancePaid(userId), balanceReward(userId), "purchase_topup");
+		return bal;
+	}
+
 	public boolean hasMangaEntitlement(String userId, String slug) {
 		Integer c = jdbc.queryForObject("""
 				select count(*)

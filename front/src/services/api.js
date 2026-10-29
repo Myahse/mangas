@@ -265,6 +265,10 @@ export async function createCoinPurchaseIntent(packId) {
   return request('/store/coin-purchase-intents', { method: 'POST', body: { packId } });
 }
 
+export async function fetchCoinPurchaseIntent(id) {
+  return request(`/store/coin-purchase-intents/${encodeURIComponent(id)}`);
+}
+
 /* ════════════════════════════════════════════════════════════
    AUTH
 ════════════════════════════════════════════════════════════ */

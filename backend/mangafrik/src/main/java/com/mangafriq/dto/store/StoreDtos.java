@@ -30,7 +30,9 @@ public final class StoreDtos {
 		String status,
 		String provider,
 		String providerRef,
-		Instant createdAt
+		Instant createdAt,
+		/** GeniusPay hosted checkout page to send the reader to; null for manual intents. */
+		String checkoutUrl
 	) {}
 }
 

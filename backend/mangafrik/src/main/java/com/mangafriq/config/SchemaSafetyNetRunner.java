@@ -520,6 +520,8 @@ public class SchemaSafetyNetRunner implements ApplicationRunner {
 			create index if not exists coin_purchase_intents_status_idx
 			  on coin_purchase_intents (status);
 			""");
+		jdbc.execute("alter table if exists coin_purchase_intents add column if not exists checkout_url text");
+		jdbc.execute("alter table if exists coin_purchase_intents add column if not exists paid_at timestamptz");
 	}
 
 	private void ensureAdsPanelSchema() {

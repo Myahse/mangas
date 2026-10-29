@@ -7,6 +7,7 @@ import com.mangafriq.dto.store.StoreDtos.PurchaseIntentDto;
 import com.mangafriq.security.utils.SecurityUtils;
 import com.mangafriq.services.store.CoinStoreService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +31,13 @@ public class CoinStoreController {
 	public PurchaseIntentDto createIntent(@RequestBody CreatePurchaseIntentRequest req) {
 		var uid = SecurityUtils.getCurrentUserIdString().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
 		return store.createIntent(uid, req);
+	}
+
+	/** Polled by the store page after GeniusPay sends the reader back. */
+	@GetMapping("/coin-purchase-intents/{id}")
+	public PurchaseIntentDto intent(@PathVariable String id) {
+		var uid = SecurityUtils.getCurrentUserIdString().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
+		return store.getIntent(uid, id);
 	}
 }
 
