@@ -95,6 +95,25 @@ public class CreatorStore {
 		);
 	}
 
+	/** Whether this creator submitted a series with this title — episodes join the catalog by title. */
+	public boolean ownsSeries(String creatorEmail, String seriesTitle) {
+		String email = creatorEmail == null ? "" : creatorEmail.trim().toLowerCase();
+		String title = seriesTitle == null ? "" : seriesTitle.trim().toLowerCase();
+		if (email.isBlank() || title.isBlank()) return false;
+		Boolean owns = jdbc.queryForObject("""
+				select exists (
+				  select 1 from creator_manga_submissions
+				  where lower(creator_email) = :email
+				    and lower(trim(payload->>'title')) = :title
+				)
+				""",
+			new MapSqlParameterSource()
+				.addValue("email", email)
+				.addValue("title", title),
+			Boolean.class);
+		return Boolean.TRUE.equals(owns);
+	}
+
 	public MangaSubmissionDto reviewSubmission(String id, String decision, String reason) {
 		if (id == null || id.isBlank()) throw new NotFoundException("Submission not found");
 		MangaSubmissionDto current = getById(id);

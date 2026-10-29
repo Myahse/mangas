@@ -328,6 +328,9 @@ public class SchemaSafetyNetRunner implements ApplicationRunner {
 			create index if not exists idx_creator_published_episodes_published_at
 			  on creator_published_episodes(published_at desc);
 			""");
+		// Matches Flyway V38 — episode ownership.
+		jdbc.execute("alter table if exists creator_episode_drafts add column if not exists creator_email text");
+		jdbc.execute("alter table if exists creator_published_episodes add column if not exists creator_email text");
 	}
 
 	private void ensureSupportSchema() {

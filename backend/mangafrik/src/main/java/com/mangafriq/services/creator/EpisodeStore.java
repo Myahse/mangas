@@ -41,13 +41,15 @@ public class EpisodeStore {
 		this.creatorPublishNotify = creatorPublishNotify;
 	}
 
-	public List<EpisodeDraftDto> listDrafts() {
+	/** Drafts owned by {@code creatorEmail}; {@code null} lists every creator's drafts (staff). */
+	public List<EpisodeDraftDto> listDrafts(String creatorEmail) {
 		return jdbc.query("""
 				select id, created_at, series_title, episode_title, creator_note, comments_enabled, publish_mode, publish_at, thumb, images
 				from creator_episode_drafts
+				where (:all = true) or (lower(creator_email) = :email)
 				order by created_at desc
 				""",
-			Map.of(),
+			ownerParams(creatorEmail),
 			(rs, i) -> new EpisodeDraftDto(
 				String.valueOf(rs.getObject("id")),
 				rs.getTimestamp("created_at").toInstant(),
@@ -63,7 +65,7 @@ public class EpisodeStore {
 		);
 	}
 
-	public EpisodeDraftDto createDraft(CreateDraftRequest req) {
+	public EpisodeDraftDto createDraft(CreateDraftRequest req, String creatorEmail) {
 		String id = UUID.randomUUID().toString();
 		Instant now = Instant.now();
 		EpisodeDraftDto dto = new EpisodeDraftDto(
@@ -81,13 +83,14 @@ public class EpisodeStore {
 
 		jdbc.update("""
 				insert into creator_episode_drafts
-				  (id, created_at, series_title, episode_title, creator_note, comments_enabled, publish_mode, publish_at, thumb, images)
+				  (id, created_at, series_title, episode_title, creator_note, comments_enabled, publish_mode, publish_at, thumb, images, creator_email)
 				values
 				  (cast(:id as uuid), :created_at, :series_title, :episode_title, :creator_note, :comments_enabled, :publish_mode, :publish_at,
-				   cast(:thumb as jsonb), cast(:images as jsonb))
+				   cast(:thumb as jsonb), cast(:images as jsonb), :creator_email)
 				""",
 			new MapSqlParameterSource()
 				.addValue("id", id)
+				.addValue("creator_email", blankToNull(creatorEmail))
 				.addValue("created_at", java.sql.Timestamp.from(now))
 				.addValue("series_title", dto.seriesTitle())
 				.addValue("episode_title", dto.episodeTitle())
@@ -99,25 +102,18 @@ public class EpisodeStore {
 				.addValue("images", writeJson(dto.images()))
 		);
 
-		// Trim old rows (keep latest 50).
-		jdbc.getJdbcTemplate().execute("""
-				delete from creator_episode_drafts
-				where id in (
-				  select id from creator_episode_drafts
-				  order by created_at desc
-				  offset 50
-				)
-				""");
 		return dto;
 	}
 
-	public List<PublishedEpisodeDto> listPublished() {
+	/** Episodes owned by {@code creatorEmail}; {@code null} lists every creator's episodes (staff). */
+	public List<PublishedEpisodeDto> listPublished(String creatorEmail) {
 		return jdbc.query("""
 				select id, published_at, scheduled_for, series_title, episode_title, creator_note, comments_enabled, thumb, images, stats, comments
 				from creator_published_episodes
+				where (:all = true) or (lower(creator_email) = :email)
 				order by published_at desc
 				""",
-			Map.of(),
+			ownerParams(creatorEmail),
 			(rs, i) -> new PublishedEpisodeDto(
 				String.valueOf(rs.getObject("id")),
 				rs.getTimestamp("published_at").toInstant(),
@@ -156,13 +152,14 @@ public class EpisodeStore {
 		);
 		jdbc.update("""
 				insert into creator_published_episodes
-				  (id, published_at, scheduled_for, series_title, episode_title, creator_note, comments_enabled, thumb, images, stats, comments)
+				  (id, published_at, scheduled_for, series_title, episode_title, creator_note, comments_enabled, thumb, images, stats, comments, creator_email)
 				values
 				  (cast(:id as uuid), :published_at, :scheduled_for, :series_title, :episode_title, :creator_note, :comments_enabled,
-				   cast(:thumb as jsonb), cast(:images as jsonb), cast(:stats as jsonb), cast(:comments as jsonb))
+				   cast(:thumb as jsonb), cast(:images as jsonb), cast(:stats as jsonb), cast(:comments as jsonb), :creator_email)
 				""",
 			new MapSqlParameterSource()
 				.addValue("id", id)
+				.addValue("creator_email", blankToNull(creatorEmail))
 				.addValue("published_at", java.sql.Timestamp.from(now))
 				.addValue("scheduled_for", dto.scheduledFor())
 				.addValue("series_title", dto.seriesTitle())
@@ -175,15 +172,6 @@ public class EpisodeStore {
 				.addValue("comments", writeJson(dto.comments()))
 		);
 
-		// Trim old rows (keep latest 200).
-		jdbc.getJdbcTemplate().execute("""
-				delete from creator_published_episodes
-				where id in (
-				  select id from creator_published_episodes
-				  order by published_at desc
-				  offset 200
-				)
-				""");
 		try {
 			catalogChapterSync.syncCreatorEpisodeToCatalog(
 					dto.seriesTitle(), dto.episodeTitle(), dto.images(), dto.publishedAt());
@@ -325,6 +313,13 @@ public class EpisodeStore {
 		);
 		if (rows.isEmpty()) throw new NotFoundException("Episode not found");
 		return rows.get(0);
+	}
+
+	private MapSqlParameterSource ownerParams(String creatorEmail) {
+		String email = creatorEmail == null ? "" : creatorEmail.trim().toLowerCase();
+		return new MapSqlParameterSource()
+			.addValue("all", creatorEmail == null)
+			.addValue("email", email);
 	}
 
 	private int asInt(Object v) {

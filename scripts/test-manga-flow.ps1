@@ -30,7 +30,7 @@
 param(
   [string]$BaseUrl = $(if ($env:APP_PUBLIC_API_BASE_URL) { $env:APP_PUBLIC_API_BASE_URL } else { "http://localhost:8088" }),
   [string]$AdminEmail = $(if ($env:APP_BOOTSTRAP_ADMIN_EMAIL) { $env:APP_BOOTSTRAP_ADMIN_EMAIL } else { "mangafric@gmail.com" }),
-  [string]$AdminPassword = $(if ($env:APP_BOOTSTRAP_ADMIN_PASSWORD) { $env:APP_BOOTSTRAP_ADMIN_PASSWORD } else { "MangAfric123" }),
+  [string]$AdminPassword = $env:APP_BOOTSTRAP_ADMIN_PASSWORD,
   [int]$HealthTimeoutSec = 90,
   [switch]$IncludeUpload,
   [switch]$KeepData
@@ -38,6 +38,28 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# Admin password: -AdminPassword, else APP_BOOTSTRAP_ADMIN_PASSWORD, else the backend's untracked
+# .env / .env.local (same order the API reads them). Never hard-coded.
+function Read-BackendEnvValue([string]$Key) {
+  $backendDir = Join-Path (Split-Path -Parent $PSScriptRoot) "backend\mangafrik"
+  foreach ($name in @(".env", ".env.local")) {
+    $file = Join-Path $backendDir $name
+    if (-not (Test-Path -LiteralPath $file)) { continue }
+    foreach ($line in Get-Content -LiteralPath $file) {
+      if ($line -match "^\s*$([regex]::Escape($Key))\s*=\s*(.*)$") {
+        $value = $Matches[1].Trim().Trim('"').Trim("'")
+        if ($value) { return $value }
+      }
+    }
+  }
+  return ""
+}
+if (-not $AdminPassword) { $AdminPassword = Read-BackendEnvValue "APP_BOOTSTRAP_ADMIN_PASSWORD" }
+if (-not $AdminPassword) {
+  Write-Host "Admin password missing: pass -AdminPassword or set APP_BOOTSTRAP_ADMIN_PASSWORD (env or backend/mangafrik/.env)." -ForegroundColor Red
+  exit 1
+}
 
 $ApiRoot = ($BaseUrl.TrimEnd("/")) + "/api/v1"
 $RunId = [Guid]::NewGuid().ToString("N").Substring(0, 8)
@@ -98,6 +120,9 @@ function Invoke-Api {
   if ($null -ne $Body) {
     $params.Body = [System.Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 12 -Compress))
   }
+
+  # PowerShell 7 returns error responses directly; Windows PowerShell 5 throws them (handled in catch).
+  if ($PSVersionTable.PSVersion.Major -ge 7) { $params.SkipHttpErrorCheck = $true }
 
   try {
     $response = Invoke-WebRequest @params -UseBasicParsing
@@ -244,6 +269,7 @@ if (-not (Check "Admin signs in" ($null -ne $admin -and $admin.Role -eq "admin")
 $reader = New-TestAccount "reader" "reader" $admin
 $creator = New-TestAccount "creator" "creator" $admin
 $support = New-TestAccount "support" "support" $admin
+$otherCreator = New-TestAccount "creator2" "creator" $admin
 
 # The admin role is also allowed on /creator/** and /support/**, so it stands in for an account
 # that could not be promoted; the flow keeps going and the promotion failure stays reported.
@@ -347,6 +373,31 @@ if ($creatorActor -and $slug) {
     ("chapters: $($chapterItems.Count) / " + (Format-Failure $chapters)) "$($chapterItems.Count) chapter(s)" | Out-Null
 } else {
   Record-Result -Name "Episode publish" -Status skip -Detail "series not public"
+}
+
+Write-Section "5b. Creators are kept apart (creator-panel)"
+if ($creator -and $otherCreator -and $slug) {
+  $own = Invoke-Api -Method GET -Path "/creator/episodes/published" -Headers $creator.Headers
+  Check "Creator lists own published episode" ([bool](@(Get-JsonItems $own.Body) | Where-Object { (Get-JsonProperty $_ @("seriesTitle")) -eq $SeriesTitle })) (Format-Failure $own) | Out-Null
+
+  $theirs = Invoke-Api -Method GET -Path "/creator/episodes/published" -Headers $otherCreator.Headers
+  Check "Other creator does not see it" ($theirs.Status -eq 200 -and -not (@(Get-JsonItems $theirs.Body) | Where-Object { (Get-JsonProperty $_ @("seriesTitle")) -eq $SeriesTitle })) (Format-Failure $theirs) | Out-Null
+
+  $hijack = Invoke-Api -Method POST -Path "/creator/episodes/published" -Headers $otherCreator.Headers -Body @{
+    seriesTitle = $SeriesTitle; episodeTitle = "Not mine"; images = @(@{ url = $pageUrl })
+  }
+  Check "Other creator cannot publish into the series" ($hijack.Status -eq 403) "got HTTP $($hijack.Status)" | Out-Null
+  $chaptersAfter = @(Get-JsonItems (Invoke-Api -Method GET -Path "/manga/$slug/chapters").Body)
+  Check "Catalog still has only the owner's chapter" ($chaptersAfter.Count -eq 1) "chapters: $($chaptersAfter.Count)" | Out-Null
+
+  $draft = Invoke-Api -Method POST -Path "/creator/episodes/drafts" -Headers $creator.Headers -Body @{ seriesTitle = $SeriesTitle; episodeTitle = "Draft 2" }
+  $draftId = [string](Get-JsonProperty $draft.Body @("id"))
+  $otherDrafts = Invoke-Api -Method GET -Path "/creator/episodes/drafts" -Headers $otherCreator.Headers
+  Check "Other creator does not see the draft" ($draftId -and -not (@(Get-JsonItems $otherDrafts.Body) | Where-Object { (Get-JsonProperty $_ @("id")) -eq $draftId })) (Format-Failure $otherDrafts) | Out-Null
+  $staffDrafts = Invoke-Api -Method GET -Path "/admin/creator-episodes/drafts" -Headers $admin.Headers
+  Check "Admin still sees every draft" ([bool](@(Get-JsonItems $staffDrafts.Body) | Where-Object { (Get-JsonProperty $_ @("id")) -eq $draftId })) (Format-Failure $staffDrafts) | Out-Null
+} else {
+  Record-Result -Name "Creator isolation" -Status skip -Detail "needs two creator accounts and a public series"
 }
 
 Write-Section "6. Reader opens the chapter (front / mobile reader)"

@@ -13,12 +13,14 @@ import com.mangafriq.services.creator.EpisodeStore;
 import com.mangafriq.services.email.CreatorPublishNotificationService;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping(AppConstants.API_V1 + "/creator")
@@ -72,23 +74,36 @@ public class CreatorController {
 
 	@GetMapping("/episodes/drafts")
 	public List<EpisodeDraftDto> listDrafts() {
-		return episodeStore.listDrafts();
+		return episodeStore.listDrafts(ownerFilter());
 	}
 
 	@PostMapping("/episodes/drafts")
 	public EpisodeDraftDto createDraft(@RequestBody CreateDraftRequest req) {
-		return episodeStore.createDraft(req);
+		return episodeStore.createDraft(req, SecurityUtils.getCurrentUserEmail().orElse(null));
 	}
 
 	@GetMapping("/episodes/published")
 	public List<PublishedEpisodeDto> listPublished() {
-		return episodeStore.listPublished();
+		return episodeStore.listPublished(ownerFilter());
 	}
 
 	@PostMapping("/episodes/published")
 	public PublishedEpisodeDto createPublished(@RequestBody CreatePublishedRequest req) {
 		String creatorEmail = SecurityUtils.getCurrentUserEmail().orElse(null);
+		// Published episodes join the catalog by series title, so a creator may only publish into their own série.
+		if (!isStaff() && !creatorStore.ownsSeries(creatorEmail, req.seriesTitle())) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only publish episodes for your own series");
+		}
 		return episodeStore.createPublished(req, creatorEmail);
+	}
+
+	private static boolean isStaff() {
+		return SecurityUtils.hasAnyRole("ADMIN", "SUPPORT");
+	}
+
+	/** Staff see every creator's episodes; creators only their own ("" matches nothing). */
+	private static String ownerFilter() {
+		return isStaff() ? null : SecurityUtils.getCurrentUserEmail().orElse("");
 	}
 
 }

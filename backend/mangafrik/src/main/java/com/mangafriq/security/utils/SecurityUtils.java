@@ -20,6 +20,18 @@ public final class SecurityUtils {
 		return Optional.of(auth.getName());
 	}
 
+	/** True when the current user holds any of the given roles (e.g. "ADMIN"), as granted by the auth filters. */
+	public static boolean hasAnyRole(String... roles) {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (auth == null || !auth.isAuthenticated()) return false;
+		for (var granted : auth.getAuthorities()) {
+			for (String role : roles) {
+				if (("ROLE_" + role.toUpperCase()).equals(granted.getAuthority())) return true;
+			}
+		}
+		return false;
+	}
+
 	public static Optional<UUID> getCurrentUserId() {
 		return getCurrentUserIdString().flatMap(SecurityUtils::parseUuid);
 	}

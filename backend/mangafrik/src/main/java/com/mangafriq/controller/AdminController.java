@@ -118,12 +118,12 @@ public class AdminController {
 
 	@GetMapping("/creator-episodes/drafts")
 	public List<EpisodeDraftDto> creatorEpisodeDrafts() {
-		return episodeStore.listDrafts();
+		return episodeStore.listDrafts(null);
 	}
 
 	@GetMapping("/creator-episodes/published")
 	public List<PublishedEpisodeDto> creatorEpisodesPublished() {
-		return episodeStore.listPublished();
+		return episodeStore.listPublished(null);
 	}
 
 	/** Push creator-published episodes for a série into the public catalog (chapters/pages). */
