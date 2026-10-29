@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [front, creator-panel, admin-panel, support-panel, finance-panel, ads-panel]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  api-flow:
+    name: API + cross-app flow tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: mangafriq
+          POSTGRES_USER: mangafriq
+          POSTGRES_PASSWORD: mangafriq
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mangafriq -d mangafriq"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # CI-only values: empty database, no email, no R2 (uploads fall back to the no-op store).
+      SPRING_PROFILES_ACTIVE: postgres
+      DATABASE_URL: postgresql://mangafriq:mangafriq@localhost:5432/mangafriq
+      APP_JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0123456789abcdef
+      APP_EMAIL_ENABLED: "false"
+      APP_BOOTSTRAP_ADMIN_EMAIL: ci-admin@example.com
+      APP_BOOTSTRAP_ADMIN_PASSWORD: ci-admin-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+      - name: Build API
+        working-directory: backend/mangafrik
+        run: sh mvnw -B -q -DskipTests package
+      - name: Start API (Flyway migrates the empty database)
+        working-directory: backend/mangafrik
+        run: nohup java -jar target/mangafriq-0.0.1-SNAPSHOT.war > "$RUNNER_TEMP/api.log" 2>&1 &
+      - name: Cross-app manga flow
+        shell: pwsh
+        run: ./scripts/test-manga-flow.ps1 -AdminEmail $env:APP_BOOTSTRAP_ADMIN_EMAIL
+      - name: API smoke test
+        shell: pwsh
+        run: ./scripts/test-api-flow.ps1 -AdminEmail $env:APP_BOOTSTRAP_ADMIN_EMAIL
+      - name: API log
+        if: always()
+        run: tail -n 200 "$RUNNER_TEMP/api.log"
