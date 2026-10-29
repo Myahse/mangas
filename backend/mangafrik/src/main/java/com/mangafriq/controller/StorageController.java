@@ -2,6 +2,7 @@ package com.mangafriq.controller;
 
 import com.mangafriq.constants.AppConstants;
 import com.mangafriq.exception.NotFoundException;
+import com.mangafriq.services.media.LiteImageService;
 import com.mangafriq.services.media.MangaArchiveImportService;
 import com.mangafriq.services.media.MangaImageNormalizeService;
 import com.mangafriq.services.media.MangaNormalizeProfile;
@@ -12,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,15 +35,18 @@ public class StorageController {
 	private final ObjectStorageService storage;
 	private final MangaImageNormalizeService mangaImageNormalizeService;
 	private final MangaArchiveImportService mangaArchiveImportService;
+	private final LiteImageService liteImages;
 
 	public StorageController(
 		ObjectStorageService storage,
 		MangaImageNormalizeService mangaImageNormalizeService,
-		MangaArchiveImportService mangaArchiveImportService
+		MangaArchiveImportService mangaArchiveImportService,
+		LiteImageService liteImages
 	) {
 		this.storage = storage;
 		this.mangaImageNormalizeService = mangaImageNormalizeService;
 		this.mangaArchiveImportService = mangaArchiveImportService;
+		this.liteImages = liteImages;
 	}
 
 	@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -112,11 +118,29 @@ public class StorageController {
 		return "";
 	}
 
+	/** Keys written by {@link #storeBytes} end in a random UUID, so their content never changes. */
+	private static final Pattern IMMUTABLE_KEY = Pattern.compile(
+		".*[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(\\.[A-Za-z0-9]+)?$");
+
+	/** {@code ?lite=1}: data-saver copy of an image (smaller JPEG), see {@link LiteImageService}. */
 	@GetMapping("/{*key}")
-	public ResponseEntity<org.springframework.core.io.InputStreamResource> download(@PathVariable String key)
-		throws IOException {
+	public ResponseEntity<org.springframework.core.io.Resource> download(
+		@PathVariable String key,
+		@RequestParam(required = false) String lite
+	) throws IOException {
 
 		String normalizedKey = key != null && key.startsWith("/") ? key.substring(1) : key;
+		boolean wantLite = "1".equals(lite) || "true".equalsIgnoreCase(lite);
+
+		var headers = new HttpHeaders();
+		headers.setCacheControl(IMMUTABLE_KEY.matcher(normalizedKey).matches()
+			? "private, max-age=31536000, immutable"
+			: "private, max-age=0, must-revalidate");
+
+		if (wantLite) {
+			LiteImageService.Lite cached = liteImages.cached(normalizedKey);
+			if (cached != null) return bytesResponse(headers, cached);
+		}
 
 		ObjectStorageService.StoredObject obj;
 		try {
@@ -128,13 +152,30 @@ public class StorageController {
 			throw e;
 		}
 
-		var headers = new HttpHeaders();
+		// Size guard: never decode very large files in memory, just serve them as they are.
+		if (wantLite && LiteImageService.isLiteCandidate(obj.contentType())
+			&& obj.contentLength() >= 0 && obj.contentLength() <= 15L * 1024 * 1024) {
+			byte[] original;
+			try (var in = obj.body()) {
+				original = in.readAllBytes();
+			}
+			LiteImageService.Lite made = liteImages.create(normalizedKey, original, obj.contentType());
+			return bytesResponse(headers, made != null ? made : new LiteImageService.Lite(original, obj.contentType()));
+		}
+
 		headers.set(HttpHeaders.CONTENT_TYPE, obj.contentType());
 		if (obj.contentLength() >= 0) headers.setContentLength(obj.contentLength());
-		headers.setCacheControl("private, max-age=0, must-revalidate");
 
 		return ResponseEntity.ok()
 			.headers(headers)
 			.body(new org.springframework.core.io.InputStreamResource(obj.body()));
+	}
+
+	private static ResponseEntity<org.springframework.core.io.Resource> bytesResponse(
+		HttpHeaders headers, LiteImageService.Lite lite
+	) {
+		headers.set(HttpHeaders.CONTENT_TYPE, lite.contentType());
+		headers.setContentLength(lite.bytes().length);
+		return ResponseEntity.ok().headers(headers).body(new ByteArrayResource(lite.bytes()));
 	}
 }

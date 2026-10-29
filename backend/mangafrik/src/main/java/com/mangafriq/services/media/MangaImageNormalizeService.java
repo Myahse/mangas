@@ -59,6 +59,22 @@ public class MangaImageNormalizeService {
 		return out;
 	}
 
+	/**
+	 * Lighter copy for the reader's data-saver mode: at most {@code maxWidth} wide, re-encoded as JPEG.
+	 * Returns null when the input is not a readable image (the caller then serves the original).
+	 */
+	public byte[] liteCopy(byte[] input, int maxWidth, float quality) throws IOException {
+		BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(input));
+		if (decoded == null) return null;
+		int w = decoded.getWidth();
+		int h = decoded.getHeight();
+		if (w > maxWidth) {
+			h = Math.max(1, (int) Math.round(h * (maxWidth / (double) w)));
+			w = maxWidth;
+		}
+		return writeJpeg(scaleTo(decoded, w, h), quality);
+	}
+
 	private static BufferedImage cropCenterToAspect(BufferedImage src, int targetW, int targetH) {
 		int sw = src.getWidth();
 		int sh = src.getHeight();

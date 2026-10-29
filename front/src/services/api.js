@@ -238,15 +238,39 @@ export async function saveReadingProgress(slug, chapterNumber, page, pageCount) 
   }
 }
 
+/* ─── Data saver ("Économie de données") ─── */
+const DATA_SAVER_KEY = 'mangafric.dataSaver';
+
+/** Saved choice, else on when the device asks to save data or the connection is slow. */
+export function getDataSaver() {
+  try {
+    const saved = localStorage.getItem(DATA_SAVER_KEY);
+    if (saved === 'on') return true;
+    if (saved === 'off') return false;
+  } catch {}
+  const c = typeof navigator !== 'undefined' ? navigator.connection : null;
+  return Boolean(c && (c.saveData || ['slow-2g', '2g', '3g'].includes(c.effectiveType)));
+}
+
+export function setDataSaver(on) {
+  try { localStorage.setItem(DATA_SAVER_KEY, on ? 'on' : 'off'); } catch {}
+}
+
+/** Page image URL; with data saver, our storage serves a lighter copy (?lite=1). */
+export function pageImageUrl(url, lite) {
+  if (!lite || !url || !url.includes('/storage/')) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}lite=1`;
+}
+
 /** Warm the browser cache with a chapter's pages so "Chapitre suivant" opens instantly. */
-export async function prefetchChapterPages(slug, chapterNumber, count = 4) {
+export async function prefetchChapterPages(slug, chapterNumber, count = 4, lite = false) {
   try {
     const pages = await fetchPages(slug, chapterNumber);
     if (!Array.isArray(pages)) return;
     pages.slice(0, count).forEach((p) => {
       const img = new Image();
       img.decoding = 'async';
-      img.src = p.url;
+      img.src = pageImageUrl(p.url, lite);
     });
   } catch {
     // Locked or not logged in: nothing to prefetch.

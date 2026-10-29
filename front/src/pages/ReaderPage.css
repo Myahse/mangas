@@ -295,6 +295,12 @@
   border-radius: 2px;
 }
 
+/* Data saver serves 600px copies; show them at the 800px uploads are normalised to, so the page
+   looks the same size either way. */
+.reader__scroll-page--lite {
+  width: min(800px, 100%);
+}
+
 /* Until it loads, a page holds screen space so lazy loading only fetches pages near the reader.
    width (not min-width) so the zoom's inline max-width still wins. */
 .reader__scroll-page:not(.reader__scroll-page--loaded) {

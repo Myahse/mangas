@@ -412,6 +412,22 @@ if ($slug) {
     $view = Invoke-Api -Method POST -Path "/manga/$slug/chapters/1/view" -Headers $reader.Headers
     Check "Reader view is recorded" ($view.Status -eq 200) (Format-Failure $view) | Out-Null
 
+    # Data saver: ?lite=1 serves a smaller copy. Skipped when storage has no real file (CI runs without R2).
+    $firstUrl = [string](Get-JsonProperty ($pageItems | Select-Object -First 1) @("url"))
+    if ($firstUrl -and $firstUrl.Contains("/storage/")) {
+      $imageUrl = if ($firstUrl.StartsWith("http")) { $firstUrl } else { $BaseUrl.TrimEnd("/") + $firstUrl }
+      try {
+        $full = Invoke-WebRequest -Uri $imageUrl -UseBasicParsing
+        $liteRes = Invoke-WebRequest -Uri "$imageUrl`?lite=1" -UseBasicParsing
+        $fullLen = $full.RawContentStream.Length
+        $liteLen = $liteRes.RawContentStream.Length
+        Check "Data saver serves a lighter page image" ($liteRes.StatusCode -eq 200 -and $liteLen -gt 0 -and $liteLen -le $fullLen) `
+          "full $fullLen bytes, lite $liteLen bytes" "full $fullLen -> lite $liteLen bytes" | Out-Null
+      } catch {
+        Record-Result -Name "Data saver serves a lighter page image" -Status skip -Detail "page image not in storage"
+      }
+    }
+
     # "Reprendre la lecture": the reader stops on page 1 of 2, then finishes the (only) chapter.
     $save = Invoke-Api -Method PUT -Path "/reading-progress/$slug" -Headers $reader.Headers -Body @{ chapterNumber = 1; page = 0; pageCount = 2 }
     $resume = @(Get-JsonItems (Invoke-Api -Method GET -Path "/reading-progress" -Headers $reader.Headers).Body) |

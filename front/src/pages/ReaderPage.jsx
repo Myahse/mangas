@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Home, List,
-  ZoomIn, ZoomOut, Settings, ArrowLeft,
+  ZoomIn, ZoomOut, Settings, ArrowLeft, Feather,
 } from 'lucide-react';
+import { notify } from '../services/notify';
 import {
   useFetch,
   fetchMangaBySlug,
@@ -15,6 +16,9 @@ import {
   recordChapterView,
   saveReadingProgress,
   prefetchChapterPages,
+  getDataSaver,
+  setDataSaver,
+  pageImageUrl,
 } from '../services/api';
 import { onWalletUpdated } from '../realtime/walletEvents';
 import './ReaderPage.css';
@@ -35,6 +39,15 @@ export default function ReaderPage() {
   const chapterList = chapters ?? [];
 
   const [zoom, setZoom] = useState(100);
+  const [dataSaver, setDataSaverState] = useState(getDataSaver);
+  const toggleDataSaver = () => {
+    const next = !dataSaver;
+    setDataSaverState(next);
+    setDataSaver(next);
+    notify.info(next
+      ? 'Économie de données activée : images plus légères.'
+      : 'Économie de données désactivée : images en pleine qualité.');
+  };
   const [showControls, setShowControls] = useState(true);
   const [showChapterList, setShowChapterList] = useState(false);
   const controlsTimeout = useRef(null);
@@ -160,8 +173,8 @@ export default function ReaderPage() {
     const key = `${slug}:${nextChapterNum}`;
     if (prefetchedRef.current === key) return;
     prefetchedRef.current = key;
-    prefetchChapterPages(slug, nextChapterNum);
-  }, [slug, nextChapterNum, currentPage, pageList.length]);
+    prefetchChapterPages(slug, nextChapterNum, 4, dataSaver);
+  }, [slug, nextChapterNum, currentPage, pageList.length, dataSaver]);
 
   if (!manga) {
     return (
@@ -200,6 +213,17 @@ export default function ReaderPage() {
           <span className="reader__zoom-label">{zoom}%</span>
           <button className="reader__ctrl-btn" onClick={() => setZoom(z => Math.min(200, z + 10))}>
             <ZoomIn size={16} />
+          </button>
+
+          {/* Data saver */}
+          <button
+            className={`reader__ctrl-btn${dataSaver ? ' reader__ctrl-btn--active' : ''}`}
+            onClick={toggleDataSaver}
+            title="Économie de données"
+            aria-label="Économie de données"
+            aria-pressed={dataSaver}
+          >
+            <Feather size={16} />
           </button>
 
           {/* Chapter list */}
@@ -295,9 +319,9 @@ export default function ReaderPage() {
               <img
                 key={p.url}
                 ref={(el) => { pageRefs.current[i] = el; }}
-                src={p.url}
+                src={pageImageUrl(p.url, dataSaver)}
                 alt={`Page ${i + 1}`}
-                className="reader__scroll-page"
+                className={`reader__scroll-page${dataSaver ? ' reader__scroll-page--lite' : ''}`}
                 style={{ maxWidth: `${zoom}%` }}
                 loading={i === resumePage ? 'eager' : 'lazy'}
                 onLoad={(e) => e.currentTarget.classList.add('reader__scroll-page--loaded')}
