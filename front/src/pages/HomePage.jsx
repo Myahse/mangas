@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import HeroBanner from '../components/home/HeroBanner';
 import LatestUpdates from '../components/home/LatestUpdates';
+import ContinueReading from '../components/home/ContinueReading';
 import PopularSidebar from '../components/home/PopularSidebar';
 import MangaCard from '../components/common/MangaCard';
 import { useFetch, fetchPopularManga } from '../services/api';
@@ -19,6 +20,7 @@ export default function HomePage() {
         {/* Content + Sidebar */}
         <div className="home__content-row">
           <div className="home__content">
+            <ContinueReading />
             <LatestUpdates />
 
             {/* Popular */}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Home, List,
   ZoomIn, ZoomOut, Settings, ArrowLeft,
@@ -13,6 +13,8 @@ import {
   dailyClaimCoins,
   unlockChapter,
   recordChapterView,
+  saveReadingProgress,
+  prefetchChapterPages,
 } from '../services/api';
 import { onWalletUpdated } from '../realtime/walletEvents';
 import './ReaderPage.css';
@@ -23,12 +25,13 @@ export default function ReaderPage() {
 
   const { data: manga }    = useFetch(fetchMangaBySlug, slug);
   const [pagesKey, setPagesKey] = useState(0);
-  const { data: pages, error: pagesError } = useFetch(fetchPages, slug, chapterNum, pagesKey);
+  const { data: pages, error: pagesError, loading: pagesLoading } = useFetch(fetchPages, slug, chapterNum, pagesKey);
   const { data: chapters } = useFetch(fetchChapters, slug);
   const [walletKey, setWalletKey] = useState(0);
   const { data: wallet } = useFetch(fetchWallet, walletKey);
 
-  const pageList    = pages    ?? [];
+  // useFetch keeps the previous result while loading or on error; never show another chapter's pages.
+  const pageList    = pagesLoading || pagesError ? [] : (pages ?? []);
   const chapterList = chapters ?? [];
 
   const [zoom, setZoom] = useState(100);
@@ -64,6 +67,102 @@ export default function ReaderPage() {
     recordChapterView(slug, chapterNum);
   }, [slug, chapterNum, pageList.length, pagesError]);
 
+  /* ─── Reading progress ─── */
+  // ?page=N (1-based) comes from "Reprendre la lecture".
+  const [searchParams] = useSearchParams();
+  const resumePage = Math.max(0, (parseInt(searchParams.get('page') || '1', 10) || 1) - 1);
+  const scrollRef = useRef(null);
+  const pageRefs = useRef([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const resumedKeyRef = useRef('');
+  const hasManga = Boolean(manga);
+
+  const nextChapterNum = (() => {
+    const later = chapterList.map((c) => c.number).filter((n) => n > chapterNum);
+    if (later.length) return Math.min(...later);
+    return manga && chapterNum < manga.totalChapters ? chapterNum + 1 : null;
+  })();
+
+  // New chapter: back to the top (or to the resume page once it has loaded).
+  useEffect(() => {
+    setCurrentPage(resumePage);
+    if (resumePage === 0 && scrollRef.current) scrollRef.current.scrollTop = 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, chapterNum]);
+
+  // Jump as soon as the resume page itself has loaded. Earlier pages stay lazy (no extra data);
+  // when they load above it, the browser's scroll anchoring keeps the reader on the same page.
+  useEffect(() => {
+    const key = `${slug}:${chapterNum}`;
+    if (resumePage === 0 || pageList.length === 0 || resumedKeyRef.current === key) return;
+    const target = Math.min(resumePage, pageList.length - 1);
+    const targetImg = pageRefs.current[target];
+    let cancelled = false;
+    new Promise((done) => {
+      if (!targetImg || targetImg.complete) return done();
+      targetImg.addEventListener('load', done, { once: true });
+      targetImg.addEventListener('error', done, { once: true });
+    }).then(() => {
+      const el = scrollRef.current;
+      const img = pageRefs.current[target];
+      if (cancelled || !el || !img) return;
+      resumedKeyRef.current = key;
+      el.scrollTop += img.getBoundingClientRect().top - el.getBoundingClientRect().top - 60;
+    });
+    return () => { cancelled = true; };
+  }, [slug, chapterNum, resumePage, pageList.length, hasManga]);
+
+  // Page reached = the last page whose top is above the middle of the screen.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || pageList.length === 0) return;
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+        if (atEnd) return setCurrentPage(pageList.length - 1);
+        const middle = el.scrollTop + el.clientHeight / 2;
+        let idx = 0;
+        pageRefs.current.forEach((img, i) => {
+          if (img && i < pageList.length && img.offsetTop <= middle) idx = i;
+        });
+        setCurrentPage(idx);
+      });
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(frame);
+    };
+    // hasManga: the scroll area only exists once the series has loaded.
+  }, [pageList.length, hasManga]);
+
+  // Save the position shortly after the reader stops on a page, and when leaving the chapter.
+  const latestProgress = useRef(null);
+  useEffect(() => {
+    if (!slug || !chapterNum || pageList.length === 0 || pagesError) return;
+    latestProgress.current = { slug, chapterNum, page: currentPage, count: pageList.length };
+    const t = setTimeout(() => saveReadingProgress(slug, chapterNum, currentPage, pageList.length), 1500);
+    return () => clearTimeout(t);
+  }, [slug, chapterNum, currentPage, pageList.length, pagesError]);
+
+  useEffect(() => () => {
+    const p = latestProgress.current;
+    if (p) saveReadingProgress(p.slug, p.chapterNum, p.page, p.count);
+  }, [slug, chapterNum]);
+
+  // Past two thirds of the chapter: warm up the next one so it opens instantly.
+  const prefetchedRef = useRef('');
+  useEffect(() => {
+    if (!nextChapterNum || pageList.length === 0) return;
+    if (currentPage + 1 < Math.ceil(pageList.length * 0.66)) return;
+    const key = `${slug}:${nextChapterNum}`;
+    if (prefetchedRef.current === key) return;
+    prefetchedRef.current = key;
+    prefetchChapterPages(slug, nextChapterNum);
+  }, [slug, nextChapterNum, currentPage, pageList.length]);
+
   if (!manga) {
     return (
       <div className="reader-notfound">
@@ -73,7 +172,8 @@ export default function ReaderPage() {
     );
   }
 
-  const isLocked = Boolean(pagesError && String(pagesError).toLowerCase().includes('locked'));
+  // The API answers 403 with error "Forbidden" (the "Locked: unlock chapter" text is in message).
+  const isLocked = Boolean(pagesError && /locked|forbidden/.test(String(pagesError).toLowerCase()));
   const needsLogin = Boolean(pagesError && String(pagesError).toLowerCase().includes('unauthorized'));
 
   return (
@@ -88,7 +188,9 @@ export default function ReaderPage() {
         </div>
         <div className="reader__topbar-center">
           <span className="reader__chapter-label">Chapitre {chapterNum}</span>
-          <span className="reader__page-label">{pageList.length} pages</span>
+          <span className="reader__page-label">
+            {pageList.length ? `Page ${Math.min(currentPage + 1, pageList.length)} / ${pageList.length}` : '0 pages'}
+          </span>
         </div>
         <div className="reader__topbar-right">
           {/* Zoom */}
@@ -140,7 +242,7 @@ export default function ReaderPage() {
       )}
 
       {/* Scroll mode */}
-      <div className="reader__scroll-mode">
+      <div className="reader__scroll-mode" ref={scrollRef}>
         {needsLogin ? (
           <div className="reader-notfound" style={{ padding: 24 }}>
             <p>Connectez-vous pour lire ce chapitre.</p>
@@ -188,16 +290,39 @@ export default function ReaderPage() {
             </div>
           </div>
         ) : (
-          pageList.map((p, i) => (
-            <img
-              key={p.url}
-              src={p.url}
-              alt={`Page ${i + 1}`}
-              className="reader__scroll-page"
-              style={{ maxWidth: `${zoom}%` }}
-              loading="lazy"
-            />
-          ))
+          <>
+            {pageList.map((p, i) => (
+              <img
+                key={p.url}
+                ref={(el) => { pageRefs.current[i] = el; }}
+                src={p.url}
+                alt={`Page ${i + 1}`}
+                className="reader__scroll-page"
+                style={{ maxWidth: `${zoom}%` }}
+                loading={i === resumePage ? 'eager' : 'lazy'}
+                onLoad={(e) => e.currentTarget.classList.add('reader__scroll-page--loaded')}
+              />
+            ))}
+            {pageList.length > 0 ? (
+              <div className="reader__chapter-end">
+                <p className="reader__chapter-end-title">Fin du chapitre {chapterNum}</p>
+                {nextChapterNum ? (
+                  <Link to={`/manga/${slug}/chapter/${nextChapterNum}`} className="reader__chapter-nav-btn">
+                    Chapitre suivant
+                    <ChevronRight size={16} />
+                  </Link>
+                ) : (
+                  <>
+                    <p className="reader__chapter-end-note">Vous êtes à jour. Le prochain chapitre arrive bientôt.</p>
+                    <Link to={`/manga/${slug}`} className="reader__chapter-index-btn">
+                      <Settings size={15} />
+                      Tous les chapitres
+                    </Link>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 
@@ -219,12 +344,12 @@ export default function ReaderPage() {
             Tous les chapitres
           </Link>
 
-          {chapterNum < manga.totalChapters && (
+          {nextChapterNum && (
             <Link
-              to={`/manga/${slug}/chapter/${chapterNum + 1}`}
+              to={`/manga/${slug}/chapter/${nextChapterNum}`}
               className="reader__chapter-nav-btn"
             >
-              Ch. {chapterNum + 1}
+              Ch. {nextChapterNum}
               <ChevronRight size={16} />
             </Link>
           )}

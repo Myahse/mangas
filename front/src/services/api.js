@@ -218,6 +218,42 @@ export async function recordChapterView(slug, chapterNumber) {
 }
 
 /* ════════════════════════════════════════════════════════════
+   READING PROGRESS ("Reprendre la lecture")
+════════════════════════════════════════════════════════════ */
+
+export async function fetchReadingProgress(limit = 8) {
+  const items = await request(`/reading-progress?limit=${encodeURIComponent(limit)}`);
+  return Array.isArray(items) ? items.map((it) => ({ ...it, cover: apiAssetUrl(it.cover) })) : items;
+}
+
+/** page is 0-based. Non-blocking: a failed save must not interrupt reading. */
+export async function saveReadingProgress(slug, chapterNumber, page, pageCount) {
+  try {
+    await request(`/reading-progress/${encodeURIComponent(slug)}`, {
+      method: 'PUT',
+      body: { chapterNumber, page, pageCount },
+    });
+  } catch {
+    // ignore
+  }
+}
+
+/** Warm the browser cache with a chapter's pages so "Chapitre suivant" opens instantly. */
+export async function prefetchChapterPages(slug, chapterNumber, count = 4) {
+  try {
+    const pages = await fetchPages(slug, chapterNumber);
+    if (!Array.isArray(pages)) return;
+    pages.slice(0, count).forEach((p) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = p.url;
+    });
+  } catch {
+    // Locked or not logged in: nothing to prefetch.
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
    COINS / WALLET
 ════════════════════════════════════════════════════════════ */
 

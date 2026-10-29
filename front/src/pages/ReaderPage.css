@@ -295,6 +295,35 @@
   border-radius: 2px;
 }
 
+/* Until it loads, a page holds screen space so lazy loading only fetches pages near the reader.
+   width (not min-width) so the zoom's inline max-width still wins. */
+.reader__scroll-page:not(.reader__scroll-page--loaded) {
+  min-height: 70vh;
+  width: min(600px, 100%);
+  background: rgba(255,255,255,0.04);
+}
+
+/* ─── End of chapter ─── */
+.reader__chapter-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.reader__chapter-end-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.reader__chapter-end-note {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.6);
+}
+
 /* ─── Bottom Bar ─── */
 .reader__bottombar {
   position: absolute;

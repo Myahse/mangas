@@ -411,6 +411,17 @@ if ($slug) {
       ("pages: $($pageItems.Count) / " + (Format-Failure $pages)) "$($pageItems.Count) page(s)" | Out-Null
     $view = Invoke-Api -Method POST -Path "/manga/$slug/chapters/1/view" -Headers $reader.Headers
     Check "Reader view is recorded" ($view.Status -eq 200) (Format-Failure $view) | Out-Null
+
+    # "Reprendre la lecture": the reader stops on page 1 of 2, then finishes the (only) chapter.
+    $save = Invoke-Api -Method PUT -Path "/reading-progress/$slug" -Headers $reader.Headers -Body @{ chapterNumber = 1; page = 0; pageCount = 2 }
+    $resume = @(Get-JsonItems (Invoke-Api -Method GET -Path "/reading-progress" -Headers $reader.Headers).Body) |
+      Where-Object { (Get-JsonProperty $_ @("slug")) -eq $slug } | Select-Object -First 1
+    Check "Reading position is saved for 'Reprendre la lecture'" ($save.Status -eq 200 -and $resume -and (Get-JsonProperty $resume @("resumeChapter")) -eq 1 -and (Get-JsonProperty $resume @("resumePage")) -eq 0) `
+      (Format-Failure $save) | Out-Null
+    Invoke-Api -Method PUT -Path "/reading-progress/$slug" -Headers $reader.Headers -Body @{ chapterNumber = 1; page = 1; pageCount = 2 } | Out-Null
+    $done = @(Get-JsonItems (Invoke-Api -Method GET -Path "/reading-progress" -Headers $reader.Headers).Body) |
+      Where-Object { (Get-JsonProperty $_ @("slug")) -eq $slug } | Select-Object -First 1
+    Check "Finishing the latest chapter marks the reader as caught up" ($done -and (Get-JsonProperty $done @("caughtUp")) -eq $true) | Out-Null
   }
 }
 if ($creatorActor -and $submissionId) {
