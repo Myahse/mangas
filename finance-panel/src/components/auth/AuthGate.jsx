@@ -22,9 +22,14 @@ export default function AuthGate({ children }) {
     return () => setOpen(false);
   }, [isAuthenticated, user]);
 
+  const role = String(user?.role || '').trim();
+  const roleOk = role === 'admin';
+  const canUsePanel =
+    isAuthenticated && roleOk && !Boolean(user?.mustChangePassword);
+
   return (
     <>
-      {children}
+      {canUsePanel ? children : null}
       <AuthModal isOpen={open} onClose={onClose} />
     </>
   );
