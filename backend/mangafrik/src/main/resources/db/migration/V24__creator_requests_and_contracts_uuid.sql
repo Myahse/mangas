@@ -3,6 +3,20 @@
 
 create extension if not exists pgcrypto;
 
+-- 0) The contracts FK depends on creator_requests_pkey, so drop it before the PK (rewired in step 2).
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conrelid = 'creator_request_contracts'::regclass
+      and contype = 'f'
+      and conname = 'creator_request_contracts_creator_request_id_fkey'
+  ) then
+    execute 'alter table creator_request_contracts drop constraint creator_request_contracts_creator_request_id_fkey';
+  end if;
+exception when undefined_table then
+end $$;
+
 -- 1) creator_requests: bigserial -> uuid
 alter table if exists creator_requests
   add column if not exists id_uuid uuid;

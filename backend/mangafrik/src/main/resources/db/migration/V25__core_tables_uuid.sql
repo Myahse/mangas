@@ -4,6 +4,8 @@
 
 create extension if not exists pgcrypto;
 
+-- PK drops use CASCADE: the only FKs on these PKs are the ones this script recreates below.
+
 -- manga: bigserial -> uuid
 alter table if exists manga
   add column if not exists id_uuid uuid;
@@ -12,7 +14,7 @@ alter table if exists manga alter column id_uuid set not null;
 do $$
 begin
   if exists (select 1 from pg_constraint where conrelid='manga'::regclass and contype='p') then
-    execute 'alter table manga drop constraint manga_pkey';
+    execute 'alter table manga drop constraint manga_pkey cascade';
   end if;
 exception when undefined_table then end $$;
 do $$
@@ -32,7 +34,7 @@ alter table if exists genres alter column id_uuid set not null;
 do $$
 begin
   if exists (select 1 from pg_constraint where conrelid='genres'::regclass and contype='p') then
-    execute 'alter table genres drop constraint genres_pkey';
+    execute 'alter table genres drop constraint genres_pkey cascade';
   end if;
 exception when undefined_table then end $$;
 do $$
@@ -75,7 +77,7 @@ alter table if exists chapters alter column id_uuid set not null;
 do $$
 begin
   if exists (select 1 from pg_constraint where conrelid='chapters'::regclass and contype='p') then
-    execute 'alter table chapters drop constraint chapters_pkey';
+    execute 'alter table chapters drop constraint chapters_pkey cascade';
   end if;
 exception when undefined_table then end $$;
 do $$

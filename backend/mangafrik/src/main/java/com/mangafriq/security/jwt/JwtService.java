@@ -3,6 +3,7 @@ package com.mangafriq.security.jwt;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -30,17 +31,20 @@ public class JwtService {
 		Instant now = Instant.now();
 		Instant exp = now.plus(Math.max(1, ttlHours), ChronoUnit.HOURS);
 
-		List<String> safeRoles = (roles == null || roles.isEmpty())
-			? List.of(role == null ? "reader" : role)
-			: roles.stream()
-				.filter(r -> r != null && !r.trim().isEmpty())
-				.map(r -> r.trim().toLowerCase())
-				.distinct()
-				.toList();
+		List<String> listed = roles == null ? List.of() : roles.stream()
+			.filter(r -> r != null && !r.trim().isEmpty())
+			.map(r -> r.trim().toLowerCase())
+			.toList();
 
 		String primaryRole = (role == null || role.trim().isEmpty())
-			? safeRoles.get(0)
+			? (listed.isEmpty() ? "reader" : listed.get(0))
 			: role.trim().toLowerCase();
+
+		// Authorities come from "roles", so the primary role must be in it: rows such as the
+		// bootstrap admin keep the column default roles = {reader} while role = 'admin'.
+		List<String> safeRoles = Stream.concat(Stream.of(primaryRole), listed.stream())
+			.distinct()
+			.toList();
 
 		JwtClaimsSet claims = JwtClaimsSet.builder()
 				.issuedAt(now)

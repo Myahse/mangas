@@ -12,7 +12,7 @@ alter table if exists app_users alter column id_uuid set not null;
 do $$
 begin
   if exists (select 1 from pg_constraint where conrelid='app_users'::regclass and contype='p') then
-    execute 'alter table app_users drop constraint app_users_pkey';
+    execute 'alter table app_users drop constraint app_users_pkey cascade';
   end if;
 exception when undefined_table then end $$;
 

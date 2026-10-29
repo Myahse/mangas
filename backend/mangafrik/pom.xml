@@ -48,6 +48,11 @@
 			<artifactId>regions</artifactId>
 			<version>2.34.6</version>
 		</dependency>
+		<!-- Spring Boot 4 only auto-runs Flyway with this starter; flyway-core alone is never invoked. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
