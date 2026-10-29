@@ -5,6 +5,9 @@ import { Toaster } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles/global.css';
 import App from './App';
+import { registerServiceWorker } from './services/offline';
+
+registerServiceWorker();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

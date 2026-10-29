@@ -2,9 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Home, List,
-  ZoomIn, ZoomOut, Settings, ArrowLeft, Feather,
+  ZoomIn, ZoomOut, Settings, ArrowLeft, Feather, Download, CheckCircle2,
 } from 'lucide-react';
 import { notify } from '../services/notify';
+import {
+  offlineSupported, isDownloaded, downloadChapter, removeDownload, onDownloadsChanged, formatBytes,
+} from '../services/offline';
 import {
   useFetch,
   fetchMangaBySlug,
@@ -47,6 +50,41 @@ export default function ReaderPage() {
     notify.info(next
       ? 'Économie de données activée : images plus légères.'
       : 'Économie de données désactivée : images en pleine qualité.');
+  };
+
+  /* ─── Offline download ─── */
+  const [downloaded, setDownloaded] = useState(() => isDownloaded(slug, chapterNum));
+  const [downloadProgress, setDownloadProgress] = useState(null); // { done, total } while downloading
+  useEffect(() => {
+    const sync = () => setDownloaded(isDownloaded(slug, chapterNum));
+    sync();
+    return onDownloadsChanged(sync);
+  }, [slug, chapterNum]);
+
+  const toggleDownload = async () => {
+    if (downloadProgress) return;
+    if (downloaded) {
+      if (!window.confirm('Supprimer ce chapitre des téléchargements ?')) return;
+      await removeDownload(slug, chapterNum);
+      notify.info('Téléchargement supprimé.');
+      return;
+    }
+    setDownloadProgress({ done: 0, total: 0 });
+    try {
+      const entry = await downloadChapter({
+        slug,
+        chapter: chapterNum,
+        title: manga?.title,
+        cover: manga?.cover,
+        lite: dataSaver,
+        onProgress: (done, total) => setDownloadProgress({ done, total }),
+      });
+      notify.success(`Chapitre ${chapterNum} disponible hors-ligne (${formatBytes(entry.bytes)}).`);
+    } catch (e) {
+      notify.error(e?.message || 'Téléchargement impossible.');
+    } finally {
+      setDownloadProgress(null);
+    }
   };
   const [showControls, setShowControls] = useState(true);
   const [showChapterList, setShowChapterList] = useState(false);
@@ -225,6 +263,21 @@ export default function ReaderPage() {
           >
             <Feather size={16} />
           </button>
+
+          {/* Offline download */}
+          {offlineSupported && pageList.length > 0 ? (
+            <button
+              className={`reader__ctrl-btn${downloaded ? ' reader__ctrl-btn--active' : ''}`}
+              onClick={toggleDownload}
+              disabled={Boolean(downloadProgress)}
+              title={downloaded ? 'Disponible hors-ligne (cliquer pour supprimer)' : 'Télécharger pour lire hors-ligne'}
+              aria-label={downloaded ? 'Supprimer le téléchargement' : 'Télécharger pour lire hors-ligne'}
+            >
+              {downloadProgress
+                ? <span className="reader__zoom-label">{downloadProgress.done}/{downloadProgress.total || '…'}</span>
+                : downloaded ? <CheckCircle2 size={16} /> : <Download size={16} />}
+            </button>
+          ) : null}
 
           {/* Chapter list */}
           <button

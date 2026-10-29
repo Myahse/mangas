@@ -21,6 +21,22 @@ function apiBase() {
   return requiredApiBaseUrl().replace(/\/$/, '');
 }
 
+/** Absolute API URL for a path like "/manga/x" (the exact URL request() fetches). */
+export function apiUrl(path) {
+  return `${apiBase()}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+/** Bearer header for the signed-in reader, or {} when signed out. */
+export function authHeader() {
+  try {
+    const raw = localStorage.getItem(requiredSessionStorageKey());
+    const token = raw ? (JSON.parse(raw)?.token || '') : '';
+    return String(token).trim() ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 /** Public URL to fetch an object stored under `key` (same host as API). */
 export function storageObjectUrl(key) {
   const k = String(key || '').trim();
