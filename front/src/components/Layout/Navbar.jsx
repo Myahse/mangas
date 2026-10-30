@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, ChevronDown, Sun, Moon, User, Coins, Home, Compass, MessageCircle } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
-import { useFetch, fetchAllManga, fetchGenres, fetchWallet } from '../../services/api';
+import { useFetch, fetchAllManga, fetchGenres, fetchWallet, searchManga } from '../../services/api';
 import { useTheme } from '../../hooks/useTheme';
 import { useLocale } from '../../hooks/useLocale';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -97,21 +97,16 @@ export default function Navbar() {
     setMenuOpen(false);
   };
 
-  /* Live search — async depuis db.json */
+  /* Live search: server-side (accents and a typo forgiven), 250 ms after the last keystroke */
   useEffect(() => {
     if (!searchQuery.trim()) { setSearchResults([]); return; }
     let cancelled = false;
-    const q = searchQuery.toLowerCase();
-    fetchAllManga().then(list => {
-      if (cancelled) return;
-      setSearchResults(
-        list.filter(m =>
-          m.title.toLowerCase().includes(q) ||
-          m.author.toLowerCase().includes(q)
-        ).slice(0, 6)
-      );
-    });
-    return () => { cancelled = true; };
+    const t = setTimeout(() => {
+      searchManga(searchQuery, 6)
+        .then((list) => { if (!cancelled) setSearchResults(list); })
+        .catch(() => { if (!cancelled) setSearchResults([]); });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(t); };
   }, [searchQuery]);
 
   const handleSearchSubmit = (e) => {

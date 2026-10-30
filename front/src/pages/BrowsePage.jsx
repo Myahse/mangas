@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, BookOpen } from 'lucide-react';
-import { useFetch, fetchAllManga, fetchGenres } from '../services/api';
+import { useFetch, fetchAllManga, fetchGenres, searchManga } from '../services/api';
 import MangaCard from '../components/common/MangaCard';
 import './BrowsePage.css';
 
 const SORT_OPTIONS = [
+  { label: 'Pertinence',    value: 'relevance' }, // only while searching
   { label: 'Popularité',    value: 'popular' },
   { label: 'Note',          value: 'rating'  },
   { label: 'Dernières MAJ', value: 'latest'  },
@@ -31,7 +32,7 @@ export default function BrowsePage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [query,          setQuery]          = useState(searchParams.get('q')     || '');
-  const [sort,           setSort]           = useState(searchParams.get('sort')  || 'popular');
+  const [sort,           setSort]           = useState(searchParams.get('sort')  || (searchParams.get('q') ? 'relevance' : 'popular'));
   const [status,         setStatus]         = useState('Tous');
   const [selectedGenres, setSelectedGenres] = useState(
     searchParams.get('genre') ? [searchParams.get('genre')] : []
@@ -39,6 +40,16 @@ export default function BrowsePage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const { data: allManga, loading } = useFetch(fetchAllManga);
+  // Search runs on the server (accents and a typo forgiven), 250 ms after the last keystroke.
+  const [debouncedQuery, setDebouncedQuery] = useState(query.trim());
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(t);
+  }, [query]);
+  const { data: searchResults, loading: searching } = useFetch(
+    (q) => (q ? searchManga(q, 50) : Promise.resolve(null)),
+    debouncedQuery,
+  );
   const { data: genres }            = useFetch(fetchGenres);
 
   const toggleGenre = (g) =>
@@ -47,23 +58,18 @@ export default function BrowsePage() {
   const handleSearch = (e) => {
     const val = e.target.value;
     setQuery(val);
+    if (val && !query) setSort('relevance');
+    if (!val && sort === 'relevance') setSort('popular');
     const params = new URLSearchParams(searchParams);
     if (val) params.set('q', val); else params.delete('q');
     setSearchParams(params);
   };
 
   const filtered = useMemo(() => {
-    if (!allManga) return [];
-    let list = [...allManga];
+    const base = debouncedQuery ? searchResults : allManga;
+    if (!base) return [];
+    let list = [...base];
 
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(m =>
-        m.title.toLowerCase().includes(q) ||
-        m.author.toLowerCase().includes(q) ||
-        m.genres.some(g => g.toLowerCase().includes(q))
-      );
-    }
     if (status !== 'Tous')        list = list.filter(m => m.status === status);
     if (selectedGenres.length > 0) list = list.filter(m => selectedGenres.every(g => m.genres.includes(g)));
 
@@ -72,10 +78,11 @@ export default function BrowsePage() {
       case 'latest':  list.sort((a, b) => b.latestChapter.number - a.latestChapter.number); break;
       case 'new':     list.sort((a, b) => b.year - a.year); break;
       case 'az':      list.sort((a, b) => a.title.localeCompare(b.title)); break;
+      case 'relevance': if (!debouncedQuery) list.sort((a, b) => b.rating - a.rating); break; // server order
       default:        list.sort((a, b) => b.rating - a.rating); break;
     }
     return list;
-  }, [allManga, query, sort, status, selectedGenres]);
+  }, [allManga, searchResults, debouncedQuery, sort, status, selectedGenres]);
 
   return (
     <div className="page-wrapper browse-page">
@@ -85,7 +92,7 @@ export default function BrowsePage() {
           <div>
             <h1 className="browse__title">Explorer les Mangas</h1>
             <p className="browse__subtitle">
-              {loading ? 'Chargement…' : `${filtered.length} manga${filtered.length !== 1 ? 's' : ''} trouvé${filtered.length !== 1 ? 's' : ''}`}
+              {loading || (debouncedQuery && searching) ? 'Chargement…' : `${filtered.length} manga${filtered.length !== 1 ? 's' : ''} trouvé${filtered.length !== 1 ? 's' : ''}`}
             </p>
           </div>
           <button
@@ -114,7 +121,7 @@ export default function BrowsePage() {
             )}
           </div>
           <div className="browse__sort">
-            {SORT_OPTIONS.map(opt => (
+            {SORT_OPTIONS.filter(opt => opt.value !== 'relevance' || query.trim()).map(opt => (
               <button
                 key={opt.value}
                 className={`browse__sort-btn${sort === opt.value ? ' browse__sort-btn--active' : ''}`}
@@ -165,7 +172,7 @@ export default function BrowsePage() {
         )}
 
         {/* Results */}
-        {loading ? (
+        {loading || (debouncedQuery && searching && !searchResults) ? (
           <div className="browse__grid">
             {Array.from({ length: 16 }, (_, i) => <CardSkeleton key={i} />)}
           </div>

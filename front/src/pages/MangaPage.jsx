@@ -4,7 +4,7 @@ import {
   Star, BookOpen, Heart, Share2, ChevronRight,
   User, Tag, Clock, TrendingUp, List, Grid,
 } from 'lucide-react';
-import { useFetch, fetchMangaBySlug, fetchChapters, fetchPopularManga, fetchFollowStatus, followSeries } from '../services/api';
+import { useFetch, fetchMangaBySlug, fetchChapters, fetchSimilarManga, fetchFollowStatus, followSeries } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { notify } from '../services/notify';
 import MangaCard from '../components/common/MangaCard';
@@ -64,7 +64,8 @@ export default function MangaPage() {
 
   const { data: manga,    loading: loadingManga,    error: errorManga }    = useFetch(fetchMangaBySlug, slug);
   const { data: chapters, loading: loadingChapters }                        = useFetch(fetchChapters,   slug);
-  const { data: related,  loading: loadingRelated }                         = useFetch(fetchPopularManga, 6);
+  // "Si vous avez aimé …": shared genres + what this series' readers also read.
+  const { data: related,  loading: loadingRelated }                         = useFetch(fetchSimilarManga, slug, 6);
 
   /* ── Erreur / 404 ── */
   if (errorManga) {
@@ -245,10 +246,11 @@ export default function MangaPage() {
           </div>
         </section>
 
-        {/* Related */}
+        {/* Related: hidden when there is nothing similar to suggest */}
+        {loadingRelated || !related || relatedFiltered.length > 0 ? (
         <section className="manga-page__related">
           <div className="section-header">
-            <h2 className="section-title">Vous pourriez aussi aimer</h2>
+            <h2 className="section-title">{manga?.title ? `Si vous avez aimé ${manga.title}` : 'Vous pourriez aussi aimer'}</h2>
             <Link to="/browse" className="see-all-btn">Voir tout</Link>
           </div>
           <div className="manga-page__related-grid">
@@ -265,6 +267,7 @@ export default function MangaPage() {
             }
           </div>
         </section>
+        ) : null}
       </div>
     </div>
   );

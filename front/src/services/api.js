@@ -182,6 +182,26 @@ export async function fetchPopularManga(count = 10) {
   return Array.isArray(list) ? list.map(normalizeManga) : list;
 }
 
+/** Server search: ignores accents and case, forgives a typo, ranked by relevance. */
+export async function searchManga(query, limit = 8) {
+  const q = String(query || '').trim();
+  if (!q) return [];
+  const list = await request(`/manga/search?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(limit)}`, { auth: false });
+  return Array.isArray(list) ? list.map(normalizeManga) : [];
+}
+
+/** "Si vous avez aimé …": series close to this one. */
+export async function fetchSimilarManga(slug, limit = 6) {
+  const list = await request(`/manga/${encodeURIComponent(slug)}/similar?limit=${encodeURIComponent(limit)}`, { auth: false });
+  return Array.isArray(list) ? list.map(normalizeManga) : [];
+}
+
+/** "Pour vous" (signed in): from the genres of what the reader reads or follows. */
+export async function fetchRecommendations(limit = 8) {
+  const list = await request(`/recommendations?limit=${encodeURIComponent(limit)}`);
+  return Array.isArray(list) ? list.map(normalizeManga) : [];
+}
+
 /** Recherche par titre, auteur ou genre */
 export async function fetchSearchManga({ query = '', genre = '', status = '', sort = 'popular' } = {}) {
 

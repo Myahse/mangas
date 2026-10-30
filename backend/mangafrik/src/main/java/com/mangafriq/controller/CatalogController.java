@@ -7,6 +7,7 @@ import com.mangafriq.dto.PageDto;
 import com.mangafriq.security.utils.SecurityUtils;
 import com.mangafriq.services.catalog.CatalogEngagementService;
 import com.mangafriq.services.catalog.CatalogService;
+import com.mangafriq.services.catalog.DiscoveryService;
 import com.mangafriq.services.community.ReadingStreakService;
 import com.mangafriq.services.wallet.WalletService;
 import java.util.List;
@@ -27,21 +28,43 @@ public class CatalogController {
 	private final WalletService walletService;
 	private final CatalogEngagementService catalogEngagementService;
 	private final ReadingStreakService readingStreaks;
+	private final DiscoveryService discovery;
 
 	public CatalogController(
 			CatalogService catalogService,
 			WalletService walletService,
 			CatalogEngagementService catalogEngagementService,
-			ReadingStreakService readingStreaks) {
+			ReadingStreakService readingStreaks,
+			DiscoveryService discovery) {
 		this.catalogService = catalogService;
 		this.walletService = walletService;
 		this.catalogEngagementService = catalogEngagementService;
 		this.readingStreaks = readingStreaks;
+		this.discovery = discovery;
 	}
 
 	@GetMapping("/manga")
 	public List<MangaDto> listAllManga() {
 		return catalogService.listAll();
+	}
+
+	/** Accent-insensitive, typo-tolerant search over titles, authors, genres and synopses. */
+	@GetMapping("/manga/search")
+	public List<MangaDto> search(@RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "8") int limit) {
+		return discovery.search(q, limit);
+	}
+
+	/** "Si vous avez aimé …" */
+	@GetMapping("/manga/{slug}/similar")
+	public List<MangaDto> similar(@PathVariable String slug, @RequestParam(defaultValue = "6") int limit) {
+		return discovery.similar(slug, limit);
+	}
+
+	/** "Pour vous" (signed in). */
+	@GetMapping("/recommendations")
+	public List<MangaDto> recommendations(@RequestParam(defaultValue = "8") int limit) {
+		String uid = SecurityUtils.getCurrentUserIdString().orElseThrow(() -> new IllegalArgumentException("unauthorized"));
+		return discovery.forUser(uid, limit);
 	}
 
 	@GetMapping("/manga/{slug}")
