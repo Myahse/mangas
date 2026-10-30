@@ -1,3 +1,13 @@
+import '../config/api_config.dart';
+
+/// The API sends storage paths like "/api/v1/storage/…": made absolute against the API host so
+/// every image widget can load them (absolute URLs and empty values are kept as they are).
+String _media(String url) {
+  final v = url.trim();
+  if (v.isEmpty || v.startsWith('http://') || v.startsWith('https://')) return v;
+  return Uri.parse(ApiConfig.base()).resolve(v).toString();
+}
+
 class LatestChapter {
   const LatestChapter({
     required this.number,
@@ -61,16 +71,16 @@ class Manga {
   final Map<String, int>? localChapters;
 
   factory Manga.fromJson(Map<String, dynamic> j) {
-    final hero = j['heroCover'] ?? j['hero_cover'];
-    final heroStr = hero is String && hero.startsWith('http') ? hero : '${j['cover'] ?? ''}';
+    final hero = '${j['heroCover'] ?? j['hero_cover'] ?? ''}'.trim();
+    final heroStr = hero.isNotEmpty ? hero : '${j['cover'] ?? ''}';
     return Manga(
       id: '${j['id'] ?? ''}',
       title: '${j['title'] ?? ''}',
       slug: '${j['slug'] ?? ''}',
       author: '${j['author'] ?? ''}',
-      cover: '${j['cover'] ?? ''}',
-      banner: '${j['banner'] ?? ''}',
-      heroCover: heroStr,
+      cover: _media('${j['cover'] ?? ''}'),
+      banner: _media('${j['banner'] ?? ''}'),
+      heroCover: _media(heroStr),
       genres: (j['genres'] as List<dynamic>?)?.map((e) => '$e').toList() ?? const [],
       rating: (j['rating'] as num?)?.toDouble() ?? 0,
       totalChapters: (j['totalChapters'] as num?)?.toInt() ?? (j['total_chapters'] as num?)?.toInt() ?? 0,

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../api/auth_errors.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_models.dart';
+import '../data/community_service.dart';
+import '../offline/offline_store.dart';
 import '../services/wallet_service.dart';
 import '../theme.dart';
 import '../widgets/account_page_layout.dart';
@@ -137,7 +140,7 @@ class _AccountSectionScreenState extends State<AccountSectionScreen> {
       if (!authController.isAuthenticated || user == null) {
         return const AccountLoginPrompt(message: 'Connectez-vous pour voir vos abonnements.');
       }
-      return const _SubscriptionsPlaceholder();
+      return const _FollowedSeries();
     }
 
     if (!_needsWalletApi) {
@@ -180,25 +183,115 @@ class _AccountSectionScreenState extends State<AccountSectionScreen> {
   }
 }
 
-class _SubscriptionsPlaceholder extends StatelessWidget {
-  const _SubscriptionsPlaceholder();
+/// Series the reader follows (same list as the website's "Mes abonnements").
+class _FollowedSeries extends StatefulWidget {
+  const _FollowedSeries();
+
+  @override
+  State<_FollowedSeries> createState() => _FollowedSeriesState();
+}
+
+class _FollowedSeriesState extends State<_FollowedSeries> {
+  List<Map<String, dynamic>>? _items;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final items = await communityService.fetchFollowed();
+      if (mounted) setState(() => _items = items);
+    } catch (e) {
+      if (mounted) setState(() => _error = friendlyApiError(e, authRequired: true));
+    }
+  }
+
+  Future<void> _unfollow(String slug) async {
+    try {
+      await communityService.setFollowing(slug, false);
+      if (mounted) setState(() => _items = _items?.where((m) => m['slug'] != slug).toList());
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyApiError(e))));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AccountCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Aucun abonnement actif', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-          const SizedBox(height: 8),
-          const Text(
-            'Les abonnements premium seront bientôt disponibles sur MangAfric. En attendant, utilisez vos coins pour débloquer des chapitres.',
-            style: TextStyle(color: AppColors.textSecondary, height: 1.45, fontSize: 14),
+    final items = _items;
+    if (_error != null && items == null) {
+      return AccountCard(child: Text(_error!, style: const TextStyle(color: AppColors.accentDark, height: 1.4)));
+    }
+    if (items == null) {
+      return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
+    }
+    if (items.isEmpty) {
+      return AccountCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Vous ne suivez aucune série', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+            const SizedBox(height: 8),
+            const Text(
+              'Touchez le cœur sur la page d’une série pour être prévenu à chaque nouveau chapitre.',
+              style: TextStyle(color: AppColors.textSecondary, height: 1.45, fontSize: 14),
+            ),
+            const SizedBox(height: 14),
+            FilledButton(onPressed: () => context.go('/explore'), child: const Text('Explorer')),
+          ],
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final m in items)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: AccountCard(
+              child: InkWell(
+                onTap: () => context.push('/manga/${m['slug']}'),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: CachedNetworkImage(
+                        imageUrl: OfflineStore.resolveMediaUrl('${m['cover'] ?? ''}').toString(),
+                        width: 44,
+                        height: 62,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, _, _) => Container(width: 44, height: 62, color: AppColors.border),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${m['title'] ?? m['slug']}',
+                              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 4),
+                          Text(
+                            m['latestChapter'] == null ? 'Aucun chapitre publié' : 'Dernier : chapitre ${m['latestChapter']}',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Ne plus suivre',
+                      onPressed: () => _unfollow('${m['slug']}'),
+                      icon: const Icon(Icons.favorite, color: AppColors.primary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 14),
-          FilledButton(onPressed: () => context.go('/store'), child: const Text('Voir la boutique')),
-        ],
-      ),
+      ],
     );
   }
 }

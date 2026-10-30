@@ -81,6 +81,24 @@ class CommentsPage {
   final List<ChapterComment> items;
 }
 
+/// "Les lecteurs votent la suite": the creator's question at the end of a chapter.
+class ChapterPoll {
+  ChapterPoll(this.raw);
+  final Map<String, dynamic> raw;
+
+  String get id => '${raw['id']}';
+  String get question => '${raw['question'] ?? ''}';
+  bool get open => raw['status'] == 'open';
+  List<Map<String, dynamic>> get options =>
+      (raw['options'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  /// Null until the reader voted (results stay hidden before that).
+  int? get totalVotes => (raw['totalVotes'] as num?)?.toInt();
+  int get myVotes => (raw['myVotes'] as num?)?.toInt() ?? 0;
+  String? get myOptionId => raw['myOptionId'] as String?;
+  String? get winnerOptionId => raw['winnerOptionId'] as String?;
+  int get boostCost => (raw['boostCost'] as num?)?.toInt() ?? 0;
+}
+
 /// Reading progress, streaks, follows, comments and server search (same endpoints as the website).
 class CommunityService {
   ApiClient get _c => authController.api;
@@ -105,7 +123,7 @@ class CommunityService {
   /// Counts the view and the reading day; returns the coins earned by the streak today (usually 0).
   Future<int> recordView(String slug, int chapter) async {
     try {
-      final res = await _c.request('${_chapter(slug, chapter)}/view', method: 'POST') as Map<String, dynamic>;
+      final res = await _c.request('${_chapter(slug, chapter)}/view', method: 'POST', optionalAuth: true) as Map<String, dynamic>;
       return (res['streakReward'] as num?)?.toInt() ?? 0;
     } catch (_) {
       return 0;
@@ -136,7 +154,7 @@ class CommunityService {
   /* ─── Comments ─── */
 
   Future<CommentsPage> fetchComments(String slug, int chapter) async {
-    final res = Map<String, dynamic>.from(await _c.request('${_chapter(slug, chapter)}/comments') as Map);
+    final res = Map<String, dynamic>.from(await _c.request('${_chapter(slug, chapter)}/comments', optionalAuth: true) as Map);
     final items = (res['items'] as List? ?? [])
         .map((e) => ChapterComment.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
@@ -156,13 +174,49 @@ class CommunityService {
     await _c.request('/comments/${Uri.encodeComponent(commentId)}', method: 'DELETE');
   }
 
+  /* ─── Community translations and cultural notes ─── */
+
+  /// Languages with at least one approved bubble: [{code, name, translated, bubbles}].
+  Future<List<Map<String, dynamic>>> fetchChapterLanguages(String slug, int chapter) async {
+    final list = await _c.request('${_chapter(slug, chapter)}/languages', auth: false) as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// Translated bubbles: page is 1-based, x/y/w/h are percentages of the page image.
+  Future<List<Map<String, dynamic>>> fetchBubbles(String slug, int chapter, String lang) async {
+    final res = await _c.request('${_chapter(slug, chapter)}/bubbles?lang=${Uri.encodeQueryComponent(lang)}', auth: false)
+        as Map<String, dynamic>;
+    return (res['bubbles'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// Approved cultural notes, placed like bubbles.
+  Future<List<Map<String, dynamic>>> fetchNotes(String slug, int chapter) async {
+    final list = await _c.request('${_chapter(slug, chapter)}/notes', auth: false) as List<dynamic>;
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /* ─── Polls ─── */
+
+  /// Null when the chapter has no poll (the API answers 204).
+  Future<ChapterPoll?> fetchPoll(String slug, int chapter) async {
+    final res = await _c.request('${_chapter(slug, chapter)}/poll', optionalAuth: true);
+    return res is Map ? ChapterPoll(Map<String, dynamic>.from(res)) : null;
+  }
+
+  /// extraVotes > 0 buys more votes for the reader's choice with coins.
+  Future<ChapterPoll> vote(String pollId, String optionId, {int extraVotes = 0}) async {
+    final res = await _c.request('/polls/${Uri.encodeComponent(pollId)}/vote',
+        method: 'POST', body: {'optionId': optionId, 'extraVotes': extraVotes});
+    return ChapterPoll(Map<String, dynamic>.from(res as Map));
+  }
+
   /* ─── Search ─── */
 
   /// Server search: accents and case ignored, a typo forgiven, ranked by relevance.
   Future<List<Manga>> search(String query, {int limit = 30}) async {
     final q = query.trim();
     if (q.isEmpty) return [];
-    final list = await _c.request('/manga/search?q=${Uri.encodeQueryComponent(q)}&limit=$limit') as List<dynamic>;
+    final list = await _c.request('/manga/search?q=${Uri.encodeQueryComponent(q)}&limit=$limit', optionalAuth: true) as List<dynamic>;
     return list.map((e) => Manga.fromJson(Map<String, dynamic>.from(e as Map))).toList();
   }
 }

@@ -150,7 +150,7 @@ ThemeData buildLightTheme() {
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.bgWhite,
       selectedColor: AppColors.primary,
-      labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+      labelStyle: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600, fontSize: 13),
       side: const BorderSide(color: AppColors.border),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       padding: const EdgeInsets.symmetric(horizontal: 4),

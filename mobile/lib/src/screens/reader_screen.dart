@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,9 +12,13 @@ import '../data/models.dart';
 import '../offline/offline_store.dart';
 import '../theme.dart';
 import '../widgets/chapter_comments.dart';
+import '../widgets/chapter_poll.dart';
 import '../widgets/reader_auth_sheet.dart';
+import '../widgets/reader_page_overlay.dart';
 
 const _dataSaverKey = 'reader.dataSaver';
+const _langKey = 'reader.lang';
+const _notesKey = 'reader.showNotes';
 
 /// Pages are shown at this aspect ratio (uploads are normalised to 800 px wide, ~1200-1280 px high),
 /// which also gives every page the same height to work out the page being read.
@@ -48,6 +51,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
   Timer? _saveTimer;
   bool _resumed = false;
 
+  // Community translations (remembered language; a chapter without it shows the original) and notes.
+  List<Map<String, dynamic>> _languages = const [];
+  String _lang = '';
+  Map<int, List<Map<String, dynamic>>> _bubblesByPage = const {};
+  final Set<String> _peeked = {};
+  Map<int, List<Map<String, dynamic>>> _notesByPage = const {};
+  bool _showNotes = true;
+
   @override
   void initState() {
     super.initState();
@@ -58,8 +69,126 @@ class _ReaderScreenState extends State<ReaderScreen> {
       if (mounted) setState(() => _saved = v);
     });
     SharedPreferences.getInstance().then((p) {
-      if (mounted) setState(() => _dataSaver = p.getBool(_dataSaverKey) ?? false);
+      if (!mounted) return;
+      setState(() {
+        _dataSaver = p.getBool(_dataSaverKey) ?? false;
+        _showNotes = p.getBool(_notesKey) ?? true;
+        _lang = p.getString(_langKey) ?? '';
+      });
+      _loadCommunityLayers();
     });
+  }
+
+  static Map<int, List<Map<String, dynamic>>> _byPage(List<Map<String, dynamic>> items) {
+    final out = <int, List<Map<String, dynamic>>>{};
+    for (final it in items) {
+      final page = it['page'] is num ? (it['page'] as num).toInt() : int.tryParse('${it['page']}') ?? 0;
+      (out[page] ??= []).add(it);
+    }
+    return out;
+  }
+
+  /// Languages, the chosen language's bubbles and the notes. Failures leave the plain pages.
+  Future<void> _loadCommunityLayers() async {
+    try {
+      final results = await Future.wait([
+        communityService.fetchChapterLanguages(widget.slug, widget.chapter),
+        communityService.fetchNotes(widget.slug, widget.chapter),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _languages = results[0];
+        _notesByPage = _byPage(results[1]);
+      });
+      await _loadBubbles();
+    } catch (_) {}
+  }
+
+  Future<void> _loadBubbles() async {
+    final lang = _lang;
+    if (lang.isEmpty || !_languages.any((l) => l['code'] == lang)) {
+      if (mounted) setState(() => _bubblesByPage = const {});
+      return;
+    }
+    try {
+      final bubbles = await communityService.fetchBubbles(widget.slug, widget.chapter, lang);
+      if (mounted && _lang == lang) setState(() => _bubblesByPage = _byPage(bubbles));
+    } catch (_) {}
+  }
+
+  Future<void> _chooseLanguage() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text('Langue de lecture', style: TextStyle(fontWeight: FontWeight.w800)),
+                subtitle: Text('Traductions faites par la communauté, validées par le créateur.'),
+              ),
+              RadioGroup<String>(
+                groupValue: _lang,
+                onChanged: (v) => Navigator.pop(ctx, v),
+                child: Column(
+                  children: [
+                    const RadioListTile<String>(value: '', title: Text('Version originale')),
+                    for (final l in _languages)
+                      RadioListTile<String>(
+                        value: '${l['code']}',
+                        title: Text('${l['name']}'),
+                        subtitle: Text('${l['translated']}/${l['bubbles']} bulles traduites'),
+                      ),
+                  ],
+                ),
+              ),
+              if (_notesByPage.isNotEmpty)
+                SwitchListTile(
+                  title: const Text('Notes culturelles'),
+                  value: _showNotes,
+                  onChanged: (v) {
+                    setState(() => _showNotes = v);
+                    setSheet(() {});
+                    SharedPreferences.getInstance().then((p) => p.setBool(_notesKey, v));
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choice == null || choice == _lang || !mounted) return;
+    setState(() {
+      _lang = choice;
+      _peeked.clear();
+    });
+    (await SharedPreferences.getInstance()).setString(_langKey, choice);
+    await _loadBubbles();
+  }
+
+  void _openNote(Map<String, dynamic> n) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('NOTE CULTURELLE',
+                  style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+              const SizedBox(height: 6),
+              Text('${n['title'] ?? ''}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 10),
+              Text('${n['body'] ?? ''}', style: const TextStyle(fontSize: 15, height: 1.5)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -273,7 +402,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+                      Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14)),
                       Text(
                         'Ch. ${widget.chapter} · page ${(_currentPage + 1).clamp(1, urls.length)}/${urls.length}',
                         style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6)),
@@ -282,6 +411,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   ),
                   leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
                   actions: [
+                    if (_languages.isNotEmpty || _notesByPage.isNotEmpty)
+                      IconButton(
+                        tooltip: 'Langue et notes',
+                        onPressed: _chooseLanguage,
+                        icon: Icon(Icons.translate, color: _bubblesByPage.isNotEmpty ? AppColors.primary : Colors.white),
+                      ),
                     IconButton(
                       tooltip: 'Économie de données',
                       onPressed: _toggleDataSaver,
@@ -342,7 +477,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       width: MediaQuery.sizeOf(context).width * _zoom,
                       child: AspectRatio(
                         aspectRatio: _pageAspect,
-                        child: CachedNetworkImage(imageUrl: urls[i], fit: BoxFit.contain),
+                        child: ReaderPageImage(
+                          url: urls[i],
+                          bubbles: _bubblesByPage[i + 1] ?? const [],
+                          notes: _showNotes ? _notesByPage[i + 1] ?? const [] : const [],
+                          peeked: _peeked,
+                          onTapBubble: (id) => setState(() => _peeked.contains(id) ? _peeked.remove(id) : _peeked.add(id)),
+                          onTapNote: _openNote,
+                        ),
                       ),
                     ),
                   );
@@ -369,6 +511,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                             const SizedBox(width: 8),
                           Expanded(
                             child: Center(
+                              heightFactor: 1,
                               child: FilledButton.tonal(
                                 onPressed: () => context.push('/manga/${widget.slug}'),
                                 child: const Text('Chapitres'),
@@ -425,6 +568,7 @@ class _ChapterEnd extends StatelessWidget {
             OutlinedButton(onPressed: () => context.push('/manga/$slug'), child: const Text('Tous les chapitres')),
           ],
           const SizedBox(height: 20),
+          ChapterPollCard(slug: slug, chapter: chapter),
           ChapterComments(slug: slug, chapter: chapter),
         ],
       ),

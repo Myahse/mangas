@@ -40,10 +40,14 @@ class ApiClient {
     String method = 'GET',
     Map<String, dynamic>? body,
     bool auth = true,
+    // Public endpoints that also personalize for a signed-in reader: send the token if there is one.
+    bool optionalAuth = false,
     Map<String, String>? headers,
   }) async {
     final uri = _uri(path);
-    if (auth) {
+    if (optionalAuth) {
+      auth = (tokenGetter() ?? '').trim().isNotEmpty;
+    } else if (auth) {
       final token = (tokenGetter() ?? '').trim();
       if (token.isEmpty) {
         throw BackendException('Connexion requise', statusCode: 401);
@@ -59,12 +63,10 @@ class ApiClient {
       if (method == 'GET') {
         res = await http.get(uri, headers: h).timeout(const Duration(seconds: 45));
       } else {
-        res = await http
-            .post(
-              uri,
-              headers: h,
-              body: body != null ? jsonEncode(body) : null,
-            )
+        // Any verb (POST, PUT, DELETE…): the method used to be ignored and everything went out as POST.
+        final req = http.Request(method, uri)..headers.addAll(h);
+        if (body != null) req.body = jsonEncode(body);
+        res = await http.Response.fromStream(await req.send().timeout(const Duration(seconds: 45)))
             .timeout(const Duration(seconds: 45));
       }
     } on SocketException catch (e) {

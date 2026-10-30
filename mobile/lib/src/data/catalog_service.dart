@@ -4,41 +4,43 @@ import 'models.dart';
 
 final CatalogService catalogService = CatalogService();
 
+/// The catalog is public: the token is only sent when the reader is signed in (it unlocks pages and
+/// personal fields); signed out, the server decides (pages answer 401 and the reader offers sign-in).
 class CatalogService {
   ApiClient get _c => authController.api;
 
   Future<List<Manga>> fetchAllManga() async {
-    final list = await _c.request('/manga') as List<dynamic>;
+    final list = await _c.request('/manga', optionalAuth: true) as List<dynamic>;
     return list.map((e) => Manga.fromJson(Map<String, dynamic>.from(e as Map))).toList();
   }
 
   Future<Manga> fetchMangaBySlug(String slug) async {
-    final j = await _c.request('/manga/${Uri.encodeComponent(slug)}') as Map<String, dynamic>;
+    final j = await _c.request('/manga/${Uri.encodeComponent(slug)}', optionalAuth: true) as Map<String, dynamic>;
     return Manga.fromJson(j);
   }
 
   Future<List<Manga>> fetchFeaturedManga() async {
-    final list = await _c.request('/manga/featured') as List<dynamic>;
+    final list = await _c.request('/manga/featured', optionalAuth: true) as List<dynamic>;
     return list.map((e) => Manga.fromJson(Map<String, dynamic>.from(e as Map))).toList();
   }
 
   Future<List<Manga>> fetchPopularManga({int count = 10}) async {
-    final list = await _c.request('/manga/popular?count=$count') as List<dynamic>;
+    final list = await _c.request('/manga/popular?count=$count', optionalAuth: true) as List<dynamic>;
     return list.map((e) => Manga.fromJson(Map<String, dynamic>.from(e as Map))).toList();
   }
 
   Future<List<Manga>> fetchLatestUpdated({int count = 12}) async {
-    final list = await _c.request('/manga/latest?count=$count') as List<dynamic>;
+    final list = await _c.request('/manga/latest?count=$count', optionalAuth: true) as List<dynamic>;
     return list.map((e) => Manga.fromJson(Map<String, dynamic>.from(e as Map))).toList();
   }
 
   Future<List<String>> fetchGenres() async {
-    final list = await _c.request('/genres') as List<dynamic>;
+    final list = await _c.request('/genres', optionalAuth: true) as List<dynamic>;
     return list.map((e) => '$e').toList();
   }
 
   Future<List<ChapterItem>> fetchChapters(String slug) async {
-    final list = await _c.request('/manga/${Uri.encodeComponent(slug)}/chapters') as List<dynamic>;
+    final list = await _c.request('/manga/${Uri.encodeComponent(slug)}/chapters', optionalAuth: true) as List<dynamic>;
     final out = list.map((e) => ChapterItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
     out.sort((a, b) => a.number.compareTo(b.number));
     return out;
@@ -47,6 +49,7 @@ class CatalogService {
   Future<List<PageItem>> fetchPages(String slug, int chapterNumber) async {
     final list = await _c.request(
       '/manga/${Uri.encodeComponent(slug)}/chapters/$chapterNumber/pages',
+      optionalAuth: true,
     ) as List<dynamic>;
     return list.map((e) => PageItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
   }
