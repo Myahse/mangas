@@ -7,6 +7,7 @@ import CreatorProfilePage from './pages/CreatorProfilePage';
 import PublicationsPage from './features/publications/PublicationsPage';
 import TranslationsPage from './features/translations/TranslationsPage';
 import PollsPage from './features/polls/PollsPage';
+import EarningsPage from './features/earnings/EarningsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ContactPage from './pages/ContactPage.jsx';
 
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/publications" element={<PublicationsPage />} />
         <Route path="/traductions" element={<TranslationsPage />} />
         <Route path="/sondages" element={<PollsPage />} />
+        <Route path="/revenus" element={<EarningsPage />} />
         <Route path="/profil" element={<CreatorProfilePage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="*" element={<NotFoundPage />} />

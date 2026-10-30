@@ -120,6 +120,12 @@ export default function CreatorTopBar() {
             >
               {t('nav.polls', 'Sondages').toUpperCase()}
             </NavLink>
+            <NavLink
+              to="/revenus"
+              className={({ isActive }) => `creator-topbar__nav-link${isActive ? ' is-active' : ''}`}
+            >
+              {t('nav.earnings', 'Revenus').toUpperCase()}
+            </NavLink>
             <Link
               to="/publications?tab=series"
               className={`creator-topbar__nav-link${isSeriesStatusActive ? ' is-active' : ''}`}

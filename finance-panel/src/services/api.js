@@ -56,5 +56,15 @@ export const financeApi = {
   createTransaction(payload) {
     return request('/finance/transactions', { method: 'POST', body: payload });
   },
+  // Creator payout requests (mobile money, paid by hand then marked paid)
+  listCreatorPayouts({ status = '' } = {}) {
+    return request(`/finance/creator-payouts${status ? `?status=${encodeURIComponent(status)}` : ''}`);
+  },
+  markCreatorPayoutPaid(id, reference) {
+    return request(`/finance/creator-payouts/${encodeURIComponent(id)}/paid`, { method: 'POST', body: { reference } });
+  },
+  rejectCreatorPayout(id, note) {
+    return request(`/finance/creator-payouts/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { note } });
+  },
 };
 

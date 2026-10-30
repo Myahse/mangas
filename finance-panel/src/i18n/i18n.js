@@ -13,6 +13,7 @@ const DICT = {
     nav: {
       overview: 'Aperçu',
       transactions: 'Transactions',
+      payouts: 'Paiements créateurs',
       reports: 'Rapports',
     },
   },
@@ -27,6 +28,7 @@ const DICT = {
     nav: {
       overview: 'Overview',
       transactions: 'Transactions',
+      payouts: 'Creator payouts',
       reports: 'Reports',
     },
   },

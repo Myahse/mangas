@@ -3,6 +3,7 @@ import { FinanceLayout } from './layout/FinanceLayout.jsx';
 import { OverviewPage } from './features/overview/pages/OverviewPage.jsx';
 import { TransactionsPage } from './features/transactions/pages/TransactionsPage.jsx';
 import { ReportsPage } from './features/reports/pages/ReportsPage.jsx';
+import { CreatorPayoutsPage } from './features/payouts/pages/CreatorPayoutsPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="overview" element={<OverviewPage />} />
         <Route path="transactions" element={<TransactionsPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="payouts" element={<CreatorPayoutsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

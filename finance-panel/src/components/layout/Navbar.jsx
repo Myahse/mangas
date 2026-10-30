@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, Moon, Sun, X, Home, ArrowLeftRight, BarChart3 } from 'lucide-react';
+import { Menu, Moon, Sun, X, Home, ArrowLeftRight, BarChart3, HandCoins } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme.js';
 import { useLocale } from '../../hooks/useLocale.js';
 import { useCurrency } from '../../hooks/useCurrency.js';
@@ -22,6 +22,7 @@ export default function Navbar() {
   const navLinks = [
     { label: t('nav.overview', 'Overview'), to: '/overview' },
     { label: t('nav.transactions', 'Transactions'), to: '/transactions' },
+    { label: t('nav.payouts', 'Creator payouts'), to: '/payouts' },
     { label: t('nav.reports', 'Reports'), to: '/reports' },
   ];
 
@@ -39,6 +40,7 @@ export default function Navbar() {
   const bottomLinks = [
     { label: t('nav.overview', 'Overview'), to: '/overview', icon: Home },
     { label: t('nav.transactions', 'Transactions'), to: '/transactions', icon: ArrowLeftRight },
+    { label: t('nav.payouts', 'Creator payouts'), to: '/payouts', icon: HandCoins },
     { label: t('nav.reports', 'Reports'), to: '/reports', icon: BarChart3 },
   ];
 

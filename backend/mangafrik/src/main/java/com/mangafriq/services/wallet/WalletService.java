@@ -1,6 +1,7 @@
 package com.mangafriq.services.wallet;
 
 import com.mangafriq.services.config.FeatureFlagService;
+import com.mangafriq.services.finance.CreatorEarningsService;
 import com.mangafriq.dto.wallet.WalletDtos.AdminGrantCoinsRequest;
 import com.mangafriq.dto.wallet.WalletDtos.AdminGrantCoinsResponse;
 import com.mangafriq.dto.wallet.WalletDtos.DailyClaimResponse;
@@ -60,10 +61,14 @@ public class WalletService {
 	@Value("${app.public.base-url:http://localhost:5173}")
 	private String publicBaseUrl;
 
-	public WalletService(NamedParameterJdbcTemplate jdbc, FeatureFlagService featureFlags, WalletRealtime walletRealtime) {
+	private final CreatorEarningsService creatorEarnings;
+
+	public WalletService(NamedParameterJdbcTemplate jdbc, FeatureFlagService featureFlags, WalletRealtime walletRealtime,
+			CreatorEarningsService creatorEarnings) {
 		this.jdbc = jdbc;
 		this.featureFlags = featureFlags;
 		this.walletRealtime = walletRealtime;
+		this.creatorEarnings = creatorEarnings;
 	}
 
 	public WalletDto wallet(String userId) {
@@ -704,6 +709,8 @@ public class WalletService {
 		int bal = balance(userId);
 		if (bal < amount) throw new IllegalArgumentException("insufficient coins");
 		credit(userId, type, -amount, refType, refId);
+		// Reward coins go first; the purchased part earns the series' creator their share.
+		creatorEarnings.recordSpend(userId, type, amount, refType, refId);
 	}
 
 	private void credit(String userId, String type, int amount, String refType, String refId) {

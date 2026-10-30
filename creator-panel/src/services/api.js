@@ -130,6 +130,14 @@ export const creatorApi = {
     return request(`/creator/notes/${encodeURIComponent(id)}/reject`, { method: 'POST' });
   },
 
+  // Revenue: my share of the purchased coins spent on my series, and payout requests
+  async getEarnings() {
+    return request('/creator/earnings');
+  },
+  async requestPayout(payload) {
+    return request('/creator/payouts', { method: 'POST', body: payload });
+  },
+
   // Reader polls ("Les lecteurs votent la suite")
   async listMyPolls() {
     return request('/creator/polls');

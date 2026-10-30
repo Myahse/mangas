@@ -15,6 +15,7 @@ const DICT = {
       publications: 'Publications',
       translations: 'Traductions',
       polls: 'Sondages',
+      earnings: 'Revenus',
     },
     user: {
       profile: 'Mon profil',
@@ -33,6 +34,7 @@ const DICT = {
       publications: 'Publications',
       translations: 'Translations',
       polls: 'Polls',
+      earnings: 'Earnings',
     },
     user: {
       profile: 'My profile',
@@ -51,6 +53,7 @@ const DICT = {
       publications: '公開',
       translations: '翻訳',
       polls: '投票',
+      earnings: '収益',
     },
     user: {
       profile: 'プロフィール',
