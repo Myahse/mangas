@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../config/api_config.dart';
 import '../config/api_discovery.dart';
@@ -57,6 +58,12 @@ class ConnectionErrorPanel extends StatelessWidget {
                         await onRetry();
                       },
                 child: Text(busy ? 'Connexion…' : 'Réessayer'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/telechargements'),
+                icon: const Icon(Icons.download_for_offline_outlined),
+                label: const Text('Lire mes téléchargements'),
               ),
               if (kDebugMode) ...[
                 const SizedBox(height: 10),
