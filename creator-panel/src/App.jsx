@@ -5,6 +5,8 @@ import SeriesPage from './pages/SeriesPage';
 import EpisodesPage from './pages/EpisodesPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
 import PublicationsPage from './features/publications/PublicationsPage';
+import TranslationsPage from './features/translations/TranslationsPage';
+import PollsPage from './features/polls/PollsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ContactPage from './pages/ContactPage.jsx';
 
@@ -16,6 +18,8 @@ export default function App() {
         <Route path="/series" element={<SeriesPage />} />
         <Route path="/episodes" element={<EpisodesPage />} />
         <Route path="/publications" element={<PublicationsPage />} />
+        <Route path="/traductions" element={<TranslationsPage />} />
+        <Route path="/sondages" element={<PollsPage />} />
         <Route path="/profil" element={<CreatorProfilePage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="*" element={<NotFoundPage />} />

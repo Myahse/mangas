@@ -440,6 +440,53 @@ if ($slug) {
     Check "Finishing the latest chapter marks the reader as caught up" ($done -and (Get-JsonProperty $done @("caughtUp")) -eq $true) | Out-Null
   }
 }
+Write-Section "6b. Community features: translations, cultural notes, polls (front reader -> creator-panel)"
+if ($slug -and $reader -and $creatorActor) {
+  $box = @{ page = 1; x = 10; y = 20; w = 40; h = 12; originalText = "Bonjour !" }
+  $bubble = Invoke-Api -Method POST -Path "/translate/$slug/chapters/1/bubbles" -Headers $reader.Headers -Body $box
+  $bubbleId = [string](Get-JsonProperty $bubble.Body @("id"))
+  $sent = Invoke-Api -Method PUT -Path "/translate/bubbles/$bubbleId/translation" -Headers $reader.Headers -Body @{ lang = "wo"; text = "Na nga def !" }
+  Check "Reader draws a bubble and sends a Wolof translation" ($bubble.Status -eq 200 -and $sent.Status -eq 200) `
+    ((Format-Failure $bubble) + " / " + (Format-Failure $sent)) | Out-Null
+
+  $pendingList = @(Get-JsonItems (Invoke-Api -Method GET -Path "/creator/translations/pending" -Headers $creatorActor.Headers).Body)
+  $pendingRow = $pendingList | Where-Object { (Get-JsonProperty $_ @("bubbleId")) -eq $bubbleId } | Select-Object -First 1
+  Check "Series creator sees it waiting for review" ($null -ne $pendingRow) "not in /creator/translations/pending" | Out-Null
+
+  $coinsBefore = [int](Get-JsonProperty (Invoke-Api -Method GET -Path "/wallet" -Headers $reader.Headers).Body @("balance"))
+  if ($pendingRow) {
+    $approved = Invoke-Api -Method POST -Path "/creator/translations/$(Get-JsonProperty $pendingRow @('id'))/approve" -Headers $creatorActor.Headers
+    $coinsAfter = [int](Get-JsonProperty (Invoke-Api -Method GET -Path "/wallet" -Headers $reader.Headers).Body @("balance"))
+    Check "Approval pays the translator" ($approved.Status -eq 200 -and $coinsAfter -eq $coinsBefore + 2) `
+      "balance $coinsBefore -> $coinsAfter" "balance $coinsBefore -> $coinsAfter" | Out-Null
+  }
+  $shown = Invoke-Api -Method GET -Path "/manga/$slug/chapters/1/bubbles?lang=wo"
+  $shownText = @(Get-JsonProperty $shown.Body @("bubbles")) | ForEach-Object { Get-JsonProperty $_ @("text") }
+  Check "Readers see the Wolof bubble" ($shownText -contains "Na nga def !") (Format-Failure $shown) | Out-Null
+  $otherReview = Invoke-Api -Method GET -Path "/creator/translations/pending" -Headers $reader.Headers
+  Check "A reader cannot review translations" ($otherReview.Status -eq 403) "got HTTP $($otherReview.Status)" | Out-Null
+
+  # Cultural note: proposed by the reader, published by the series creator (+3 coins).
+  $noteBody = @{ page = 1; x = 50; y = 50; w = 20; h = 15; title = "L'attiéké"; body = "Semoule de manioc, plat de Côte d'Ivoire." }
+  $note = Invoke-Api -Method POST -Path "/translate/$slug/chapters/1/notes" -Headers $reader.Headers -Body $noteBody
+  $noteId = [string](Get-JsonProperty $note.Body @("id"))
+  $notePending = @(Get-JsonItems (Invoke-Api -Method GET -Path "/creator/notes/pending" -Headers $creatorActor.Headers).Body) |
+    Where-Object { (Get-JsonProperty $_ @("id")) -eq $noteId }
+  $notePublish = Invoke-Api -Method POST -Path "/creator/notes/$noteId/approve" -Headers $creatorActor.Headers
+  $publicNotes = @(Get-JsonItems (Invoke-Api -Method GET -Path "/manga/$slug/chapters/1/notes").Body)
+  Check "Cultural note proposed, reviewed and shown" ($note.Status -eq 200 -and $notePending -and (Get-JsonProperty $notePublish.Body @("rewardCoins")) -eq 3 -and ($publicNotes | Where-Object { (Get-JsonProperty $_ @("id")) -eq $noteId })) `
+    ((Format-Failure $note) + " / " + (Format-Failure $notePublish)) | Out-Null
+
+  # Reader poll: the creator asks what happens next, the reader votes, the creator closes it.
+  $pollBody = @{ slug = $slug; chapterNumber = 1; question = "Que doit faire Awa ?"; options = @("Rentrer au village", "Partir à Abidjan") }
+  $poll = Invoke-Api -Method POST -Path "/creator/polls" -Headers $creatorActor.Headers -Body $pollBody
+  $pollId = [string](Get-JsonProperty $poll.Body @("id"))
+  $firstOption = [string](Get-JsonProperty (@(Get-JsonProperty $poll.Body @("options")) | Select-Object -First 1) @("id"))
+  $voted = Invoke-Api -Method POST -Path "/polls/$pollId/vote" -Headers $reader.Headers -Body @{ optionId = $firstOption; extraVotes = 0 }
+  $closedPoll = Invoke-Api -Method POST -Path "/creator/polls/$pollId/close" -Headers $creatorActor.Headers
+  Check "Reader poll: created, voted, closed with a winner" ($poll.Status -eq 200 -and (Get-JsonProperty $voted.Body @("totalVotes")) -eq 1 -and (Get-JsonProperty $closedPoll.Body @("winnerOptionId")) -eq $firstOption) `
+    ((Format-Failure $poll) + " / " + (Format-Failure $voted) + " / " + (Format-Failure $closedPoll)) | Out-Null
+}
 if ($creatorActor -and $submissionId) {
   $mine = Invoke-Api -Method GET -Path "/creator/submissions" -Headers $creatorActor.Headers
   $mineRow = @(Get-JsonItems $mine.Body) | Where-Object { (Get-JsonProperty $_ @("id")) -eq $submissionId } | Select-Object -First 1

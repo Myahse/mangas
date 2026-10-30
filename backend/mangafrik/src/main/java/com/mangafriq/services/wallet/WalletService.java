@@ -627,6 +627,27 @@ public class WalletService {
 		return out;
 	}
 
+	/** Spends coins (e.g. extra poll votes); throws "insufficient coins" when the balance is too low. */
+	@Transactional
+	public int spend(String userId, String type, int coins, String refType, String refId) {
+		lockUserRow(userId);
+		spendOrThrow(userId, coins, type, refType, refId);
+		int bal = balance(userId);
+		publishWalletUpdate(userId, bal, balancePaid(userId), balanceReward(userId), type.toLowerCase());
+		return bal;
+	}
+
+	/** Reward coins (e.g. an approved translation); the caller guarantees it runs once per refId. */
+	@Transactional
+	public int creditReward(String userId, String type, int coins, String refType, String refId) {
+		if (coins <= 0) return balance(userId);
+		lockUserRow(userId);
+		credit(userId, type, coins, refType, refId);
+		int bal = balance(userId);
+		publishWalletUpdate(userId, bal, balancePaid(userId), balanceReward(userId), type.toLowerCase());
+		return bal;
+	}
+
 	/** Paid coins for a purchase intent; the caller guarantees it runs once per intent. */
 	@Transactional
 	public int creditPurchase(String userId, int coins, String intentId) {

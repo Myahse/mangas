@@ -13,6 +13,8 @@ const DICT = {
       series: 'Séries',
       episodes: 'Épisodes',
       publications: 'Publications',
+      translations: 'Traductions',
+      polls: 'Sondages',
     },
     user: {
       profile: 'Mon profil',
@@ -29,6 +31,8 @@ const DICT = {
       series: 'Series',
       episodes: 'Episodes',
       publications: 'Publications',
+      translations: 'Translations',
+      polls: 'Polls',
     },
     user: {
       profile: 'My profile',
@@ -45,6 +49,8 @@ const DICT = {
       series: 'シリーズ',
       episodes: 'エピソード',
       publications: '公開',
+      translations: '翻訳',
+      polls: '投票',
     },
     user: {
       profile: 'プロフィール',

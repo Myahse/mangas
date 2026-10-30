@@ -42,7 +42,8 @@ export function onDownloadsChanged(cb) {
 
 const seriesPath = (slug) => `/manga/${encodeURIComponent(slug)}`;
 const chaptersPath = (slug) => `/manga/${encodeURIComponent(slug)}/chapters`;
-const pagesPath = (slug, n) => `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(n)}/pages`;
+const chapterPath = (slug, n) => `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(n)}`;
+const pagesPath = (slug, n) => `${chapterPath(slug, n)}/pages`;
 
 async function saveJson(cache, path, withAuth) {
   const url = apiUrl(path);
@@ -62,9 +63,9 @@ async function saveImage(cache, url) {
 
 /**
  * Downloads one chapter. onProgress(done, total) is called after each page.
- * lite: store the data-saver copies (much smaller).
+ * lite: store the data-saver copies (much smaller). lang: also store that language's bubbles.
  */
-export async function downloadChapter({ slug, chapter, title, cover, lite, onProgress }) {
+export async function downloadChapter({ slug, chapter, title, cover, lite, lang, onProgress }) {
   if (!offlineSupported) throw new Error('Ce navigateur ne permet pas la lecture hors-ligne.');
   try { await navigator.storage?.persist?.(); } catch {}
   const cache = await caches.open(CACHE);
@@ -72,6 +73,10 @@ export async function downloadChapter({ slug, chapter, title, cover, lite, onPro
   await saveJson(cache, seriesPath(slug), false);
   await saveJson(cache, chaptersPath(slug), false);
   const pages = await saveJson(cache, pagesPath(slug, chapter), true);
+  // Community extras: cultural notes, available languages, and the bubbles in the reader's language.
+  const extras = [`${chapterPath(slug, chapter)}/notes`, `${chapterPath(slug, chapter)}/languages`];
+  if (lang) extras.push(`${chapterPath(slug, chapter)}/bubbles?lang=${encodeURIComponent(lang)}`);
+  await Promise.all(extras.map((p) => saveJson(cache, p, false).catch(() => null)));
   const list = Array.isArray(pages) ? pages : [];
   const imageUrls = list.map((p) => pageImageUrl(apiAssetUrl(p.url), lite));
 
@@ -115,7 +120,9 @@ export async function removeDownload(slug, chapter) {
   if (offlineSupported) {
     const cache = await caches.open(CACHE);
     await Promise.all((entry?.imageUrls || []).map((u) => cache.delete(u)));
-    await cache.delete(apiUrl(pagesPath(slug, chapter)));
+    // pages, notes, languages and bubbles of this chapter
+    const prefix = `${apiUrl(chapterPath(slug, chapter))}/`;
+    await Promise.all((await cache.keys()).filter((r) => r.url.startsWith(prefix)).map((r) => cache.delete(r)));
     if (!rest.some((d) => d.slug === slug)) {
       await cache.delete(apiUrl(seriesPath(slug)));
       await cache.delete(apiUrl(chaptersPath(slug)));

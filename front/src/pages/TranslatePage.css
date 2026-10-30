@@ -1,0 +1,117 @@
+/* ─── Translation tool (reuses the reader's dark layout from ReaderPage.css) ─── */
+.translate__lang-select {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
+.translate__lang-select option {
+  color: #111;
+}
+
+.translate__hint {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.8);
+  font-size: 0.8rem;
+}
+
+.translate__page--drawing {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.translate__box {
+  position: absolute;
+  border: 2px dashed rgba(255,255,255,0.8);
+  border-radius: var(--radius-sm);
+  background: rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+.translate__box--approved {
+  border: 2px solid #22c55e;
+  background: rgba(34,197,94,0.12);
+}
+
+.translate__box--pending {
+  border: 2px solid var(--primary);
+  background: rgba(255,106,0,0.12);
+}
+
+.translate__box--note {
+  border: 2px solid #38bdf8;
+  background: rgba(56,189,248,0.14);
+}
+
+.translate__box--selected {
+  border: 2px solid var(--primary-light);
+  background: rgba(255,178,107,0.22);
+}
+
+.translate__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.translate__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.6);
+}
+
+.translate__field textarea {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.88rem;
+  resize: vertical;
+}
+
+.translate__original,
+.translate__approved {
+  font-size: 0.83rem;
+  color: rgba(255,255,255,0.8);
+}
+
+.translate__voice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.translate__voice-label {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.6);
+}
+
+.translate__voice-audio {
+  width: 100%;
+  height: 34px;
+}
+
+.translate__status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.6);
+}
+
+.translate__status--approved { color: #22c55e; }
+.translate__status--pending { color: var(--primary-light); }
+.translate__status--rejected { color: var(--accent-light); }

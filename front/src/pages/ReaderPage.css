@@ -184,6 +184,12 @@
   transition: all 0.2s;
 }
 
+/* The language panel uses buttons with the same look as the chapter links. */
+button.reader__chapter-link {
+  width: 100%;
+  text-align: left;
+}
+
 .reader__chapter-link:hover {
   background: rgba(255,255,255,0.06);
   color: #fff;
@@ -295,18 +301,280 @@
   border-radius: 2px;
 }
 
+/* A page and its translated bubbles. The wrapper is exactly the image's box (the zoom's inline
+   max-width is set on it), so bubbles placed in % of the image land on the right spot. */
+.reader__scroll-item {
+  position: relative;
+  flex-shrink: 0;
+  width: fit-content;
+  max-width: 100%;
+  line-height: 0;
+}
+
+.reader__scroll-item .reader__scroll-page {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 /* Data saver serves 600px copies; show them at the 800px uploads are normalised to, so the page
    looks the same size either way. */
-.reader__scroll-page--lite {
+.reader__scroll-item--lite {
   width: min(800px, 100%);
 }
 
-/* Until it loads, a page holds screen space so lazy loading only fetches pages near the reader.
-   width (not min-width) so the zoom's inline max-width still wins. */
-.reader__scroll-page:not(.reader__scroll-page--loaded) {
-  min-height: 70vh;
+.reader__scroll-item--lite .reader__scroll-page {
+  width: 100%;
+}
+
+/* Until it loads, a page holds screen space so lazy loading only fetches pages near the reader. */
+.reader__scroll-item:has(> .reader__scroll-page:not(.reader__scroll-page--loaded)) {
   width: min(600px, 100%);
+}
+
+.reader__scroll-page:not(.reader__scroll-page--loaded) {
+  width: 100%;
+  min-height: 70vh;
   background: rgba(255,255,255,0.04);
+}
+
+/* ─── Translated bubbles ─── */
+.reader__bubble {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  overflow: hidden;
+  background: #fff;
+  color: #111;
+  border-radius: 12px;
+  text-align: center;
+  line-height: 1.15;
+  /* scales with the page: ~16px on an 800px page, never under 9px */
+  font-size: max(9px, calc(min(800px, 100vw - 40px) * var(--reader-zoom, 1) * 0.02));
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+/* Tap a bubble to see the original drawing underneath. */
+.reader__bubble--peek {
+  opacity: 0;
+}
+
+/* ─── Reader poll (end of chapter) ─── */
+.reader__poll {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: min(480px, 100%);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  text-align: left;
+}
+
+.reader__poll-kicker {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary-light);
+}
+
+.reader__poll-question {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.reader__poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reader__poll-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  transition: var(--transition);
+}
+
+.reader__poll-option:not(:disabled):hover {
+  border-color: var(--primary);
+  background: rgba(255,106,0,0.12);
+}
+
+.reader__poll-option:disabled {
+  cursor: default;
+}
+
+.reader__poll-option--mine {
+  border-color: var(--primary);
+}
+
+.reader__poll-option--winner {
+  border-color: #22c55e;
+}
+
+/* Full width, scaled to the share of votes (transform, not width, so it animates without layout). */
+.reader__poll-bar {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,106,0,0.22);
+  transform-origin: left center;
+  transition: transform 0.4s ease;
+}
+
+.reader__poll-option--winner .reader__poll-bar {
+  background: rgba(34,197,94,0.25);
+}
+
+.reader__poll-label,
+.reader__poll-pct {
+  position: relative;
+}
+
+.reader__poll-pct {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.75);
+}
+
+/* ─── Griot mode ─── */
+.reader__griot-focus {
+  position: absolute;
+  border: 3px solid var(--primary);
+  border-radius: 12px;
+  box-shadow: 0 0 0 4px rgba(255,106,0,0.25), 0 0 24px rgba(255,106,0,0.45);
+  pointer-events: none;
+}
+
+.reader__griot {
+  position: absolute;
+  left: 50%;
+  bottom: 80px;
+  z-index: 110;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, calc(100% - 32px));
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(15,15,15,0.97);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+}
+
+.reader__griot-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.reader__griot-text p {
+  margin-top: 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.reader__griot-meta {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.45);
+}
+
+.reader__griot-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ─── Cultural notes ─── */
+/* An "i" pinned on the top-right corner of the noted spot. */
+.reader__note-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 26px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+.reader__note-dot:hover {
+  background: var(--primary-dark);
+}
+
+.reader__note-card {
+  position: absolute;
+  left: 50%;
+  bottom: 80px;
+  z-index: 120;
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 32px));
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(15,15,15,0.97);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+}
+
+.reader__note-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reader__note-card-head h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.reader__note-card-head button {
+  color: rgba(255,255,255,0.6);
+}
+
+.reader__note-card-body {
+  margin-top: 8px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.85);
+  white-space: pre-wrap;
+}
+
+.reader__note-card-author {
+  margin-top: 10px;
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.35);
+}
+
+.reader__lang-note {
+  padding: 12px 16px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.6);
 }
 
 /* ─── End of chapter ─── */

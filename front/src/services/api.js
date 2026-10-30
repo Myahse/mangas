@@ -17,6 +17,22 @@ function requiredSessionStorageKey() {
   return v;
 }
 
+/**
+ * Best message from an API error body. Spring puts the generic reason ("Bad Request") in `error`
+ * and the useful text in `message` (for ResponseStatusException: `403 FORBIDDEN "reason"`).
+ */
+const GENERIC_HTTP_ERRORS = /^(bad request|unauthorized|forbidden|not found|conflict|internal server error|service unavailable|bad gateway|method not allowed|unprocessable entity|payload too large)$/i;
+function apiErrorMessage(body, fallback) {
+  const error = typeof body?.error === 'string' ? body.error.trim() : '';
+  let detail = typeof body?.message === 'string' ? body.message.trim() : '';
+  const quoted = detail.match(/^\d{3} [A-Z_]+ "(.*)"$/);
+  if (quoted) detail = quoted[1];
+  // Pages check for "unauthorized" to ask the reader to sign in: keep that word for 401s.
+  if (/^unauthorized$/i.test(error)) return error;
+  if (detail && (!error || GENERIC_HTTP_ERRORS.test(error))) return detail;
+  return error || detail || fallback;
+}
+
 function apiBase() {
   return requiredApiBaseUrl().replace(/\/$/, '');
 }
@@ -87,7 +103,7 @@ async function postMultipart(path, formData) {
     let message = text || `Request failed (${res.status})`;
     try {
       const maybeJson = text ? JSON.parse(text) : null;
-      message = maybeJson?.error || maybeJson?.message || message;
+      message = apiErrorMessage(maybeJson, message);
     } catch {}
     throw new Error(String(message));
   }
@@ -122,7 +138,7 @@ async function request(path, { method = 'GET', body, headers, auth = true } = {}
     let message = text || `Request failed (${res.status})`;
     try {
       const maybeJson = text ? JSON.parse(text) : null;
-      message = maybeJson?.error || maybeJson?.message || message;
+      message = apiErrorMessage(maybeJson, message);
     } catch {}
     throw new Error(String(message));
   }
@@ -252,6 +268,110 @@ export async function saveReadingProgress(slug, chapterNumber, page, pageCount) 
   } catch {
     // ignore
   }
+}
+
+/* ─── Community translations ─── */
+
+export async function fetchTranslationLanguages() {
+  return request('/manga/translation-languages', { auth: false });
+}
+
+/** Languages with approved bubbles in this chapter: [{ code, name, translated, bubbles }]. */
+export async function fetchChapterLanguages(slug, chapterNumber) {
+  return request(`/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/languages`, { auth: false });
+}
+
+/** Approved bubbles in lang (null when lang is empty: the original is shown). */
+export async function fetchChapterBubbles(slug, chapterNumber, lang) {
+  if (!lang) return null;
+  return request(
+    `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/bubbles?lang=${encodeURIComponent(lang)}`,
+    { auth: false },
+  );
+}
+
+/** Translation tool: every bubble with the approved text and my own submission in lang. */
+export async function fetchTranslatorBubbles(slug, chapterNumber, lang) {
+  return request(
+    `/translate/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/bubbles?lang=${encodeURIComponent(lang)}`,
+  );
+}
+
+/** box: { page, x, y, w, h, originalText } in % of the page image. */
+export async function createBubble(slug, chapterNumber, box) {
+  return request(`/translate/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/bubbles`, {
+    method: 'POST',
+    body: box,
+  });
+}
+
+export async function deleteBubble(bubbleId) {
+  return request(`/translate/bubbles/${encodeURIComponent(bubbleId)}`, { method: 'DELETE' });
+}
+
+export async function submitBubbleTranslation(bubbleId, lang, text) {
+  return request(`/translate/bubbles/${encodeURIComponent(bubbleId)}/translation`, {
+    method: 'PUT',
+    body: { lang, text },
+  });
+}
+
+/* ─── Cultural notes ─── */
+
+/** Approved notes of a chapter: [{ id, page, x, y, w, h, title, body, authorName }]. */
+export async function fetchChapterNotes(slug, chapterNumber) {
+  return request(`/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/notes`, { auth: false });
+}
+
+/** Contribution tool: approved notes plus my own, with their status. */
+export async function fetchContributorNotes(slug, chapterNumber) {
+  return request(`/translate/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/notes`);
+}
+
+/** note: { page, x, y, w, h, title, body } in % of the page image. */
+export async function createNote(slug, chapterNumber, note) {
+  return request(`/translate/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/notes`, {
+    method: 'POST',
+    body: note,
+  });
+}
+
+export async function deleteNote(noteId) {
+  return request(`/translate/notes/${encodeURIComponent(noteId)}`, { method: 'DELETE' });
+}
+
+/* ─── Reader polls ("Les lecteurs votent la suite") ─── */
+
+/** The chapter's poll, or null when it has none (the API answers 204). */
+export async function fetchChapterPoll(slug, chapterNumber) {
+  const poll = await request(`/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/poll`);
+  return poll && typeof poll === 'object' ? poll : null;
+}
+
+/** First call: the free vote for optionId. extraVotes: votes bought with coins for my choice. */
+export async function votePoll(pollId, optionId, extraVotes = 0) {
+  return request(`/polls/${encodeURIComponent(pollId)}/vote`, { method: 'POST', body: { optionId, extraVotes } });
+}
+
+/* ─── Griot mode (narration) ─── */
+
+/** Bubbles in reading order with the text to tell and the approved voice: { lang, steps: [...] }. */
+export async function fetchNarration(slug, chapterNumber, lang) {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : '';
+  return request(`/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/narration${q}`, { auth: false });
+}
+
+/** Sends my recording of a bubble (lang: a language code, or '' for the original text). */
+export async function uploadBubbleAudio(bubbleId, lang, blob, durationMs) {
+  const fd = new FormData();
+  fd.append('file', blob, 'voice');
+  const q = new URLSearchParams({ lang: lang || 'orig', durationMs: String(Math.round(durationMs || 0)) });
+  return postMultipart(`/translate/bubbles/${encodeURIComponent(bubbleId)}/audio?${q}`, fd);
+}
+
+/** My recording of a bubble in that language: { url, status } or {}. */
+export async function fetchMyBubbleAudio(bubbleId, lang) {
+  return request(`/translate/bubbles/${encodeURIComponent(bubbleId)}/audio?lang=${encodeURIComponent(lang || 'orig')}`);
 }
 
 /* ─── Data saver ("Économie de données") ─── */
@@ -395,7 +515,7 @@ export async function getMyCreatorRequest() {
     let message = text || `Request failed (${res.status})`;
     try {
       const maybeJson = text ? JSON.parse(text) : null;
-      message = maybeJson?.error || maybeJson?.message || message;
+      message = apiErrorMessage(maybeJson, message);
     } catch {}
     throw new Error(String(message));
   }

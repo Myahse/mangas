@@ -108,6 +108,18 @@ export default function CreatorTopBar() {
             >
               {t('nav.publications', 'Publications').toUpperCase()}
             </NavLink>
+            <NavLink
+              to="/traductions"
+              className={({ isActive }) => `creator-topbar__nav-link${isActive ? ' is-active' : ''}`}
+            >
+              {t('nav.translations', 'Traductions').toUpperCase()}
+            </NavLink>
+            <NavLink
+              to="/sondages"
+              className={({ isActive }) => `creator-topbar__nav-link${isActive ? ' is-active' : ''}`}
+            >
+              {t('nav.polls', 'Sondages').toUpperCase()}
+            </NavLink>
             <Link
               to="/publications?tab=series"
               className={`creator-topbar__nav-link${isSeriesStatusActive ? ' is-active' : ''}`}

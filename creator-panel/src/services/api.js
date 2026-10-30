@@ -108,6 +108,54 @@ export const creatorApi = {
     return request('/creator/submissions');
   },
 
+  // Community translations of my series' bubbles
+  async listPendingTranslations() {
+    return request('/creator/translations/pending');
+  },
+  async approveTranslation(id) {
+    return request(`/creator/translations/${encodeURIComponent(id)}/approve`, { method: 'POST' });
+  },
+  async rejectTranslation(id) {
+    return request(`/creator/translations/${encodeURIComponent(id)}/reject`, { method: 'POST' });
+  },
+
+  // Cultural notes proposed by readers on my series
+  async listPendingNotes() {
+    return request('/creator/notes/pending');
+  },
+  async approveNote(id) {
+    return request(`/creator/notes/${encodeURIComponent(id)}/approve`, { method: 'POST' });
+  },
+  async rejectNote(id) {
+    return request(`/creator/notes/${encodeURIComponent(id)}/reject`, { method: 'POST' });
+  },
+
+  // Reader polls ("Les lecteurs votent la suite")
+  async listMyPolls() {
+    return request('/creator/polls');
+  },
+  async createPoll(poll) {
+    return request('/creator/polls', { method: 'POST', body: poll });
+  },
+  async closePoll(id) {
+    return request(`/creator/polls/${encodeURIComponent(id)}/close`, { method: 'POST' });
+  },
+  /** Public catalog, to find the slug and chapters of my approved series. */
+  async listCatalog() {
+    return request('/manga');
+  },
+
+  // Griot mode: readers' recorded voices for my bubbles
+  async listPendingNarrations() {
+    return request('/creator/narrations/pending');
+  },
+  async approveNarration(id) {
+    return request(`/creator/narrations/${encodeURIComponent(id)}/approve`, { method: 'POST' });
+  },
+  async rejectNarration(id) {
+    return request(`/creator/narrations/${encodeURIComponent(id)}/reject`, { method: 'POST' });
+  },
+
   // Episodes
   async listDrafts() {
     return request('/creator/episodes/drafts');

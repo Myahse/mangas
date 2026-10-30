@@ -6,6 +6,7 @@ import Footer from './components/Layout/Footer';
 import HomePage from './pages/HomePage';
 import MangaPage from './pages/MangaPage';
 import ReaderPage from './pages/ReaderPage';
+import TranslatePage from './pages/TranslatePage';
 import BrowsePage from './pages/BrowsePage';
 import Register from './pages/Register/Register';
 import AccountSectionPage from './pages/Account/AccountSectionPage';
@@ -22,7 +23,7 @@ import ReferralRewardModal from './components/rewards/ReferralRewardModal.jsx';
 /* The reader page uses its own full-screen layout */
 function Layout({ children }) {
   const { pathname } = useLocation();
-  const isReader = pathname.includes('/chapter/');
+  const isReader = pathname.includes('/chapter/') || pathname.startsWith('/translate/');
   const isRegister = pathname.startsWith('/register');
 
   if (isReader || isRegister) return <>{children}<DailyRewardModal /><ReferralRewardModal /></>;
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/episodes"                      element={<EpisodesPage />} />
           <Route path="/manga/:slug"                   element={<MangaPage  />} />
           <Route path="/manga/:slug/chapter/:chapter"  element={<ReaderPage />} />
+          <Route path="/translate/:slug/:chapter"      element={<TranslatePage />} />
           <Route path="/register"                      element={<Register   />} />
           <Route path="/reset-password"                element={<ResetPasswordPage />} />
           <Route path="/contact"                       element={<ContactPage />} />

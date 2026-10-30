@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Home, List,
-  ZoomIn, ZoomOut, Settings, ArrowLeft, Feather, Download, CheckCircle2,
+  ZoomIn, ZoomOut, Settings, ArrowLeft, Feather, Download, CheckCircle2, Languages, Headphones,
 } from 'lucide-react';
+import GriotBar from '../components/reader/GriotBar';
+import PollCard from '../components/reader/PollCard';
 import { notify } from '../services/notify';
 import {
   offlineSupported, isDownloaded, downloadChapter, removeDownload, onDownloadsChanged, formatBytes,
@@ -22,6 +24,10 @@ import {
   getDataSaver,
   setDataSaver,
   pageImageUrl,
+  fetchChapterLanguages,
+  fetchChapterBubbles,
+  fetchChapterNotes,
+  fetchNarration,
 } from '../services/api';
 import { onWalletUpdated } from '../realtime/walletEvents';
 import './ReaderPage.css';
@@ -52,6 +58,78 @@ export default function ReaderPage() {
       : 'Économie de données désactivée : images en pleine qualité.');
   };
 
+  /* ─── Community translations ─── */
+  // The reader's language is remembered; a chapter without it shows the original.
+  const [readLang, setReadLang] = useState(() => {
+    try { return localStorage.getItem('mangafric.readLang') || ''; } catch { return ''; }
+  });
+  const [showLangPanel, setShowLangPanel] = useState(false);
+  const [peeked, setPeeked] = useState({});
+  const { data: chapterLanguages } = useFetch(fetchChapterLanguages, slug, chapterNum);
+  const languageList = Array.isArray(chapterLanguages) ? chapterLanguages : [];
+  const activeLang = languageList.some((l) => l.code === readLang) ? readLang : '';
+  const { data: bubbleData } = useFetch(fetchChapterBubbles, slug, chapterNum, activeLang);
+  const bubblesByPage = {};
+  (activeLang && bubbleData?.lang === activeLang ? bubbleData.bubbles : []).forEach((b) => {
+    (bubblesByPage[b.page] ||= []).push(b);
+  });
+  /* ─── Cultural notes ─── */
+  const [showNotes, setShowNotes] = useState(() => {
+    try { return localStorage.getItem('mangafric.showNotes') !== 'off'; } catch { return true; }
+  });
+  const [openNote, setOpenNote] = useState(null);
+  const { data: chapterNotes } = useFetch(fetchChapterNotes, slug, chapterNum);
+  const noteList = Array.isArray(chapterNotes) ? chapterNotes : [];
+  const notesByPage = {};
+  noteList.forEach((n) => { (notesByPage[n.page] ||= []).push(n); });
+  const toggleNotes = () => {
+    const next = !showNotes;
+    setShowNotes(next);
+    setOpenNote(null);
+    try { localStorage.setItem('mangafric.showNotes', next ? 'on' : 'off'); } catch {}
+  };
+
+  /* ─── Griot mode ─── */
+  const [griot, setGriot] = useState(null); // { lang, steps } while narrating
+  const [griotFocus, setGriotFocus] = useState(null); // bubble being told
+  const startGriot = async () => {
+    if (griot) { setGriot(null); setGriotFocus(null); return; }
+    try {
+      const narration = await fetchNarration(slug, chapterNum, activeLang);
+      const steps = Array.isArray(narration?.steps) ? narration.steps.filter((s) => s.text) : [];
+      if (steps.length === 0) {
+        notify.info(activeLang
+          ? 'Aucune bulle traduite à raconter dans cette langue pour l’instant.'
+          : 'Aucune bulle à raconter pour l’instant : entourez-les dans « Traduire ce chapitre ».');
+        return;
+      }
+      setOpenNote(null);
+      setShowLangPanel(false);
+      setGriot({ lang: narration.lang, steps });
+    } catch (e) {
+      notify.error(e?.message || 'Mode griot indisponible.');
+    }
+  };
+  useEffect(() => { setGriot(null); setGriotFocus(null); }, [slug, chapterNum]);
+  const focusGriotStep = (i) => {
+    const step = griot?.steps[i];
+    if (!step) return;
+    setGriotFocus(step);
+    const el = scrollRef.current;
+    const img = pageRefs.current[step.page - 1];
+    if (!el || !img) return;
+    const r = img.getBoundingClientRect();
+    const bubbleTop = r.top + (r.height * step.y) / 100;
+    el.scrollTo({ top: el.scrollTop + bubbleTop - el.getBoundingClientRect().top - el.clientHeight * 0.3, behavior: 'smooth' });
+  };
+
+  const chooseLang = (code) => {
+    setReadLang(code);
+    setPeeked({});
+    setShowLangPanel(false);
+    try { localStorage.setItem('mangafric.readLang', code); } catch {}
+  };
+
   /* ─── Offline download ─── */
   const [downloaded, setDownloaded] = useState(() => isDownloaded(slug, chapterNum));
   const [downloadProgress, setDownloadProgress] = useState(null); // { done, total } while downloading
@@ -77,6 +155,7 @@ export default function ReaderPage() {
         title: manga?.title,
         cover: manga?.cover,
         lite: dataSaver,
+        lang: activeLang,
         onProgress: (done, total) => setDownloadProgress({ done, total }),
       });
       notify.success(`Chapitre ${chapterNum} disponible hors-ligne (${formatBytes(entry.bytes)}).`);
@@ -176,7 +255,9 @@ export default function ReaderPage() {
         const middle = el.scrollTop + el.clientHeight / 2;
         let idx = 0;
         pageRefs.current.forEach((img, i) => {
-          if (img && i < pageList.length && img.offsetTop <= middle) idx = i;
+          // the image sits at the top of its positioned .reader__scroll-item, so measure the wrapper
+          const top = img?.parentElement?.offsetTop ?? 0;
+          if (img && i < pageList.length && top <= middle) idx = i;
         });
         setCurrentPage(idx);
       });
@@ -279,10 +360,33 @@ export default function ReaderPage() {
             </button>
           ) : null}
 
+          {/* Griot mode */}
+          {pageList.length > 0 ? (
+            <button
+              className={`reader__ctrl-btn${griot ? ' reader__ctrl-btn--active' : ''}`}
+              onClick={startGriot}
+              title="Mode griot : écouter le chapitre"
+              aria-label="Mode griot"
+              aria-pressed={Boolean(griot)}
+            >
+              <Headphones size={16} />
+            </button>
+          ) : null}
+
+          {/* Language */}
+          <button
+            className={`reader__ctrl-btn${readLang ? ' reader__ctrl-btn--active' : ''}`}
+            onClick={() => { setShowLangPanel((s) => !s); setShowChapterList(false); }}
+            title="Langue"
+            aria-label="Langue"
+          >
+            <Languages size={16} />
+          </button>
+
           {/* Chapter list */}
           <button
             className={`reader__ctrl-btn${showChapterList ? ' reader__ctrl-btn--active' : ''}`}
-            onClick={() => setShowChapterList(s => !s)}
+            onClick={() => { setShowChapterList(s => !s); setShowLangPanel(false); }}
             title="Chapitres"
           >
             <List size={16} />
@@ -315,6 +419,80 @@ export default function ReaderPage() {
               </Link>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Language panel */}
+      {showLangPanel && (
+        <div className="reader__chapter-panel">
+          <div className="reader__chapter-panel-header">
+            <h3>Langue</h3>
+            <button onClick={() => setShowLangPanel(false)}>✕</button>
+          </div>
+          <div className="reader__chapter-panel-list">
+            <button
+              type="button"
+              className={`reader__chapter-link${!readLang ? ' reader__chapter-link--active' : ''}`}
+              onClick={() => chooseLang('')}
+            >
+              <span>Version originale</span>
+            </button>
+            {languageList.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                className={`reader__chapter-link${readLang === l.code ? ' reader__chapter-link--active' : ''}`}
+                onClick={() => chooseLang(l.code)}
+              >
+                <span>{l.name}</span>
+                <span className="reader__chapter-link-date">{l.translated}/{l.bubbles} bulles</span>
+              </button>
+            ))}
+            {languageList.length === 0 ? (
+              <p className="reader__lang-note">Pas encore de traduction pour ce chapitre.</p>
+            ) : null}
+            <button
+              type="button"
+              className={`reader__chapter-link${showNotes ? ' reader__chapter-link--active' : ''}`}
+              onClick={toggleNotes}
+              aria-pressed={showNotes}
+            >
+              <span>Notes culturelles</span>
+              <span className="reader__chapter-link-date">
+                {showNotes ? 'affichées' : 'masquées'} · {noteList.length}
+              </span>
+            </button>
+            <Link to={`/translate/${slug}/${chapterNum}`} className="reader__chapter-link">
+              <span>Traduire ce chapitre</span>
+              <span className="reader__chapter-link-date">+2 coins par bulle</span>
+            </Link>
+            <Link to={`/translate/${slug}/${chapterNum}?mode=notes`} className="reader__chapter-link">
+              <span>Ajouter une note culturelle</span>
+              <span className="reader__chapter-link-date">+3 coins</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {griot ? (
+        <GriotBar
+          key={`${slug}:${chapterNum}:${griot.lang}`}
+          steps={griot.steps}
+          lang={griot.lang}
+          onStep={focusGriotStep}
+          onClose={() => { setGriot(null); setGriotFocus(null); }}
+        />
+      ) : null}
+
+      {/* Cultural note card */}
+      {openNote && (
+        <div className="reader__note-card" role="dialog" aria-label={openNote.title}>
+          <div className="reader__note-card-head">
+            <h3>{openNote.title}</h3>
+            <button type="button" onClick={() => setOpenNote(null)} aria-label="Fermer">✕</button>
+          </div>
+          <p className="reader__note-card-body">{openNote.body}</p>
+          <p className="reader__note-card-author">Note de {openNote.authorName}</p>
         </div>
       )}
 
@@ -369,20 +547,55 @@ export default function ReaderPage() {
         ) : (
           <>
             {pageList.map((p, i) => (
-              <img
+              <div
                 key={p.url}
-                ref={(el) => { pageRefs.current[i] = el; }}
-                src={pageImageUrl(p.url, dataSaver)}
-                alt={`Page ${i + 1}`}
-                className={`reader__scroll-page${dataSaver ? ' reader__scroll-page--lite' : ''}`}
-                style={{ maxWidth: `${zoom}%` }}
-                loading={i === resumePage ? 'eager' : 'lazy'}
-                onLoad={(e) => e.currentTarget.classList.add('reader__scroll-page--loaded')}
-              />
+                className={`reader__scroll-item${dataSaver ? ' reader__scroll-item--lite' : ''}`}
+                style={{ maxWidth: `${zoom}%`, '--reader-zoom': zoom / 100 }}
+              >
+                <img
+                  ref={(el) => { pageRefs.current[i] = el; }}
+                  src={pageImageUrl(p.url, dataSaver)}
+                  alt={`Page ${i + 1}`}
+                  className="reader__scroll-page"
+                  loading={i === resumePage ? 'eager' : 'lazy'}
+                  onLoad={(e) => e.currentTarget.classList.add('reader__scroll-page--loaded')}
+                />
+                {(bubblesByPage[i + 1] || []).map((b) => (
+                  <span
+                    key={b.id}
+                    className={`reader__bubble${peeked[b.id] ? ' reader__bubble--peek' : ''}`}
+                    style={{ left: `${b.x}%`, top: `${b.y}%`, width: `${b.w}%`, height: `${b.h}%` }}
+                    title={b.originalText ? `Original : ${b.originalText}` : undefined}
+                    onClick={() => setPeeked((s) => ({ ...s, [b.id]: !s[b.id] }))}
+                  >
+                    {b.text}
+                  </span>
+                ))}
+                {griot && griotFocus?.page === i + 1 ? (
+                  <span
+                    className="reader__griot-focus"
+                    style={{ left: `${griotFocus.x}%`, top: `${griotFocus.y}%`, width: `${griotFocus.w}%`, height: `${griotFocus.h}%` }}
+                  />
+                ) : null}
+                {showNotes && (notesByPage[i + 1] || []).map((n) => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    className="reader__note-dot"
+                    style={{ left: `${n.x + n.w}%`, top: `${n.y}%` }}
+                    onClick={() => setOpenNote(n)}
+                    aria-label={`Note culturelle : ${n.title}`}
+                    title={n.title}
+                  >
+                    i
+                  </button>
+                ))}
+              </div>
             ))}
             {pageList.length > 0 ? (
               <div className="reader__chapter-end">
                 <p className="reader__chapter-end-title">Fin du chapitre {chapterNum}</p>
+                <PollCard slug={slug} chapterNumber={chapterNum} onCoinsSpent={() => setWalletKey((k) => k + 1)} />
                 {nextChapterNum ? (
                   <Link to={`/manga/${slug}/chapter/${nextChapterNum}`} className="reader__chapter-nav-btn">
                     Chapitre suivant
