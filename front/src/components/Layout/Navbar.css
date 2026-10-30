@@ -473,6 +473,61 @@
   opacity: 0.75;
 }
 
+/* ─── Notification bell (reuses the account menu) ─── */
+.navbar__bell {
+  position: relative;
+}
+
+.navbar__bell-badge {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+
+.navbar__bell-menu {
+  width: min(320px, calc(100vw - 32px));
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* Doubled class: must win over .navbar__user-menu-item (display: block), declared further down. */
+.navbar__user-menu-item.navbar__bell-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navbar__bell-item span {
+  font-weight: 500;
+  color: var(--nav-text-muted);
+}
+
+.navbar__bell-item small {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--nav-text-muted);
+}
+
+.navbar__bell-item--unread {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.navbar__bell-empty {
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  color: var(--nav-text-muted);
+}
+
 .navbar__user-menu {
   position: absolute;
   top: calc(100% + 10px);

@@ -1,10 +1,12 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Star, BookOpen, Heart, Share2, ChevronRight,
   User, Tag, Clock, TrendingUp, List, Grid,
 } from 'lucide-react';
-import { useFetch, fetchMangaBySlug, fetchChapters, fetchPopularManga } from '../services/api';
+import { useFetch, fetchMangaBySlug, fetchChapters, fetchPopularManga, fetchFollowStatus, followSeries } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { notify } from '../services/notify';
 import MangaCard from '../components/common/MangaCard';
 import './MangaPage.css';
 
@@ -31,7 +33,32 @@ function HeaderSkeleton() {
 
 export default function MangaPage() {
   const { slug } = useParams();
+  // Following the series: real, stored server-side, and drives new-chapter notifications.
+  const { isAuthenticated } = useAuth();
   const [bookmarked, setBookmarked] = useState(false);
+  useEffect(() => {
+    if (!isAuthenticated || !slug) { setBookmarked(false); return; }
+    let cancelled = false;
+    fetchFollowStatus(slug).then((s) => { if (!cancelled) setBookmarked(Boolean(s?.following)); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [isAuthenticated, slug]);
+  const toggleFollow = () => {
+    if (!isAuthenticated) {
+      notify.info('Connectez-vous pour suivre cette série.');
+      return;
+    }
+    const next = !bookmarked;
+    setBookmarked(next);
+    followSeries(slug, next)
+      .then((s) => {
+        setBookmarked(Boolean(s?.following));
+        if (s?.following) notify.success('Série suivie : vous serez prévenu de chaque nouveau chapitre.');
+      })
+      .catch((e) => {
+        setBookmarked(!next);
+        notify.error(e?.message || 'Action impossible.');
+      });
+  };
   const [chapterView,   setChapterView]   = useState('list');
   const [chapterSearch, setChapterSearch] = useState('');
 
@@ -159,8 +186,10 @@ export default function MangaPage() {
                 </Link>
                 <button
                   className={`manga-page__btn manga-page__btn--icon${bookmarked ? ' manga-page__btn--bookmarked' : ''}`}
-                  onClick={() => setBookmarked(s => !s)}
-                  aria-label="Favoris"
+                  onClick={toggleFollow}
+                  aria-label={bookmarked ? 'Ne plus suivre cette série' : 'Suivre cette série'}
+                  aria-pressed={bookmarked}
+                  title={bookmarked ? 'Série suivie : vous serez prévenu des nouveaux chapitres' : 'Suivre la série'}
                 >
                   <Heart size={18} fill={bookmarked ? 'currentColor' : 'none'} />
                 </button>

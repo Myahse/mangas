@@ -47,6 +47,7 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 						from app_sessions s
 						join app_users u on u.id = s.user_id
 						where s.token = :token
+						  and coalesce(u.status, 'active') <> 'disabled'
 						limit 1
 						""", new MapSqlParameterSource().addValue("token", token));
 

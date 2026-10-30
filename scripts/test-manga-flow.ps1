@@ -354,6 +354,11 @@ if (Check "Series listed in GET /manga" ($null -ne $catalogRow) "not found by ti
   Check "GET /manga/{slug}" ($detail.Status -eq 200) (Format-Failure $detail) "slug $slug" | Out-Null
   $latest = Invoke-Api -Method GET -Path "/manga/latest?count=50"
   Check "Series listed in GET /manga/latest" ([bool](@(Get-JsonItems $latest.Body) | Where-Object { (Get-JsonProperty $_ @("slug")) -eq $slug })) "not in latest 50" | Out-Null
+  if ($reader) {
+    # The reader follows the series now, so episode 1 (published next) must notify them.
+    $follow = Invoke-Api -Method PUT -Path "/follows/$slug" -Headers $reader.Headers
+    Check "Reader follows the series" ($follow.Status -eq 200 -and (Get-JsonProperty $follow.Body @("following")) -eq $true) (Format-Failure $follow) | Out-Null
+  }
 }
 
 Write-Section "5. Creator publishes episode 1 (creator-panel)"
@@ -440,6 +445,15 @@ if ($slug) {
     Check "Finishing the latest chapter marks the reader as caught up" ($done -and (Get-JsonProperty $done @("caughtUp")) -eq $true) | Out-Null
   }
 }
+if ($slug -and $reader) {
+  $notes = Invoke-Api -Method GET -Path "/notifications" -Headers $reader.Headers
+  $newChapter = @(Get-JsonProperty $notes.Body @("items")) | Where-Object { (Get-JsonProperty $_ @("link")) -eq "/manga/$slug/chapter/1" }
+  Check "Follower is notified of the new chapter" ($notes.Status -eq 200 -and $newChapter -and (Get-JsonProperty $notes.Body @("unread")) -ge 1) `
+    (Format-Failure $notes) | Out-Null
+  $followed = @(Get-JsonItems (Invoke-Api -Method GET -Path "/follows" -Headers $reader.Headers).Body)
+  Check "Series listed in 'Mes abonnements'" ([bool]($followed | Where-Object { (Get-JsonProperty $_ @("slug")) -eq $slug })) | Out-Null
+}
+
 Write-Section "6b. Community features: translations, cultural notes, polls (front reader -> creator-panel)"
 if ($slug -and $reader -and $creatorActor) {
   $box = @{ page = 1; x = 10; y = 20; w = 40; h = 12; originalText = "Bonjour !" }
@@ -577,6 +591,11 @@ if ($KeepData) {
     if ($res.Status -eq 200) { $disabled++ }
   }
   Check "Disable test accounts" ($disabled -eq @($users).Count) "$disabled of $(@($users).Count) disabled" "$disabled account(s)" | Out-Null
+  if ($reader) {
+    # A disabled account's token (issued before) must stop working at once, not when it expires.
+    $after = Invoke-Api -Method GET -Path "/wallet" -Headers $reader.Headers
+    Check "Disabled account's token is refused" ($after.Status -eq 401) "got HTTP $($after.Status)" | Out-Null
+  }
 }
 
 Write-Section "Summary"

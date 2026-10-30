@@ -340,6 +340,36 @@ export async function deleteNote(noteId) {
   return request(`/translate/notes/${encodeURIComponent(noteId)}`, { method: 'DELETE' });
 }
 
+/* ─── Followed series and notifications ─── */
+
+/** { following, followers } for the signed-in reader. */
+export async function fetchFollowStatus(slug) {
+  return request(`/follows/${encodeURIComponent(slug)}`);
+}
+
+export async function followSeries(slug, follow) {
+  return request(`/follows/${encodeURIComponent(slug)}`, { method: follow ? 'PUT' : 'DELETE' });
+}
+
+/** Followed series with their latest chapter: [{ slug, title, cover, latestChapter, latestTitle, latestAt }]. */
+export async function fetchFollowedSeries() {
+  const items = await request('/follows');
+  return Array.isArray(items) ? items.map((it) => ({ ...it, cover: apiAssetUrl(it.cover) })) : [];
+}
+
+/** { unread, items: [{ id, kind, title, body, link, createdAt, read }] } */
+export async function fetchNotifications(limit = 20) {
+  return request(`/notifications?limit=${encodeURIComponent(limit)}`);
+}
+
+export async function markNotificationRead(id) {
+  return request(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead() {
+  return request('/notifications/read-all', { method: 'POST' });
+}
+
 /* ─── Reader polls ("Les lecteurs votent la suite") ─── */
 
 /** The chapter's poll, or null when it has none (the API answers 204). */

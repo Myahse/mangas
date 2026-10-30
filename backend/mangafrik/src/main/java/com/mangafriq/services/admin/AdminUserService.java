@@ -1,5 +1,6 @@
 package com.mangafriq.services.admin;
 
+import com.mangafriq.security.jwt.AccountStateJwtValidator;
 import com.mangafriq.dto.admin.AdminDtos.AdminUserDto;
 import com.mangafriq.dto.admin.AdminDtos.CreateUserRequest;
 import com.mangafriq.dto.admin.AdminDtos.ResetUserCredentialsResponse;
@@ -26,6 +27,7 @@ public class AdminUserService {
 	private final NamedParameterJdbcTemplate jdbc;
 	private final PasswordEncoder passwordEncoder;
 	private final EmailService emailService;
+	private final AccountStateJwtValidator accountState;
 
 	@Value("${app.email.enabled:true}")
 	private boolean emailEnabled;
@@ -39,10 +41,12 @@ public class AdminUserService {
 	@Value("${app.public.frontend-url:}")
 	private String publicFrontendUrl;
 
-	public AdminUserService(NamedParameterJdbcTemplate jdbc, PasswordEncoder passwordEncoder, EmailService emailService) {
+	public AdminUserService(NamedParameterJdbcTemplate jdbc, PasswordEncoder passwordEncoder, EmailService emailService,
+			AccountStateJwtValidator accountState) {
 		this.jdbc = jdbc;
 		this.passwordEncoder = passwordEncoder;
 		this.emailService = emailService;
+		this.accountState = accountState;
 	}
 
 	public List<AdminUserDto> listUsers() {
@@ -137,6 +141,8 @@ public class AdminUserService {
 				.addValue("updated_at", Timestamp.from(now))
 		);
 		if (updated == 0) throw new NotFoundException("User not found");
+		// Existing tokens must see the new status/role right away (disabled = signed out).
+		accountState.evict(userId.toString());
 
 		Map<String, Object> next = getUserRow(userId);
 		return mapRow(next);

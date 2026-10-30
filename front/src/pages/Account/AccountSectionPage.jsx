@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { dailyClaimCoins, fetchReferralInfo, fetchWallet, useFetch } from '../../services/api';
 import { onWalletUpdated } from '../../realtime/walletEvents';
+import FollowedSeries from '../../components/home/FollowedSeries';
 import './AccountSectionPage.css';
 
 const TITLES = {
@@ -36,6 +37,12 @@ export default function AccountSectionPage() {
         <span>{title}</span>
       </nav>
       <h1 className="account-section__title">{title}</h1>
+
+      {pathname === '/compte/abonnements' && isAuthenticated ? (
+        <div style={{ marginTop: 16 }}>
+          <FollowedSeries />
+        </div>
+      ) : null}
 
       <div style={{ marginTop: 16 }}>
         {isAuthenticated && user ? (

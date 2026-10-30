@@ -3,6 +3,7 @@ package com.mangafriq.services.catalog;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mangafriq.constants.AppConstants;
+import com.mangafriq.services.follow.FollowService;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -23,10 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class CatalogChapterSyncService {
 	private final NamedParameterJdbcTemplate jdbc;
 	private final ObjectMapper objectMapper;
+	private final FollowService follows;
 
-	public CatalogChapterSyncService(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+	public CatalogChapterSyncService(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper, FollowService follows) {
 		this.jdbc = jdbc;
 		this.objectMapper = objectMapper;
+		this.follows = follows;
 	}
 
 	/**
@@ -180,6 +183,8 @@ public class CatalogChapterSyncService {
 				nextNum,
 				insertedPages,
 				t);
+		int notified = follows.notifyNewChapter(mangaId, nextNum, epTitle);
+		if (notified > 0) log.info("New chapter notification sent to {} follower(s) of mangaId={}", notified, mangaId);
 	}
 
 	private boolean chapterTitleExists(UUID mangaId, String episodeTitle) {

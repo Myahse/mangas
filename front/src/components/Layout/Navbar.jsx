@@ -10,6 +10,7 @@ import { useI18n } from '../../i18n/i18n';
 import { useAuth } from '../../context/AuthContext';
 import { CREATOR_PANEL_URL } from '../../config/publicUrls';
 import { emitWalletUpdated } from '../../realtime/walletEvents';
+import NotificationBell from './NotificationBell';
 import AuthModal from '../auth/AuthModal';
 import PreferencesModal from '../modals/PreferencesModal';
 import './Navbar.css';
@@ -311,6 +312,7 @@ export default function Navbar() {
               <span>{wallet?.balance ?? '—'}</span>
             </Link>
           ) : null}
+          {isAuthenticated && user ? <NotificationBell /> : null}
           {/* Search */}
           <div className="navbar__search" ref={searchRef}>
             <button
