@@ -491,6 +491,15 @@ if ($slug -and $reader -and $creatorActor) {
   Check "Cultural note proposed, reviewed and shown" ($note.Status -eq 200 -and $notePending -and (Get-JsonProperty $notePublish.Body @("rewardCoins")) -eq 3 -and ($publicNotes | Where-Object { (Get-JsonProperty $_ @("id")) -eq $noteId })) `
     ((Format-Failure $note) + " / " + (Format-Failure $notePublish)) | Out-Null
 
+  # Comment at the end of the chapter: shown to readers and mirrored into the creator's episode.
+  $posted = Invoke-Api -Method POST -Path "/manga/$slug/chapters/1/comments" -Headers $reader.Headers -Body @{ text = "Trop bien !" }
+  $episodes = @(Get-JsonItems (Invoke-Api -Method GET -Path "/creator/episodes/published" -Headers $creatorActor.Headers).Body)
+  $mirrored = $episodes | Where-Object { @(Get-JsonProperty $_ @("comments")) | Where-Object { (Get-JsonProperty $_ @("text")) -eq "Trop bien !" } }
+  Check "Reader comment shown and visible to the creator" ($posted.Status -eq 200 -and $mirrored) (Format-Failure $posted) | Out-Null
+  $streak = Invoke-Api -Method GET -Path "/reading-streak" -Headers $reader.Headers
+  Check "Opening the chapter started a reading streak" ($streak.Status -eq 200 -and (Get-JsonProperty $streak.Body @("current")) -ge 1) `
+    (Format-Failure $streak) | Out-Null
+
   # Reader poll: the creator asks what happens next, the reader votes, the creator closes it.
   $pollBody = @{ slug = $slug; chapterNumber = 1; question = "Que doit faire Awa ?"; options = @("Rentrer au village", "Partir à Abidjan") }
   $poll = Invoke-Api -Method POST -Path "/creator/polls" -Headers $creatorActor.Headers -Body $pollBody

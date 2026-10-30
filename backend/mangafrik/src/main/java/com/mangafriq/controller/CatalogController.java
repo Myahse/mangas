@@ -7,6 +7,7 @@ import com.mangafriq.dto.PageDto;
 import com.mangafriq.security.utils.SecurityUtils;
 import com.mangafriq.services.catalog.CatalogEngagementService;
 import com.mangafriq.services.catalog.CatalogService;
+import com.mangafriq.services.community.ReadingStreakService;
 import com.mangafriq.services.wallet.WalletService;
 import java.util.List;
 import java.util.Map;
@@ -25,14 +26,17 @@ public class CatalogController {
 	private final CatalogService catalogService;
 	private final WalletService walletService;
 	private final CatalogEngagementService catalogEngagementService;
+	private final ReadingStreakService readingStreaks;
 
 	public CatalogController(
 			CatalogService catalogService,
 			WalletService walletService,
-			CatalogEngagementService catalogEngagementService) {
+			CatalogEngagementService catalogEngagementService,
+			ReadingStreakService readingStreaks) {
 		this.catalogService = catalogService;
 		this.walletService = walletService;
 		this.catalogEngagementService = catalogEngagementService;
+		this.readingStreaks = readingStreaks;
 	}
 
 	@GetMapping("/manga")
@@ -85,10 +89,12 @@ public class CatalogController {
 
 	/** Count a view when a logged-in reader opens chapter pages (not available to the série owner). */
 	@PostMapping("/manga/{slug}/chapters/{chapterNumber}/view")
-	public Map<String, String> recordChapterView(@PathVariable String slug, @PathVariable int chapterNumber) {
+	public Map<String, Object> recordChapterView(@PathVariable String slug, @PathVariable int chapterNumber) {
 		String email = SecurityUtils.getCurrentUserEmail().orElse("");
 		catalogEngagementService.recordChapterView(slug, chapterNumber, email);
-		return Map.of("status", "ok");
+		// Opening a chapter counts as a reading day for the streak (may pay a streak reward).
+		int streakReward = SecurityUtils.getCurrentUserIdString().map(readingStreaks::recordRead).orElse(0);
+		return Map.of("status", "ok", "streakReward", streakReward);
 	}
 }
 

@@ -216,10 +216,15 @@ public class EpisodeStore {
 	}
 
 	public PublishedEpisodeDto addComment(String id, AddCommentRequest req) {
+		return addComment(id, req, UUID.randomUUID().toString());
+	}
+
+	/** Same, with the id of the reader's comment (chapter_comments) so it can be removed later. */
+	public PublishedEpisodeDto addComment(String id, AddCommentRequest req, String commentId) {
 		PublishedEpisodeDto ep = getPublished(id);
 		List<Map<String, Object>> comments = new ArrayList<>(ep.comments() == null ? List.of() : ep.comments());
 		Map<String, Object> row = new HashMap<>();
-		row.put("id", UUID.randomUUID().toString());
+		row.put("id", commentId);
 		row.put("createdAt", Instant.now().toString());
 		row.put("author", blankToNull(req.author()));
 		row.put("text", nz(req.text()));
@@ -288,6 +293,28 @@ public class EpisodeStore {
 		);
 		if (updated == 0) throw new NotFoundException("Episode not found");
 		return next;
+	}
+
+	/** Removes a reader comment mirrored by {@link #addComment(String, AddCommentRequest, String)}. */
+	public void removeComment(String id, String commentId) {
+		PublishedEpisodeDto ep = getPublished(id);
+		List<Map<String, Object>> comments = new ArrayList<>(ep.comments() == null ? List.of() : ep.comments());
+		if (!comments.removeIf(c -> commentId.equals(String.valueOf(c.get("id"))))) return;
+		Map<String, Object> nextStats = new HashMap<>(ep.stats() == null ? Map.of() : ep.stats());
+		nextStats.put("comments", Math.max(0, asInt(nextStats.get("comments")) - 1));
+		jdbc.update("""
+				update creator_published_episodes
+				set stats = cast(:stats as jsonb), comments = cast(:comments as jsonb)
+				where id = cast(:id as uuid)
+				""",
+			new MapSqlParameterSource()
+				.addValue("id", id)
+				.addValue("stats", writeJson(nextStats))
+				.addValue("comments", writeJson(comments)));
+	}
+
+	public boolean commentsEnabled(String id) {
+		return getPublished(id).commentsEnabled();
 	}
 
 	private PublishedEpisodeDto getPublished(String id) {

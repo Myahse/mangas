@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import GriotBar from '../components/reader/GriotBar';
 import PollCard from '../components/reader/PollCard';
+import CommentsSection from '../components/reader/CommentsSection';
 import { notify } from '../services/notify';
 import {
   offlineSupported, isDownloaded, downloadChapter, removeDownload, onDownloadsChanged, formatBytes,
@@ -194,7 +195,12 @@ export default function ReaderPage() {
     if (!slug || !chapterNum || pageList.length === 0 || pagesError) return;
     if (viewRecordedKeyRef.current === key) return;
     viewRecordedKeyRef.current = key;
-    recordChapterView(slug, chapterNum);
+    recordChapterView(slug, chapterNum).then(({ streakReward }) => {
+      if (streakReward > 0) {
+        notify.success(`Série de lecture : encore une semaine d’affilée, +${streakReward} coins !`);
+        setWalletKey((k) => k + 1);
+      }
+    });
   }, [slug, chapterNum, pageList.length, pagesError]);
 
   /* ─── Reading progress ─── */
@@ -610,6 +616,7 @@ export default function ReaderPage() {
                     </Link>
                   </>
                 )}
+                <CommentsSection slug={slug} chapterNumber={chapterNum} />
               </div>
             ) : null}
           </>

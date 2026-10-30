@@ -237,16 +237,50 @@ export async function fetchPages(slug, chapterNumber, _nonce) {
     : pages;
 }
 
-/** Record one view when a logged-in reader opens a chapter (ignored for the série owner). */
+/**
+ * Record one view when a logged-in reader opens a chapter (ignored for the série owner). It also counts
+ * the day for the reading streak: resolves to { streakReward } (coins earned today, usually 0).
+ */
 export async function recordChapterView(slug, chapterNumber) {
   try {
-    await request(
+    const res = await request(
       `/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/view`,
       { method: 'POST' },
     );
+    return { streakReward: Number(res?.streakReward || 0) };
   } catch {
     // Non-blocking: stats must not break reading.
+    return { streakReward: 0 };
   }
+}
+
+/* ─── Chapter comments and reading streak ─── */
+
+/** { enabled, canModerate, items: [{ id, author, text, createdAt, likes, liked, mine }] } */
+export async function fetchComments(slug, chapterNumber, _nonce) {
+  void _nonce;
+  return request(`/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/comments`);
+}
+
+export async function postComment(slug, chapterNumber, text) {
+  return request(`/manga/${encodeURIComponent(slug)}/chapters/${encodeURIComponent(chapterNumber)}/comments`, {
+    method: 'POST',
+    body: { text },
+  });
+}
+
+/** Toggles my like: { liked, likes }. */
+export async function likeComment(commentId) {
+  return request(`/comments/${encodeURIComponent(commentId)}/like`, { method: 'POST' });
+}
+
+export async function deleteComment(commentId) {
+  return request(`/comments/${encodeURIComponent(commentId)}`, { method: 'DELETE' });
+}
+
+/** { current, best, readToday, rewardEvery, rewardCoins, daysToReward } */
+export async function fetchReadingStreak() {
+  return request('/reading-streak');
 }
 
 /* ════════════════════════════════════════════════════════════

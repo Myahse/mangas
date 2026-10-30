@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Play } from 'lucide-react';
-import { useFetch, fetchReadingProgress } from '../../services/api';
+import { Flame, Play } from 'lucide-react';
+import { useFetch, fetchReadingProgress, fetchReadingStreak } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import './ContinueReading.css';
 
 // Refetches when the reader signs in or out (isAuthenticated is part of the useFetch key).
 const loadProgress = (limit, authed) => (authed ? fetchReadingProgress(limit) : Promise.resolve([]));
+const loadStreak = (authed) => (authed ? fetchReadingStreak().catch(() => null) : Promise.resolve(null));
 
 function ItemSkeleton() {
   return (
@@ -49,6 +50,7 @@ function ContinueItem({ item }) {
 export default function ContinueReading() {
   const { isAuthenticated } = useAuth();
   const { data, loading } = useFetch(loadProgress, 8, isAuthenticated);
+  const { data: streak } = useFetch(loadStreak, isAuthenticated);
   const items = (Array.isArray(data) ? data : []).filter((it) => !it.caughtUp).slice(0, 6);
 
   if (!isAuthenticated || (!loading && items.length === 0)) return null;
@@ -57,6 +59,15 @@ export default function ContinueReading() {
     <section className="continue">
       <div className="section-header">
         <h2 className="section-title">Reprendre la lecture</h2>
+        {streak?.current > 0 ? (
+          <span
+            className="continue__streak"
+            title={`Encore ${streak.daysToReward} jour${streak.daysToReward > 1 ? 's' : ''} de lecture d’affilée pour gagner ${streak.rewardCoins} coins (record : ${streak.best} jour${streak.best > 1 ? 's' : ''})`}
+          >
+            <Flame size={14} aria-hidden="true" />
+            {streak.current} jour{streak.current > 1 ? 's' : ''} de suite
+          </span>
+        ) : null}
       </div>
       <div className="continue__list">
         {loading && !data

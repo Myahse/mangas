@@ -454,6 +454,97 @@ button.reader__chapter-link {
   color: rgba(255,255,255,0.75);
 }
 
+/* ─── Comments (end of chapter, same card as the poll) ─── */
+.reader__comments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(480px, 100%);
+  margin-top: 12px;
+  text-align: left;
+}
+
+.reader__comment-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.reader__comment-form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.reader__comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.reader__comment {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.reader__comment-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #fff;
+}
+
+.reader__comment-head span {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.reader__comment-text {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.85);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reader__comment-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.reader__comment-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.55);
+}
+
+.reader__comment-like:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.reader__comment-like--on {
+  color: var(--primary-light);
+}
+
 /* ─── Griot mode ─── */
 .reader__griot-focus {
   position: absolute;

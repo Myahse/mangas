@@ -3,6 +3,18 @@
   /* spaced by .home__content's gap, like the other home sections */
 }
 
+.continue__streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .continue__list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

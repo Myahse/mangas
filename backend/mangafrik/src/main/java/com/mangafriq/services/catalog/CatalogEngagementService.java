@@ -50,6 +50,12 @@ public class CatalogEngagementService {
 				.ifPresent(episodeStore::addLike);
 	}
 
+	/** The creator-panel episode behind a catalog chapter, if it came from one. */
+	public Optional<String> episodeIdFor(String slug, int chapterNumber) {
+		EngagementTarget target = resolveTarget(slug, chapterNumber);
+		return episodeStore.findPublishedEpisodeIdByTitles(target.seriesTitle(), target.episodeTitle());
+	}
+
 	private EngagementTarget resolveTarget(String slug, int chapterNumber) {
 		MangaDto manga = catalogService.getBySlug(slug);
 		List<ChapterDto> chapters = catalogService.chapters(slug);
