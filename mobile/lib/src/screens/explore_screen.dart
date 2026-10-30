@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/api_config.dart';
 import '../data/catalog_service.dart';
+import '../data/community_service.dart';
 import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/connection_error_panel.dart';
@@ -26,6 +29,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
   List<String> _apiGenres = [];
   bool _loading = true;
   String? _error;
+  // Server search (accents and a typo forgiven), 300 ms after the last keystroke.
+  List<Manga>? _searchResults;
+  String _searchedFor = '';
+  Timer? _searchTimer;
 
   @override
   void initState() {
@@ -35,6 +42,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   void dispose() {
+    _searchTimer?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -87,31 +95,46 @@ class _ExploreScreenState extends State<ExploreScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _search.text = q;
-          setState(() {});
+          _onQueryChanged();
         }
       });
     }
   }
 
-  List<Manga> _filtered() {
-    var list = [..._base];
-    final query = _search.text.trim().toLowerCase();
-    if (query.isNotEmpty) {
-      list = list
-          .where(
-            (m) =>
-                m.title.toLowerCase().contains(query) ||
-                m.author.toLowerCase().contains(query) ||
-                m.genres.any((g) => g.toLowerCase().contains(query)),
-          )
-          .toList();
+  void _onQueryChanged() {
+    _searchTimer?.cancel();
+    final q = _search.text.trim();
+    if (q.isEmpty) {
+      setState(() {
+        _searchResults = null;
+        _searchedFor = '';
+      });
+      return;
     }
+    _searchTimer = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        final found = await communityService.search(q, limit: 50);
+        if (!mounted || _search.text.trim() != q) return;
+        setState(() {
+          _searchResults = found;
+          _searchedFor = q;
+        });
+      } catch (_) {}
+    });
+  }
+
+  List<Manga> _filtered() {
+    final query = _search.text.trim();
+    final searching = query.isNotEmpty && _searchResults != null && _searchedFor == query;
+    var list = searching ? [..._searchResults!] : [..._base];
     if (_genreFilter != null && _genreFilter!.isNotEmpty) {
       list = list.where((m) => m.genres.contains(_genreFilter)).toList();
     }
     if (_status != 'Tous') {
       list = list.where((m) => m.status == _status).toList();
     }
+    // While searching, keep the server's relevance order unless another sort is picked.
+    if (searching && _sort == 'popular') return list;
     switch (_sort) {
       case 'rating':
         list.sort((a, b) => b.rating.compareTo(a.rating));
@@ -196,7 +219,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   hintText: 'Rechercher un manga, un auteur…',
                   prefixIcon: Icon(Icons.search, color: AppColors.textMuted),
                 ),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => _onQueryChanged(),
               ),
             ),
           ),

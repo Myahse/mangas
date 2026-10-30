@@ -1,19 +1,34 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api_client.dart';
+import '../auth/auth_controller.dart';
 import '../data/catalog_service.dart';
+import '../data/community_service.dart';
 import '../data/models.dart';
 import '../offline/offline_store.dart';
 import '../theme.dart';
+import '../widgets/chapter_comments.dart';
 import '../widgets/reader_auth_sheet.dart';
 
+const _dataSaverKey = 'reader.dataSaver';
+
+/// Pages are shown at this aspect ratio (uploads are normalised to 800 px wide, ~1200-1280 px high),
+/// which also gives every page the same height to work out the page being read.
+const _pageAspect = 800 / 1200;
+
 class ReaderScreen extends StatefulWidget {
-  const ReaderScreen({super.key, required this.slug, required this.chapter});
+  const ReaderScreen({super.key, required this.slug, required this.chapter, this.resumePage = 0});
 
   final String slug;
   final int chapter;
+
+  /// 0-based page to open at ("Reprendre la lecture").
+  final int resumePage;
 
   @override
   State<ReaderScreen> createState() => _ReaderScreenState();
@@ -25,14 +40,81 @@ class _ReaderScreenState extends State<ReaderScreen> {
   double _zoom = 1;
   bool _saved = false;
   double? _dlProgress;
+  bool _dataSaver = false;
+
+  final ScrollController _scroll = ScrollController();
+  int _currentPage = 0;
+  int _pageCount = 0;
+  Timer? _saveTimer;
+  bool _resumed = false;
 
   @override
   void initState() {
     super.initState();
+    _currentPage = widget.resumePage;
     _future = _load();
+    _scroll.addListener(_onScroll);
     offlineStore.isSaved(widget.slug, widget.chapter).then((v) {
       if (mounted) setState(() => _saved = v);
     });
+    SharedPreferences.getInstance().then((p) {
+      if (mounted) setState(() => _dataSaver = p.getBool(_dataSaverKey) ?? false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    if (_pageCount > 0 && authController.isAuthenticated) {
+      communityService.saveProgress(widget.slug, widget.chapter, _currentPage, _pageCount);
+    }
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  double _pageHeight(BuildContext context) => MediaQuery.sizeOf(context).width * _zoom / _pageAspect;
+
+  double _topPadding(BuildContext context) =>
+      (_showChrome ? kToolbarHeight + MediaQuery.paddingOf(context).top : 8) + 8;
+
+  void _onScroll() {
+    if (!mounted || _pageCount == 0) return;
+    final h = _pageHeight(context);
+    final middle = _scroll.offset + MediaQuery.sizeOf(context).height / 2 - _topPadding(context);
+    final page = (middle / h).floor().clamp(0, _pageCount - 1);
+    if (page != _currentPage) {
+      setState(() => _currentPage = page);
+      _scheduleSave();
+    }
+  }
+
+  void _scheduleSave() {
+    if (!authController.isAuthenticated) return;
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 1500), () {
+      communityService.saveProgress(widget.slug, widget.chapter, _currentPage, _pageCount);
+    });
+  }
+
+  void _resumeIfNeeded() {
+    if (_resumed || widget.resumePage <= 0) return;
+    _resumed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      _scroll.jumpTo((widget.resumePage * _pageHeight(context)).clamp(0, _scroll.position.maxScrollExtent));
+    });
+  }
+
+  Future<void> _toggleDataSaver() async {
+    final next = !_dataSaver;
+    setState(() => _dataSaver = next);
+    (await SharedPreferences.getInstance()).setBool(_dataSaverKey, next);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(next
+          ? 'Économie de données activée : images plus légères.'
+          : 'Économie de données désactivée : images en pleine qualité.'),
+    ));
   }
 
   Future<void> _download() async {
@@ -96,6 +178,18 @@ class _ReaderScreenState extends State<ReaderScreen> {
     final m = await catalogService.fetchMangaBySlug(widget.slug);
     try {
       final pages = await catalogService.fetchPages(widget.slug, widget.chapter);
+      _pageCount = pages.length;
+      // Counts the view and today's reading day (streak); a weekly streak pays coins.
+      communityService.recordView(widget.slug, widget.chapter).then((reward) {
+        if (reward > 0 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Série de lecture : encore une semaine d’affilée, +$reward coins !'),
+          ));
+        }
+      });
+      if (authController.isAuthenticated) {
+        communityService.saveProgress(widget.slug, widget.chapter, widget.resumePage, pages.length);
+      }
       return _ReaderBundle(m, pages, null);
     } catch (e) {
       return _ReaderBundle(m, const [], e);
@@ -163,8 +257,11 @@ class _ReaderScreenState extends State<ReaderScreen> {
           );
         }
 
-        final urls = pages.map((p) => p.url).toList();
+        // Relative storage URLs from the API resolved against the API host (and ?lite=1 in data saver mode).
+        final urls = pages.map((p) => OfflineStore.resolveMediaUrl(p.url, lite: _dataSaver).toString()).toList();
         final bottom = MediaQuery.paddingOf(context).bottom;
+        final hasNext = widget.chapter < m.totalChapters;
+        _resumeIfNeeded();
 
         return Scaffold(
           backgroundColor: AppColors.readerBg,
@@ -178,13 +275,19 @@ class _ReaderScreenState extends State<ReaderScreen> {
                     children: [
                       Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
                       Text(
-                        'Ch. ${widget.chapter} · ${urls.length} pages',
+                        'Ch. ${widget.chapter} · page ${(_currentPage + 1).clamp(1, urls.length)}/${urls.length}',
                         style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6)),
                       ),
                     ],
                   ),
                   leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
                   actions: [
+                    IconButton(
+                      tooltip: 'Économie de données',
+                      onPressed: _toggleDataSaver,
+                      icon: Icon(_dataSaver ? Icons.data_saver_on : Icons.data_saver_off,
+                          color: _dataSaver ? AppColors.primary : Colors.white),
+                    ),
                     if (_dlProgress != null)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -204,12 +307,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       onPressed: () => setState(() => _zoom = (_zoom - 0.1).clamp(0.6, 1.3)),
                       icon: const Icon(Icons.remove),
                     ),
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Text('${(_zoom * 100).round()}%', style: const TextStyle(fontSize: 12, color: Colors.white)),
-                      ),
-                    ),
                     IconButton(
                       onPressed: () => setState(() => _zoom = (_zoom + 0.1).clamp(0.6, 1.3)),
                       icon: const Icon(Icons.add),
@@ -226,17 +323,25 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 return false;
               },
               child: ListView.builder(
+                controller: _scroll,
                 padding: EdgeInsets.only(
-                  top: (_showChrome ? kToolbarHeight + MediaQuery.paddingOf(context).top : 8) + 8,
+                  top: _topPadding(context),
                   bottom: (_showChrome ? 72 + bottom : 16) + bottom,
                 ),
-                itemCount: urls.length,
+                itemCount: urls.length + 1,
                 itemBuilder: (context, i) {
+                  if (i == urls.length) {
+                    return _ChapterEnd(
+                      slug: widget.slug,
+                      chapter: widget.chapter,
+                      nextChapter: hasNext ? widget.chapter + 1 : null,
+                    );
+                  }
                   return Center(
                     child: SizedBox(
                       width: MediaQuery.sizeOf(context).width * _zoom,
                       child: AspectRatio(
-                        aspectRatio: 800 / 1200,
+                        aspectRatio: _pageAspect,
                         child: CachedNetworkImage(imageUrl: urls[i], fit: BoxFit.contain),
                       ),
                     ),
@@ -270,7 +375,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                               ),
                             ),
                           ),
-                          if (widget.chapter < m.totalChapters)
+                          if (hasNext)
                             TextButton.icon(
                               onPressed: () => context.go('/manga/${widget.slug}/chapter/${widget.chapter + 1}'),
                               icon: const Icon(Icons.chevron_right, color: Colors.white),
@@ -286,6 +391,43 @@ class _ReaderScreenState extends State<ReaderScreen> {
               : null,
         );
       },
+    );
+  }
+}
+
+/// End of the chapter: next chapter (or "à jour"), then the readers' comments.
+class _ChapterEnd extends StatelessWidget {
+  const _ChapterEnd({required this.slug, required this.chapter, required this.nextChapter});
+
+  final String slug;
+  final int chapter;
+  final int? nextChapter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Column(
+        children: [
+          Text('Fin du chapitre $chapter',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+          const SizedBox(height: 12),
+          if (nextChapter != null)
+            FilledButton.icon(
+              onPressed: () => context.go('/manga/$slug/chapter/$nextChapter'),
+              icon: const Icon(Icons.chevron_right),
+              label: const Text('Chapitre suivant'),
+            )
+          else ...[
+            Text('Vous êtes à jour. Le prochain chapitre arrive bientôt.',
+                textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
+            const SizedBox(height: 8),
+            OutlinedButton(onPressed: () => context.push('/manga/$slug'), child: const Text('Tous les chapitres')),
+          ],
+          const SizedBox(height: 20),
+          ChapterComments(slug: slug, chapter: chapter),
+        ],
+      ),
     );
   }
 }

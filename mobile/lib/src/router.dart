@@ -183,7 +183,9 @@ GoRouter createRouter(StartupController startup) {
         builder: (context, state) {
           final slug = state.pathParameters['slug']!;
           final ch = int.tryParse(state.pathParameters['chapter'] ?? '') ?? 1;
-          return ReaderScreen(slug: slug, chapter: ch);
+          // ?page=N (1-based) from "Reprendre la lecture".
+          final page = (int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 1) - 1;
+          return ReaderScreen(key: ValueKey('$slug#$ch'), slug: slug, chapter: ch, resumePage: page < 0 ? 0 : page);
         },
       ),
     ],

@@ -4,8 +4,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../auth/auth_controller.dart';
 import '../config/api_config.dart';
 import '../data/catalog_service.dart';
+import '../data/community_service.dart';
+import '../offline/offline_store.dart';
 import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/connection_error_panel.dart';
@@ -28,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Manga> _popular = [];
   List<Manga> _top = [];
   List<Manga> _newest = [];
+  List<ReadingProgress> _progress = [];
   int _heroIndex = 0;
   Timer? _heroTimer;
 
@@ -78,6 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
       _restartHeroTimer();
+      _loadProgress();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -85,6 +90,15 @@ class _HomeScreenState extends State<HomeScreen> {
         _error = ApiConfig.connectionFailedMessage();
       });
     }
+  }
+
+  /// "Reprendre la lecture" (signed in only; never blocks the home page).
+  Future<void> _loadProgress() async {
+    if (!authController.isAuthenticated) return;
+    try {
+      final list = await communityService.fetchProgress(limit: 8);
+      if (mounted) setState(() => _progress = list.where((p) => !p.caughtUp).toList());
+    } catch (_) {}
   }
 
   @override
@@ -124,6 +138,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     onDot: (i) => setState(() => _heroIndex = i),
                   ),
           ),
+          if (_progress.isNotEmpty) ...[
+            const SliverToBoxAdapter(child: SectionHeader(title: 'Reprendre la lecture')),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 92,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  itemCount: _progress.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
+                  itemBuilder: (context, i) => _ContinueCard(item: _progress[i]),
+                ),
+              ),
+            ),
+          ],
           SliverToBoxAdapter(child: SectionHeader(title: 'Mises à jour', onSeeAll: () => context.go('/explore'))),
           if (_latest.isEmpty)
             const SliverToBoxAdapter(child: SizedBox(height: 80, child: Center(child: Text('Aucune mise à jour.'))))
@@ -398,6 +427,74 @@ class _HeroBanner extends StatelessWidget {
       child: Text(
         uppercase ? label.toUpperCase() : label,
         style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.04),
+      ),
+    );
+  }
+}
+
+
+/// One series to resume: cover, title, where the reader stopped, and a progress bar.
+class _ContinueCard extends StatelessWidget {
+  const _ContinueCard({required this.item});
+
+  final ReadingProgress item;
+
+  @override
+  Widget build(BuildContext context) {
+    final sameChapter = item.resumeChapter == item.chapterNumber;
+    final progress = sameChapter && item.pageCount > 0 ? (item.page + 1) / item.pageCount : 0.0;
+    final query = item.resumePage > 0 ? '?page=${item.resumePage + 1}' : '';
+    return InkWell(
+      onTap: () => context.push('/manga/${item.slug}/chapter/${item.resumeChapter}$query'),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 250,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.bgWhite,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 12, offset: Offset(0, 2))],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: CachedNetworkImage(
+                imageUrl: OfflineStore.resolveMediaUrl(item.cover).toString(),
+                width: 48,
+                height: 68,
+                fit: BoxFit.cover,
+                errorWidget: (_, _, _) => Container(width: 48, height: 68, color: AppColors.border),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    sameChapter
+                        ? 'Chapitre ${item.chapterNumber} · page ${item.page + 1}/${item.pageCount}'
+                        : 'Chapitre ${item.chapterNumber} terminé · suite : ch. ${item.resumeChapter}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(value: progress, minHeight: 4, color: AppColors.primary, backgroundColor: AppColors.border),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const CircleAvatar(radius: 15, backgroundColor: AppColors.primary, child: Icon(Icons.play_arrow, size: 18, color: Colors.white)),
+          ],
+        ),
       ),
     );
   }

@@ -49,7 +49,15 @@ public class FollowController {
 	@GetMapping("/notifications")
 	public Map<String, Object> notifications(@RequestParam(defaultValue = "20") int limit) {
 		String uid = userId();
-		return Map.of("unread", follows.unreadCount(uid), "items", follows.notifications(uid, limit));
+		int unread = follows.unreadCount(uid);
+		// "unread" for the web, "unreadCount" for the mobile app.
+		return Map.of("unread", unread, "unreadCount", unread, "items", follows.notifications(uid, limit));
+	}
+
+	/** Used by the mobile app's badge. */
+	@GetMapping("/notifications/unread-count")
+	public Map<String, Object> unreadCount() {
+		return Map.of("count", follows.unreadCount(userId()));
 	}
 
 	@PostMapping("/notifications/{id}/read")

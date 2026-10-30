@@ -2,10 +2,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../auth/auth_controller.dart';
 import '../data/catalog_service.dart';
+import '../data/community_service.dart';
 import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/manga_card.dart';
+import '../widgets/reader_auth_sheet.dart';
 import '../widgets/section_header.dart';
 
 class MangaDetailScreen extends StatefulWidget {
@@ -20,11 +23,36 @@ class MangaDetailScreen extends StatefulWidget {
 class _MangaDetailScreenState extends State<MangaDetailScreen> {
   late Future<_DetailBundle> _future;
   final _chapterSearch = TextEditingController();
+  bool _following = false;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    if (authController.isAuthenticated) {
+      communityService.isFollowing(widget.slug).then((v) {
+        if (mounted) setState(() => _following = v);
+      }).catchError((_) {});
+    }
+  }
+
+  /// Follow the series: stored server-side, a new chapter then shows up in the notifications.
+  Future<void> _toggleFollow() async {
+    if (!authController.isAuthenticated) {
+      await showReaderAuthSheet(context);
+      return;
+    }
+    final next = !_following;
+    setState(() => _following = next);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final v = await communityService.setFollowing(widget.slug, next);
+      if (!mounted) return;
+      setState(() => _following = v);
+      if (v) messenger.showSnackBar(const SnackBar(content: Text('Série suivie : vous serez prévenu de chaque nouveau chapitre.')));
+    } catch (_) {
+      if (mounted) setState(() => _following = !next);
+    }
   }
 
   @override
@@ -103,6 +131,14 @@ class _MangaDetailScreenState extends State<MangaDetailScreen> {
                   onPressed: () => context.pop(),
                 ),
                 title: Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                actions: [
+                  IconButton(
+                    tooltip: _following ? 'Ne plus suivre' : 'Suivre la série',
+                    onPressed: _toggleFollow,
+                    icon: Icon(_following ? Icons.favorite : Icons.favorite_border,
+                        color: _following ? AppColors.primary : null),
+                  ),
+                ],
               ),
               SliverToBoxAdapter(
                 child: Stack(

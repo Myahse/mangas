@@ -99,8 +99,23 @@ public class FollowService {
 				row.put("link", rs.getString("link"));
 				row.put("createdAt", rs.getTimestamp("created_at").toInstant());
 				row.put("read", rs.getTimestamp("read_at") != null);
+				// Fields the mobile app reads: type (upper case) and data.slug / data.chapter.
+				row.put("type", String.valueOf(rs.getString("kind")).toUpperCase());
+				row.put("data", linkData(rs.getString("link")));
 				return row;
 			});
+	}
+
+	/** "/manga/{slug}/chapter/{n}" -> { slug, chapter } (empty when the link is something else). */
+	static Map<String, Object> linkData(String link) {
+		Map<String, Object> data = new LinkedHashMap<>();
+		if (link == null) return data;
+		java.util.regex.Matcher m = java.util.regex.Pattern.compile("^/manga/([^/]+)(?:/chapter/(\\d+))?$").matcher(link);
+		if (m.matches()) {
+			data.put("slug", m.group(1));
+			if (m.group(2) != null) data.put("chapter", Integer.parseInt(m.group(2)));
+		}
+		return data;
 	}
 
 	public int unreadCount(String userId) {
