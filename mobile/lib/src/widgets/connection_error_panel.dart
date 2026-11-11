@@ -23,7 +23,8 @@ class ConnectionErrorPanel extends StatelessWidget {
       future: ApiDiscovery.connectionHint(),
       builder: (context, snap) {
         final hint = snap.data ?? '';
-        return Padding(
+        // Scrollable: on a short screen (landscape, small phone) the buttons would not fit.
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,

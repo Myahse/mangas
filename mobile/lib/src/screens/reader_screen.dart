@@ -13,6 +13,7 @@ import '../offline/offline_store.dart';
 import '../theme.dart';
 import '../widgets/chapter_comments.dart';
 import '../widgets/chapter_poll.dart';
+import '../widgets/griot_bar.dart';
 import '../widgets/reader_auth_sheet.dart';
 import '../widgets/reader_page_overlay.dart';
 
@@ -58,6 +59,11 @@ class _ReaderScreenState extends State<ReaderScreen> {
   final Set<String> _peeked = {};
   Map<int, List<Map<String, dynamic>>> _notesByPage = const {};
   bool _showNotes = true;
+
+  // Griot mode: the bubbles told one by one, and the one being told (outlined on its page).
+  List<Map<String, dynamic>>? _griotSteps;
+  String _griotLang = '';
+  Map<String, dynamic>? _griotFocus;
 
   @override
   void initState() {
@@ -167,6 +173,57 @@ class _ReaderScreenState extends State<ReaderScreen> {
     await _loadBubbles();
   }
 
+  Future<void> _toggleGriot() async {
+    if (_griotSteps != null) {
+      setState(() {
+        _griotSteps = null;
+        _griotFocus = null;
+      });
+      return;
+    }
+    final lang = _languages.any((l) => l['code'] == _lang) ? _lang : '';
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final narration = await communityService.fetchNarration(widget.slug, widget.chapter, lang);
+      if (!mounted) return;
+      if (narration.steps.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              lang.isEmpty
+                  ? 'Aucune bulle à raconter pour l’instant dans ce chapitre.'
+                  : 'Aucune bulle traduite à raconter dans cette langue pour l’instant.',
+            ),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _griotLang = narration.lang == 'orig' ? '' : narration.lang;
+        _griotSteps = narration.steps;
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e is BackendException ? e.message : 'Mode griot indisponible.')));
+    }
+  }
+
+  /// Outlines the bubble being told and scrolls it to about a third of the screen.
+  void _focusGriotStep(int i) {
+    final step = _griotSteps?[i];
+    if (step == null) return;
+    setState(() => _griotFocus = step);
+    if (!_scroll.hasClients) return;
+    final page = (step['page'] as num?)?.toInt() ?? 1;
+    final y = ((step['y'] as num?)?.toDouble() ?? 0) / 100;
+    final h = _pageHeight(context);
+    final target = _topPadding(context) + (page - 1 + y) * h - MediaQuery.sizeOf(context).height * 0.3;
+    _scroll.animateTo(
+      target.clamp(0, _scroll.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   void _openNote(Map<String, dynamic> n) {
     showModalBottomSheet<void>(
       context: context,
@@ -178,8 +235,15 @@ class _ReaderScreenState extends State<ReaderScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('NOTE CULTURELLE',
-                  style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+              const Text(
+                'NOTE CULTURELLE',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
               const SizedBox(height: 6),
               Text('${n['title'] ?? ''}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
               const SizedBox(height: 10),
@@ -239,11 +303,15 @@ class _ReaderScreenState extends State<ReaderScreen> {
     setState(() => _dataSaver = next);
     (await SharedPreferences.getInstance()).setBool(_dataSaverKey, next);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(next
-          ? 'Économie de données activée : images plus légères.'
-          : 'Économie de données désactivée : images en pleine qualité.'),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          next
+              ? 'Économie de données activée : images plus légères.'
+              : 'Économie de données désactivée : images en pleine qualité.',
+        ),
+      ),
+    );
   }
 
   Future<void> _download() async {
@@ -257,7 +325,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ListTile(title: Text('Télécharger ce chapitre', style: TextStyle(fontWeight: FontWeight.w800))),
+            const ListTile(
+              title: Text('Télécharger ce chapitre', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
             ListTile(
               leading: const Icon(Icons.data_saver_on),
               title: const Text('Économie de données (recommandé)'),
@@ -293,13 +363,18 @@ class _ReaderScreenState extends State<ReaderScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: const Text('Chapitre téléchargé. Lisible sans connexion.'),
-          action: SnackBarAction(label: 'Envoyer', onPressed: () => context.push('/telechargements/${offlineId(widget.slug, widget.chapter)}/envoyer')),
+          action: SnackBarAction(
+            label: 'Envoyer',
+            onPressed: () => context.push('/telechargements/${offlineId(widget.slug, widget.chapter)}/envoyer'),
+          ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _dlProgress = null);
-      messenger.showSnackBar(SnackBar(content: Text(e is BackendException ? e.message : 'Téléchargement impossible : $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text(e is BackendException ? e.message : 'Téléchargement impossible : $e')),
+      );
     }
   }
 
@@ -311,9 +386,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
       // Counts the view and today's reading day (streak); a weekly streak pays coins.
       communityService.recordView(widget.slug, widget.chapter).then((reward) {
         if (reward > 0 && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Série de lecture : encore une semaine d’affilée, +$reward coins !'),
-          ));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Série de lecture : encore une semaine d’affilée, +$reward coins !')));
         }
       });
       if (authController.isAuthenticated) {
@@ -354,10 +429,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      err is BackendException ? err.message : '$err',
-                      textAlign: TextAlign.center,
-                    ),
+                    Text(err is BackendException ? err.message : '$err', textAlign: TextAlign.center),
                     const SizedBox(height: 16),
                     if (code == 401 || code == 403)
                       FilledButton(
@@ -368,10 +440,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                         child: const Text('Se connecter'),
                       )
                     else
-                      FilledButton(
-                        onPressed: () => setState(() => _future = _load()),
-                        child: const Text('Réessayer'),
-                      ),
+                      FilledButton(onPressed: () => setState(() => _future = _load()), child: const Text('Réessayer')),
                   ],
                 ),
               ),
@@ -402,7 +471,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                      Text(
+                        m.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
                       Text(
                         'Ch. ${widget.chapter} · page ${(_currentPage + 1).clamp(1, urls.length)}/${urls.length}',
                         style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6)),
@@ -415,13 +489,18 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       IconButton(
                         tooltip: 'Langue et notes',
                         onPressed: _chooseLanguage,
-                        icon: Icon(Icons.translate, color: _bubblesByPage.isNotEmpty ? AppColors.primary : Colors.white),
+                        icon: Icon(
+                          Icons.translate,
+                          color: _bubblesByPage.isNotEmpty ? AppColors.primary : Colors.white,
+                        ),
                       ),
                     IconButton(
                       tooltip: 'Économie de données',
                       onPressed: _toggleDataSaver,
-                      icon: Icon(_dataSaver ? Icons.data_saver_on : Icons.data_saver_off,
-                          color: _dataSaver ? AppColors.primary : Colors.white),
+                      icon: Icon(
+                        _dataSaver ? Icons.data_saver_on : Icons.data_saver_off,
+                        color: _dataSaver ? AppColors.primary : Colors.white,
+                      ),
                     ),
                     if (_dlProgress != null)
                       Padding(
@@ -459,10 +538,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
               },
               child: ListView.builder(
                 controller: _scroll,
-                padding: EdgeInsets.only(
-                  top: _topPadding(context),
-                  bottom: (_showChrome ? 72 + bottom : 16) + bottom,
-                ),
+                padding: EdgeInsets.only(top: _topPadding(context), bottom: (_showChrome ? 72 + bottom : 16) + bottom),
                 itemCount: urls.length + 1,
                 itemBuilder: (context, i) {
                   if (i == urls.length) {
@@ -482,8 +558,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
                           bubbles: _bubblesByPage[i + 1] ?? const [],
                           notes: _showNotes ? _notesByPage[i + 1] ?? const [] : const [],
                           peeked: _peeked,
-                          onTapBubble: (id) => setState(() => _peeked.contains(id) ? _peeked.remove(id) : _peeked.add(id)),
+                          onTapBubble: (id) =>
+                              setState(() => _peeked.contains(id) ? _peeked.remove(id) : _peeked.add(id)),
                           onTapNote: _openNote,
+                          focus: _griotFocus != null && _griotFocus!['page'] == i + 1 ? _griotFocus : null,
                         ),
                       ),
                     ),
@@ -492,7 +570,18 @@ class _ReaderScreenState extends State<ReaderScreen> {
               ),
             ),
           ),
-          bottomNavigationBar: _showChrome
+          bottomNavigationBar: _griotSteps != null
+              ? GriotBar(
+                  key: ValueKey('griot:$_griotLang'),
+                  steps: _griotSteps!,
+                  lang: _griotLang,
+                  onStep: _focusGriotStep,
+                  onClose: () => setState(() {
+                    _griotSteps = null;
+                    _griotFocus = null;
+                  }),
+                )
+              : _showChrome
               ? Material(
                   color: Colors.black.withValues(alpha: 0.88),
                   child: SafeArea(
@@ -510,12 +599,20 @@ class _ReaderScreenState extends State<ReaderScreen> {
                           else
                             const SizedBox(width: 8),
                           Expanded(
-                            child: Center(
-                              heightFactor: 1,
-                              child: FilledButton.tonal(
-                                onPressed: () => context.push('/manga/${widget.slug}'),
-                                child: const Text('Chapitres'),
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                FilledButton.tonal(
+                                  onPressed: () => context.push('/manga/${widget.slug}'),
+                                  child: const Text('Chapitres'),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Mode griot : écouter le chapitre',
+                                  onPressed: _toggleGriot,
+                                  icon: const Icon(Icons.record_voice_over, color: Colors.white),
+                                ),
+                              ],
                             ),
                           ),
                           if (hasNext)
@@ -552,8 +649,10 @@ class _ChapterEnd extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Column(
         children: [
-          Text('Fin du chapitre $chapter',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+          Text(
+            'Fin du chapitre $chapter',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+          ),
           const SizedBox(height: 12),
           if (nextChapter != null)
             FilledButton.icon(
@@ -562,8 +661,11 @@ class _ChapterEnd extends StatelessWidget {
               label: const Text('Chapitre suivant'),
             )
           else ...[
-            Text('Vous êtes à jour. Le prochain chapitre arrive bientôt.',
-                textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
+            Text(
+              'Vous êtes à jour. Le prochain chapitre arrive bientôt.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+            ),
             const SizedBox(height: 8),
             OutlinedButton(onPressed: () => context.push('/manga/$slug'), child: const Text('Tous les chapitres')),
           ],

@@ -22,6 +22,10 @@ class ApiClient {
 
   final TokenGetter tokenGetter;
 
+  /// Called when the server refuses the saved token (expired, revoked, account deleted) on a public
+  /// call: the session is dead and should be dropped.
+  void Function()? onSessionRejected;
+
   Uri _uri(String path) {
     final p = path.startsWith('/') ? path : '/$path';
     return Uri.parse('${ApiConfig.base()}$p');
@@ -58,6 +62,18 @@ class ApiClient {
       ...?headers,
     });
 
+    final res = await _send(method, uri, h, body);
+
+    // A dead token must not lock the reader out of public pages: drop it and ask again anonymously.
+    if (optionalAuth && auth && res.statusCode == 401) {
+      onSessionRejected?.call();
+      return request(path, method: method, body: body, auth: false, headers: headers);
+    }
+
+    return _decode(res);
+  }
+
+  Future<http.Response> _send(String method, Uri uri, Map<String, String> h, Map<String, dynamic>? body) async {
     late final http.Response res;
     try {
       if (method == 'GET') {
@@ -76,7 +92,10 @@ class ApiClient {
     } on http.ClientException catch (e) {
       throw BackendException(ApiConfig.connectionFailedMessage(e.message));
     }
+    return res;
+  }
 
+  dynamic _decode(http.Response res) {
     final text = res.body;
     final contentType = res.headers['content-type'] ?? '';
 

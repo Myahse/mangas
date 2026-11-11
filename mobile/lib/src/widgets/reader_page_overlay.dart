@@ -17,6 +17,7 @@ class ReaderPageImage extends StatelessWidget {
     this.peeked = const {},
     this.onTapBubble,
     this.onTapNote,
+    this.focus,
   });
 
   final String url;
@@ -28,9 +29,12 @@ class ReaderPageImage extends StatelessWidget {
   final ValueChanged<String>? onTapBubble;
   final ValueChanged<Map<String, dynamic>>? onTapNote;
 
+  /// Box of the bubble being told in griot mode (x/y/w/h percentages), outlined on the page.
+  final Map<String, dynamic>? focus;
+
   @override
   Widget build(BuildContext context) {
-    if (bubbles.isEmpty && notes.isEmpty) {
+    if (bubbles.isEmpty && notes.isEmpty && focus == null) {
       return CachedNetworkImage(imageUrl: url, fit: BoxFit.contain);
     }
     return CachedNetworkImage(
@@ -99,6 +103,7 @@ class _OverlaidState extends State<_Overlaid> {
           if (img != null) ...[
             for (final b in page.bubbles) _bubble(b, rect),
             for (final n in page.notes) _noteDot(n, rect),
+            if (page.focus != null) _focusBox(page.focus!, rect),
           ],
         ],
       );
@@ -136,6 +141,24 @@ class _OverlaidState extends State<_Overlaid> {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _focusBox(Map<String, dynamic> f, Rect rect) {
+    return Positioned(
+      left: rect.left + _pct(f['x']) * rect.width - 4,
+      top: rect.top + _pct(f['y']) * rect.height - 4,
+      width: _pct(f['w']) * rect.width + 8,
+      height: _pct(f['h']) * rect.height + 8,
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            border: Border.all(color: AppColors.primary, width: 3),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),

@@ -195,6 +195,18 @@ class CommunityService {
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
+  /// Griot mode: bubbles in reading order with the text to tell and the approved voice, if any.
+  /// An empty lang tells the original text.
+  Future<({String lang, List<Map<String, dynamic>> steps})> fetchNarration(String slug, int chapter, String lang) async {
+    final q = lang.isEmpty ? '' : '?lang=${Uri.encodeQueryComponent(lang)}';
+    final res = await _c.request('${_chapter(slug, chapter)}/narration$q', auth: false) as Map<String, dynamic>;
+    final steps = (res['steps'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .where((s) => '${s['text'] ?? ''}'.trim().isNotEmpty)
+        .toList();
+    return (lang: '${res['lang'] ?? lang}', steps: steps);
+  }
+
   /* ─── Polls ─── */
 
   /// Null when the chapter has no poll (the API answers 204).

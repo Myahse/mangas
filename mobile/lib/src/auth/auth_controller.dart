@@ -12,7 +12,7 @@ final AuthController authController = AuthController();
 
 class AuthController extends ChangeNotifier {
   AuthController() {
-    _api = ApiClient(tokenGetter: () => _user?.token);
+    _api = ApiClient(tokenGetter: () => _user?.token)..onSessionRejected = () => _persist(null);
   }
 
   late final ApiClient _api;
